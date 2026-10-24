@@ -22,6 +22,7 @@ import { liveUrl, openPanel } from './liveapp/open';
 import { speedRow } from './liveapp/speed';
 import { aheadBanner } from './branch-ahead/banner';
 import { walkLinks } from './walkthroughs/links';
+import { impactCard } from './data-impact/card';
 import { businessNow, onBusiness, wantBusiness } from './business-status/feed';
 import './liveapp.css';
 
@@ -73,6 +74,8 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   const walks = walkLinks();
   walks.onChange = () => draw();
   opener.onPreview = () => draw();
+  // The data-impact guard's hold (ui/data-impact/): findings, who may approve, Approve….
+  const impact = impactCard(() => store.floor ?? undefined);
   const banner = aheadBanner('live', { openModel: () => document.getElementById('tab-model')?.click() });
   const chip = h('button.la-chip', { type: 'button', title: "The project's app, running from main: open the 🌐 Live app tab", onclick: openTab });
 
@@ -85,7 +88,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     chip.className = `la-chip ${s?.status ?? 'stopped'} ${st.tone}`;
     // The work's status is the business status (shared/business-status.ts), never a second "ready" of its own.
     const biz = s ? businessNow(s.floor)?.project : undefined;
-    const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : ''}${biz ? ` · ${biz.label}` : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
+    const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : s.failure?.kind === 'held' ? ' · update held' : ''}${biz ? ` · ${biz.label}` : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
     chip.textContent = `🌐 Live app: ${what}`;
     chip.title = [biz?.line, s?.readiness?.headline].filter(Boolean).join('\n') || "The project's app, running from main: open the 🌐 Live app tab";
   }
@@ -131,7 +134,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const note = said ? h('p.la-note', {}, said) : null;
     const f = s.failure;
     const failed = crashed
-      ? h('div.la-failed', { role: 'alert' }, h('p.la-note.bad', {}, f ? `${f.kind === 'crash' ? `The app stopped by itself at ${stamp(f.at)}` : f.kind === 'timeout' ? `It didn't come up; gave up at ${stamp(f.at)}` : `The build failed at ${stamp(f.at)}`}${f.sha ? ` (${s.branch ?? 'main'} @${short(f.sha)})` : ''}: ${f.why}` : (s.message ?? 'It failed.')), admin ? null : h('p.la-note', {}, 'An admin can restart it.'))
+      ? h('div.la-failed', { role: 'alert' }, h('p.la-note.bad', {}, f ? `${f.kind === 'crash' ? `The app stopped by itself at ${stamp(f.at)}` : f.kind === 'timeout' ? `It didn't come up; gave up at ${stamp(f.at)}` : f.kind === 'held' ? 'Start held: nothing was built' : `The build failed at ${stamp(f.at)}`}${f.sha ? ` (${s.branch ?? 'main'} @${short(f.sha)})` : ''}: ${f.why}` : (s.message ?? 'It failed.')), admin ? null : h('p.la-note', {}, 'An admin can restart it.'))
       : null;
     const refresh = s.refresh && !s.refresh.ok && (up || crashed) ? h('p.la-note.bad', {}, `Live app can't check for updates: ${s.refresh.error ?? 'unknown error'}${on ? `. Running ${commitLine({ ...s, main: undefined })}` : ''}.`) : null;
     const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app (AGENT_OFFICE_LIVE_MXCLI).") : null;
@@ -148,7 +151,8 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha, s.readiness?.milestones.find((x) => x.id === m)?.journeys.map((j) => j.id)));
     // How fast it followed main last time and why (hot reload or restart), and the admins' Hot reload / Keep warm.
     const speed = speedRow(s, net, admin);
-    top.replaceChildren(bar, ...([speed, failed, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
+    impact.update(s);
+    top.replaceChildren(bar, ...([speed, failed, impact.el, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 

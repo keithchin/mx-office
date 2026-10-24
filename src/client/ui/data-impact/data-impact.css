@@ -1,0 +1,107 @@
+/* The data-impact card on the Live app tab and its Approve dialog (ui/data-impact/). Tokens from base.css. */
+.di-card {
+  border: 1px solid var(--bad-ink);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--bad-soft);
+  padding: 12px 14px;
+  margin: 8px 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.di-card[hidden] {
+  display: none;
+}
+.di-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--bad-ink);
+}
+.di-fact,
+.di-unknown,
+.di-uncertain,
+.di-who {
+  margin: 4px 0;
+}
+.di-uncertain {
+  font-style: italic;
+}
+.di-findings {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.di-finding {
+  margin: 4px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+}
+.di-unit {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.di-el {
+  font-weight: 600;
+}
+.di-risk {
+  flex-basis: 100%;
+}
+.di-rows {
+  font-size: 0.85em;
+  color: var(--bad-ink);
+}
+.di-warn pre {
+  white-space: pre-wrap;
+  margin: 2px 0;
+}
+.di-actions {
+  margin-top: 8px;
+}
+.di-approval[data-void='true'] {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.di-modal {
+  width: min(640px, calc(100vw - 32px));
+}
+.di-body label {
+  display: block;
+  margin: 6px 0;
+}
+.di-recovery {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 8px 0;
+}
+.di-dump-box {
+  margin-left: 22px;
+}
+.di-dump {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+.di-none {
+  margin-left: 22px !important;
+  font-size: 0.9em;
+}
+.di-reason {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+.di-msg {
+  flex: 1;
+  margin: 0 8px 0 0;
+}
+.di-modal .di-body {
+  display: block;
+}
+.di-body label {
+  font-weight: normal;
+}
+.di-reason-l {
+  font-weight: 600 !important;
+}

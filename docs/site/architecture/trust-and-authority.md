@@ -123,6 +123,30 @@ It still doesn't check that the listed checks really ran, or the reviewer's role
 
 So the gate shows **an approval of the revision that was (or will be) merged, by someone other than its authors, as far as the office's records tell**. On a Solo team you are the reviewer, and your review recorded in the PR window counts. See [Review gate](../using-the-office/review-gate.md#the-merge-gate) and [Branch protection](../integrations/branch-protection.md).
 
+## Data-impact approval
+
+Confirming that the work looks right is not the same as accepting that data may be lost, so the office has one authority for the second: the **data-impact approval** permission (`server/data-impact/`, rules in `shared/data-impact.ts`).
+
+**Implemented (not yet in a release):**
+
+- **Where it applies:** the live preview only (`server/liveapp/`). Before the live app applies a commit (an update after a merge, a restart, or a start over the database an earlier build used), `liveapp/app.ts` asks the guard with the revision the database last ran (the served commit, or the last served one) and the new commit.
+- **Detection:** a diff of the domain model and enumeration units at both revisions, read from git by `model/units.ts`, with no mxcli and no database. It finds removed, renamed and no-longer-stored persistent entities, attributes and associations, attribute type changes, reference storage changes, changed delete behaviour, removed or renamed enumeration values in use, and generalization changes. Each finding names the unit and the element, with one risk line. It is kept per revision pair; nothing is decoded when none of those units changed.
+- **Fail closed:** a model or changed unit that can't be read is *data impact unknown*, which holds like a finding.
+- **The hold:** a held commit is not hot reloaded, restarted onto or built by a start; the running build keeps serving. The hold is a fact of its own (`HeldFact`: environment, baseline, target, reason), exposed by `GET /api/data-impact` and on the live app's state as failure kind `held`. It never folds into merged, implemented, verified or accepted.
+- **Who:** office admins by default, plus accounts the office policy names (`<data>/data-impact/policy.json`, admins only, audited). Owning or running a project grants nothing. The check is on the server (`http/routes/data-impact.ts`); the page only hides the button.
+- **The approval** needs the approver, a recovery step (a `pg_dump` of the live preview's database taken by the office and checked with `pg_restore --list`, with its path, size and sha256, or the approver's explicit "no data to keep") and a reason. It is bound to the environment, the starting baseline, the target and the recovery evidence; a change to any of them (a new commit, a different baseline, a dump file changed or gone) voids it, and the change is assessed again.
+- **Evidence:** every hold, dump, approval, void and release is a hash-chained audit event with all four bound values.
+
+**Planned, not built:**
+
+- **Developer change candidates** (Increment B): `checkCandidate` in `data-impact/seams.ts` is the seam; `server/dev-changes/` doesn't call it yet, so a DC can still settle as implemented over a change that would be held.
+- **External commits on main**: `checkExternal` is the seam for `review-gate/pushes.ts` with the persisted push baseline; today such a commit is caught only when the live app follows main.
+- **mxcli's own warnings** are carried in the assessment (`warnings`) but the office doesn't capture the output of the agents' mxcli runs, so the list is empty.
+- **Restore**: the office takes and checks dumps but doesn't restore them; a restore loses records made after the dump and needs its own authorization.
+- **Policy by change class:** every finding kind holds; the policy can't yet exempt a class.
+
+**Limits, stated plainly:** detection is model-diff based (migration microflows, Java actions and the runtime's schema sync aren't analysed). The guard protects against accidental errors by people and agents. It is **not** a security boundary against an adversarial agent: agents run as the same operating-system user as the office, so one set on it could edit the office's data folder or drive its API (see [Filesystem and process isolation](#filesystem-and-process-isolation)).
+
 ## See also
 
 - [Security and tokens](../administration/security-and-tokens.md)

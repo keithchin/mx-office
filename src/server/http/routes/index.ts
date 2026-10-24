@@ -77,6 +77,7 @@ import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
 import { securityRoutes } from './security.js';
 import { pushCheckRoutes } from './push-check.js';
+import { dataImpactRoutes } from './data-impact.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -269,6 +270,8 @@ export const routes: readonly Route[] = [
   securityRoutes.act,
   pushCheckRoutes.view,
   pushCheckRoutes.reconcile,
+  dataImpactRoutes.view,
+  dataImpactRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

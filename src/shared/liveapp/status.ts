@@ -9,6 +9,7 @@
 
 import type { NeedItem } from '../needsyou.js';
 import type { LiveAppState } from '../protocol/liveapp.js';
+import { heldFactLine } from '../data-impact.js';
 
 export type LiveTone = 'good' | 'busy' | 'bad' | 'idle';
 
@@ -30,7 +31,7 @@ export function liveStatus(s: LiveAppState | null | undefined, now = Date.now())
   if (!s) return { word: 'checking…', tone: 'idle' };
   switch (s.status) {
     case 'running':
-      return s.failure?.kind === 'update' ? { word: 'running · update failed', tone: 'bad' } : { word: 'running', tone: 'good' };
+      return s.failure?.kind === 'update' ? { word: 'running · update failed', tone: 'bad' } : s.failure?.kind === 'held' ? { word: 'running · update held', tone: 'bad' } : { word: 'running', tone: 'good' };
     case 'starting':
       return { word: (s.phase ? s.phase === 'building' : /^Building|building/.test(s.message ?? '')) ? 'building…' : 'starting…', tone: 'busy' };
     case 'updating':
@@ -41,6 +42,7 @@ export function liveStatus(s: LiveAppState | null | undefined, now = Date.now())
       const f = s.failure;
       if (!f) return { word: 'failed', tone: 'bad' };
       const at = stamp(f.at, now);
+      if (f.kind === 'held') return { word: 'start held (data impact)', tone: 'bad' };
       return { word: f.kind === 'crash' ? `stopped (crashed at ${at})` : f.kind === 'timeout' ? `didn't come up (gave up at ${at})` : `build failed at ${at}`, tone: 'bad' };
     }
     default:
@@ -84,11 +86,13 @@ export function revisionLine(s: LiveAppState | null | undefined, now = Date.now(
     }
     case 'running': {
       const f = s.failure;
+      if (f?.kind === 'held' && f.sha) return `${cap(heldFactLine(s.branch ?? 'main', f.sha))} · ${run ? `still running ${short(s.served!.sha)}` : 'nothing running'}`;
       if (f?.kind === 'update') return `Update${f.sha ? ` to ${short(f.sha)}` : ''} failed · ${run ? `still running ${short(s.served!.sha)}` : 'nothing running'}`;
       return run;
     }
     case 'failed': {
       const f = s.failure;
+      if (f?.kind === 'held' && f.sha) return `${cap(heldFactLine(s.branch ?? 'main', f.sha))} · nothing running`;
       if (f?.kind === 'crash') return `${f.sha ? short(f.sha) : 'The app'} stopped by itself · nothing running`;
       const what = f?.sha ?? t?.sha;
       return `${t?.from ? `Update${what ? ` to ${short(what)}` : ''}` : what ? `Build of ${short(what)}` : 'The build'} failed · nothing running`;
@@ -105,7 +109,7 @@ export function liveNeeds(live: LiveAppState | null | undefined, floor: string |
   if (!live || live.floor !== floor) return [];
   const out: NeedItem[] = [];
   const f = live.failure;
-  if (live.status === 'failed') {
+  if (live.status === 'failed' && f?.kind !== 'held') {
     if (f?.kind === 'crash') {
       out.push({ key: `live-crash@${f.at}`, kind: 'live', icon: '🌐', text: `The live app stopped by itself (crashed at ${stamp(f.at)}${f.sha ? `, ${live.branch ?? 'main'} @${short(f.sha)}` : ''}): ${f.why}. Restart it on the Live app tab`, since: f.at, level: 'warn', action: 'Live app', target: { to: 'live' } });
     } else out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${live.message ? `: ${live.message}` : ''}${f?.sha ? `. ${revisionLine(live)}` : ''}`, since: f?.at ?? live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });
@@ -113,6 +117,11 @@ export function liveNeeds(live: LiveAppState | null | undefined, floor: string |
   // An update that failed with the old build still serving: it runs, but not what main has.
   if (live.status === 'running' && f?.kind === 'update' && live.served) {
     out.push({ key: `live-update@${f.at}`, kind: 'live', icon: '🌐', text: `Live app update${f.sha ? ` to ${live.branch ?? 'main'} @${short(f.sha)}` : ''} failed: ${f.why}. Still running ${live.branch ?? 'main'} @${short(live.served.sha)}; Restart it on the Live app tab`, since: f.at, level: 'warn', action: 'Live app', target: { to: 'live' } });
+  }
+  // The data-impact guard holds main's newest commit (server/data-impact/): merged, never applied; an approver decides on the Live app tab.
+  if (f?.kind === 'held' && f.sha) {
+    const running = live.served ? `still running ${live.branch ?? 'main'} @${short(live.served.sha)}` : 'nothing running';
+    out.push({ key: `live-held:${f.sha}`, kind: 'live', icon: '✋', text: `Live app: ${heldFactLine(live.branch ?? 'main', f.sha)} (${/unknown/.test(f.why) ? 'data impact unknown' : 'possible data impact'}). Needs data-impact approval; ${running}`, since: f.at, level: 'block', action: 'Review the data impact', target: { to: 'live' } });
   }
   if (live.refresh && !live.refresh.ok && (live.status === 'running' || live.status === 'failed')) {
     out.push({ key: 'live-refresh', kind: 'live', icon: '🌐', text: `Live app can't check for updates: ${live.refresh.error ?? 'unknown error'}${live.served ? ` (running ${live.branch ?? 'main'} @${short(live.served.sha)}${live.served.commitAt ? ` from ${stamp(live.served.commitAt)}` : ''})` : ''}`, since: live.refresh.at, level: 'info', action: 'Live app', target: { to: 'live' } });
@@ -127,5 +136,5 @@ export function liveNeeds(live: LiveAppState | null | undefined, floor: string |
   return out;
 }
 
-/** Which live-app rows reach the notification channels (Teams, phone push): a crash, and readiness news; once each, by key. */
-export const liveNotifies = (key: string) => key.startsWith('live-crash@') || key.startsWith('live-ready:') || key.startsWith('live-unready:');
+/** Which live-app rows reach the notification channels (Teams, phone push): a crash, a data-impact hold, and readiness news; once each, by key. */
+export const liveNotifies = (key: string) => key.startsWith('live-crash@') || key.startsWith('live-held:') || key.startsWith('live-ready:') || key.startsWith('live-unready:');

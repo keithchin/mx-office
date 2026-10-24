@@ -18,13 +18,14 @@ Only admins can start or stop it. Everyone else watches.
 | **⟳ Restart** | Stops and starts it again. |
 | **■ Stop** | Stops it. |
 
-The status pill says what is actually there: *not started* (nobody started it since the office started), *building…*, *starting…* (mxcli said the runtime is starting), *running*, *updating to 1a2b3c4…*, *running · update failed*, *stopping…*, *stopped*, *build failed at 10:27*, or *stopped (crashed at 10:27)* when it was running and stopped by itself. Beside it is the **served** commit (the one actually running and answering) against main, *main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed* (or *· up to date*), and when that build came up. The same words are on the tab's chip, the Overview's **Live app** row and **View App**.
+The status pill says what is actually there: *not started* (nobody started it since the office started), *building…*, *starting…* (mxcli said the runtime is starting), *running*, *updating to 1a2b3c4…*, *running · update failed*, *running · update held* (see [Data-impact hold](#data-impact-hold)), *stopping…*, *stopped*, *build failed at 10:27*, or *stopped (crashed at 10:27)* when it was running and stopped by itself. Beside it is the **served** commit (the one actually running and answering) against main, *main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed* (or *· up to date*), and when that build came up. The same words are on the tab's chip, the Overview's **Live app** row and **View App**.
 
 The office keeps two revisions apart: the **served** one, which counts only from the moment its build answers on its port and stops counting the moment that runtime stops, and the **target**, the commit it's getting, building or starting. While they differ, a line beside the pill says which is which:
 
 - *Running abc1234 · updating to def5678…*: the old build still answers while main is fetched.
 - *Updating to def5678… · nothing running (abc1234 stopped for the build)*: the old build was stopped so the new one can build (see [How it works](#how-it-works)).
 - *Update to def5678 failed · still running abc1234*: the update failed before the old build was stopped (main couldn't be fetched into the live checkout), so the old build keeps serving. Needs you has a row for it, and the office doesn't retry that commit by itself every minute: **⟳ Restart** does.
+- *Merged on main at def5678; not applied to the live preview: data-impact hold · still running abc1234*: the data-impact guard holds the new commit because it may drop or convert stored data; the old build keeps serving until someone with the data-impact approval permission approves it (see [Data-impact hold](#data-impact-hold)).
 - *Update to def5678 failed · nothing running*: the new build failed after the old one was stopped. *Build of def5678 failed · nothing running* is the same for a ▶ Start.
 - *Nothing running · last ran abc1234 until 10:27*: stopped, or the office restarted.
 
@@ -99,6 +100,31 @@ A build writes thousands of small files, and real-time antivirus scanning can sl
 2. **Before.** With the antivirus as it is, start the live app and let it settle. Make five small page changes and five microflow changes on main (one merge each, a minute apart), then one entity change, and note the *⚡ Updated in …* line after each (or copy the `✔ Updated in …` lines, with their phases, from `<office data>/live/<project>.log`). Then **⟳ Restart** three times and note *Restarted in …*.
 3. **After.** Have IT add exclusions for the folders in step 1 (some IT departments prefer process exclusions: `mxcli.exe`, `mxbuild.exe`, the runtime's `java.exe` and the web bundler's `node.exe`), and repeat step 2 the same way, at a similar time of day and load.
 4. **Compare** the medians per kind, phase by phase: *build* and *apply* are the phases scanning slows. A difference of a few seconds is within the noise of a busy laptop. Have IT remove the exclusions again if they don't help.
+
+## Data-impact hold
+
+Some model changes can drop or convert data the app already stored, and the runtime applies them to the database (its schema sync) the moment it restarts on them. So before the live app applies a new commit (an update after a merge, a **⟳ Restart**, or a **▶ Start** over the database an earlier build used), the office compares the domain models at the revision the database last ran and at the new commit, read straight out of git. It holds the commit when it finds:
+
+- a persistent entity, attribute or association that is removed, renamed or no longer stored (an entity made non-persistable, an attribute made calculated);
+- an attribute type change (a string made shorter counts; a longer one doesn't), or a reference changed to a reference set;
+- a changed delete behaviour;
+- an enumeration value removed or renamed while a persistent attribute uses that enumeration;
+- a changed generalization.
+
+When the office can't read a model (a unit it can't decode, no project file, no `node:sqlite`), it holds as *data impact unknown* rather than guess.
+
+While a commit is held, **nothing of it is applied**: no hot reload, no restart onto it, and **⟳ Restart** keeps the running build. The app keeps serving the commit it ran, and the tab says *running · update held* and *Merged on main at def5678; not applied to the live preview: data-impact hold · still running abc1234*. If the app was stopped, **▶ Start** builds nothing and says *start held (data impact)*. Merged on main and applied to the live preview are separate facts: the hold never reads as the preview running that commit. Needs you has a ✋ row (Teams and phone push send it once), and the tab shows a card with each finding (the unit, the element and a plain line such as *may drop data in Sales.Order.Notes*, with how many rows have data there when the database answers), what the check doesn't cover, other ways than approving (keep the attribute and deprecate it, migrate the data first, apply it in a maintenance window), and who may approve.
+
+**Who may approve.** Approving needs the **data-impact approval** permission: office admins have it by default, and an admin can name other accounts through the policy (`POST /api/data-impact` with `action: policy`). Nobody gets it for owning or running a project. Everyone else sees the card and who can approve.
+
+**What an approval needs.** **Approve…** asks for:
+
+- a **recovery step**: either **Take a database dump now** (the office runs `pg_dump` of the live preview's database into `<office data>/data-impact/dumps/<project>/`, checks it with `pg_restore --list`, and records its path, size and sha256; the app keeps running meanwhile), or the explicit statement *No data to keep: I accept that data in these elements may be lost*;
+- a **reason**.
+
+The approval is bound to all four of: the environment (the live preview), the revision it runs (the starting baseline), the commit it takes, and the recovery evidence. If any of them changes (a new commit on main, a different baseline, the dump file changed or gone), the approval is void, the change is looked at again, and it holds again if it still touches data. Once approved, the live app restarts onto the commit. The hold, each dump, the approval and a voided approval are in the [audit log](audit-log.md) with all four.
+
+**What it doesn't do.** Detection is a model diff: migration microflows, Java actions and the runtime's own schema sync aren't analysed, and the card says so. It doesn't restore a dump for you (restore one with `pg_restore` into a database of your choice), and it doesn't yet pass on mxcli's own warnings, because the office doesn't capture the output of the mxcli runs the agents make. It guards against mistakes by people and agents; it is not a security boundary against an agent that deliberately works around the office (agents run as the same Windows user).
 
 ## Is it ready?
 

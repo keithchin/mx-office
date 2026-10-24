@@ -78,6 +78,8 @@ export interface LiveAppDeps {
   hotTimes?: HotTimes;
   /** Memory free now (machine.ts availableMemory): a start with too little for hot reload restarts instead (./hot-mode.ts). */
   freeMemory?(): Promise<number> | number;
+  /** The data-impact guard (data-impact/guard.ts): whether `to` may be applied over `from`, the revision the database last ran. */
+  guard?(dir: string, from: string, to: string): Promise<{ hold: false } | { hold: true; why: string }>;
 }
 
 export class LiveApp {
@@ -197,7 +199,7 @@ export class LiveApp {
       return;
     }
     if (this.s.status !== 'running') return;
-    if (this.s.failure?.kind === 'update' && this.s.failure.sha === head) return;
+    if ((this.s.failure?.kind === 'update' || this.s.failure?.kind === 'held') && this.s.failure.sha === head) return;
     await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${short(head)}…`, head);
   }
 
@@ -263,6 +265,7 @@ export class LiveApp {
     const from = this.s.served?.sha;
     this.set({ branch, target: { sha: next.sha, subject: next.subject, ...(next.at ? { commitAt: next.at } : {}), ...(from ? { from } : {}) } });
     if (clock && from) [clock.from, clock.to] = [from, next.sha];
+    if ((await this.held(next.sha)) || gen !== this.gen) return;
     // An update over a build that serves: what changed decides whether it restarts at all (shared/liveapp/speed.ts).
     if (update && clock && from && from !== next.sha && this.child && this.child === this.serving && this.mprRel) {
       const done = await this.quick(next, branch, from, clock, gen);
@@ -344,6 +347,18 @@ export class LiveApp {
     if (/didn't pick the change up/.test(o.why) && ++this.hotMisses >= 2) this.note("hot reload: mxcli's watch didn't answer twice in a row, so updates restart until the next ▶ Start or ⟳ Restart");
     if (this.s.served) this.set({ ...this.unserved(), message: `Updating to ${short(next.sha)}: hot reload didn't confirm, restarting…` });
     return false;
+  }
+
+  /** A target the data-impact guard holds is never applied: what serves serves on (failure `held`), and a start builds nothing. */
+  private async held(sha: string): Promise<boolean> {
+    const base = this.s.served?.sha ?? this.s.lastServed?.sha;
+    const v = this.d.guard && base && base !== sha ? await this.d.guard(this.checkout, base, sha) : undefined;
+    if (!v?.hold) return false;
+    if (!(this.child && this.child === this.serving && this.s.served)) return this.fail(v.why, 'held'), true;
+    this.note(`✋ ${v.why}`);
+    this.set({ status: 'running', phase: 'running', message: undefined, since: this.s.served.builtAt, failure: { kind: 'held', at: Date.now(), why: v.why, lines: [], sha } });
+    this.clock = undefined;
+    return this.followPending(sha), true;
   }
 
   private async spawnApp(mpr: string, gen: number) {

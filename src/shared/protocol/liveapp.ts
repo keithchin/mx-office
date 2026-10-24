@@ -147,9 +147,10 @@ export interface LiveTarget extends LiveRevision {
 export interface LiveAppFailure {
   /**
    * build: it never came up; crash: it was running and stopped by itself; timeout: it never answered;
-   * update: an update or restart failed before the running app was stopped, so that one still serves.
+   * update: an update or restart failed before the running app was stopped, so that one still serves;
+   * held: the data-impact guard (server/data-impact/) holds the target, so it was never applied (what served serves on).
    */
-  kind: 'build' | 'crash' | 'timeout' | 'update';
+  kind: 'build' | 'crash' | 'timeout' | 'update' | 'held';
   at: number;
   why: string;
   /** The log's last lines when it happened. */

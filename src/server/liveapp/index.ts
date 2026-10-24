@@ -38,8 +38,9 @@ import { classifyUpdate } from './classify.js';
 import { forgetPrefs, readPrefs, writePrefs } from './prefs.js';
 import type { LiveAppPrefs } from '../../shared/protocol.js';
 import { availableMemory } from '../machine.js';
+import { dataImpactOf } from '../data-impact/index.js';
 
-type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
+type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor' | 'accounts' | 'meOf'>>;
 
 /** <live checkout>/.mxcli/runtime.log, in mxcli's working folder (the .mpr's). */
 export function runtimeLogOf(projectDir: string | undefined, checkout: string): string {
@@ -159,6 +160,8 @@ export class LiveApps {
         freeMemory: availableMemory,
         // What an update changes, read by the model's unit reader (model/units.ts) from the live checkout's git; its reader let go after.
         classify: (dir, from, to, mpr) => classifyUpdate(dir, from, to, mpr, { units: this.units }).finally(() => this.units.blobs(dir).close()),
+        // Nothing that may drop or convert stored data is applied without a data-impact approval (data-impact/guard.ts).
+        ...(this.ctx.accounts && this.ctx.meOf ? { guard: (dir: string, from: string, to: string) => dataImpactOf(this.ctx as Parameters<typeof dataImpactOf>[0]).guard.check({ floorId: floor.id, dir, base: from, target: to, units: this.units }).finally(() => this.units.blobs(dir).close()) } : {}),
       });
       this.apps.set(floor.id, app);
     }
