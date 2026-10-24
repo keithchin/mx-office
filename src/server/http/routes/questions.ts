@@ -8,12 +8,13 @@ import { refuseStale } from '../../phone-access/reauth.js';
 import { qFloor, questionsOf } from '../../questions/index.js';
 import { csvAnswers, toCsv, toHtml, type ExportWhich } from '../../questions/export.js';
 import { ANSWER_KINDS, parsePastedAnswers, type AnswerKind } from '../../../shared/questions.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import type { Session } from '../../auth.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 async function jsonBody(req: http.IncomingMessage, limit = 16 * 1024): Promise<Record<string, unknown> | undefined> {
   try {

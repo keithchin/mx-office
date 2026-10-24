@@ -18,7 +18,7 @@ badge: Proposed
 > | The artifact beside the decision | **Done** in its minimal form (release 68) |
 > | Review safeguards | **Partly built**: proposals 1 to 3 done (release 71); 4 and 5 proposed |
 > | Readiness and walkthroughs | **Partly built**: no Ready without journeys (release 67); served vs target and *last ran* on the Live app (release 71); the rest proposed |
-> | One Inbox and one count | **Partly built**: one count for the tray, Home, Teams and phone pushes, including answers whose delivery is unknown (release 67); the rest proposed |
+> | One Inbox and one count | **Partly built**: one count for the tray, Home, Teams and phone pushes, including answers whose delivery is unknown (release 67); one count for the viewer across a project page's surfaces (Unreleased); the rest proposed |
 > | Navigation, structured agent reports, design configuration, team setup, terminology | **Proposed**, not built |
 >
 > Only items marked **Proposed** describe behaviour the office doesn't have. The current behaviour each proposal would change is described on the other pages of this section and linked from each item.
@@ -53,7 +53,7 @@ Every existing `?tab=` id and alias keeps working, and links from Teams cards, p
 
 ## One Inbox and one count
 
-**Partly built since:** release 67 gave the tray, Home, Teams and phone pushes one count (`src/shared/needs-actionable.ts`), with an answer whose delivery the office couldn't confirm counted as *Needs intervention*. The rest below is still proposed.
+**Partly built since:** release 67 gave the tray, Home, Teams and phone pushes one count (`src/shared/needs-actionable.ts`), with an answer whose delivery the office couldn't confirm counted as *Needs intervention*. Unreleased: every surface on a project's page shows one count for the viewer (`src/shared/needs-count.ts`), a member's apart from what waits on the Project Manager. The rest below is still proposed.
 
 **Today (as assessed at release 66):** one aggregator (`collectDecisions` in `src/shared/needsyou.ts`) fed five different count rules: the project strip, the tray / Home / Teams *red items*, web push, the phone badge and the phone's Status tab. Some items that need a person (an answer whose delivery is unknown, a record that differs from your decision) appear only on the Overview's card and are counted nowhere; severity-1 incidents never reach the tray or Teams, while some informational items do. See [Needs you](../using-the-office/needs-you.md).
 

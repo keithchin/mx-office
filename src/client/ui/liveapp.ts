@@ -11,6 +11,7 @@
 import type { Net } from '../net';
 import type { LiveAppState, ServerMsg } from '../../shared/protocol';
 import { builtLine, commitLine, liveStatus, revisionLine, stamp } from '../../shared/liveapp/status';
+import { unknownLine, type UnknownReason } from '../../shared/business-status';
 import { store } from '../state';
 import { h, timeAgo } from './dom';
 import { readinessCard } from './liveapp/readiness';
@@ -47,11 +48,11 @@ export const appUrl = (s: LiveAppState) => liveUrl(s, location.hostname);
  * business status (shared/business-status.ts, ui/business-status/feed.ts: the same words as Home, the
  * progress bar and the phone), and what serves against what it's updating to.
  */
-export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; business?: { label: string; line: string }; revision?: string } | undefined {
+export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; business?: { label: string; line: string; unknown?: UnknownReason[] }; revision?: string } | undefined {
   if (!s) return undefined;
   const revision = revisionLine(s);
   const b = businessNow(s.floor)?.project;
-  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(b ? { business: { label: b.label, line: b.line } } : {}), ...(revision ? { revision } : {}) };
+  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(b ? { business: { label: b.label, line: b.line, ...(b.unknown?.length ? { unknown: b.unknown } : {}) } } : {}), ...(revision ? { revision } : {}) };
 }
 
 /** What a change of the live app's state asks the business status again for: what it runs and what that has of the plan. */
@@ -90,7 +91,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const biz = s ? businessNow(s.floor)?.project : undefined;
     const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : s.failure?.kind === 'held' ? ' · update held' : ''}${biz ? ` · ${biz.label}` : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
     chip.textContent = `🌐 Live app: ${what}`;
-    chip.title = [biz?.line, s?.readiness?.headline].filter(Boolean).join('\n') || "The project's app, running from main: open the 🌐 Live app tab";
+    chip.title = [biz?.line, biz ? unknownLine(biz) : '', s?.readiness?.headline].filter(Boolean).join('\n') || "The project's app, running from main: open the 🌐 Live app tab";
   }
 
   function draw() {

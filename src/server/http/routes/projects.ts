@@ -8,7 +8,8 @@ import type http from 'node:http';
 import { projectDeletesOf } from '../../project-delete/office.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import type { Ctx } from '../../office/context.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { whoOf } from './notify-teams.js';
 
@@ -20,7 +21,7 @@ export function projectPath(p: string): { floor: string; what: string } | undefi
   return m ? { floor: m[1], what: m[2] } : undefined;
 }
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 export const projectRoutes = {
   /** Every /api/projects/<floor>/… route. */

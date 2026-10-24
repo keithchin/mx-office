@@ -63,6 +63,8 @@ html body.lite.aw-on .lite-main { margin: 0 var(--lp-space, 0px) 0 0 !important;
 .aw .aw-canvas { display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
 .aw .aw-runline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 .aw .aw-runline .aw-hint { flex-basis: 100%; margin: 0; }
+.aw .aw-runline .aw-offline.bad { color: var(--bad-ink); }
+.aw .aw-tab.aw-tab-bad { color: var(--bad-ink); }
 .aw .aw-rev { font: 13px var(--mono, monospace); }
 .aw .aw-frame { flex: 1; display: flex; flex-direction: column; min-height: 520px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card); }
 .aw .aw-frame[hidden], .aw .aw-canvas-empty[hidden], .aw .aw-canvas-brief[hidden] { display: none; }

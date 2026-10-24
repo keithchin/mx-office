@@ -105,8 +105,8 @@ test('"N waiting on you" counts every actionable item: escalations, a merged PR 
   assert.equal(waitingCount(items), 5);
   assert.ok(items.some((i) => i.kind === 'floor'), 'the other floor is listed, but not counted here');
   // The panel's strip and the Overview's tab count are the same number.
-  assert.match(read('src/client/ui/needsyou/feed.ts'), /export const waitingCount = \(items: readonly NeedItem\[\]\): number => hereCount\(items\);/);
-  assert.match(read('src/client/ui/lead-panel/panel.ts'), /waitingCount\(s\.items\)/);
+  assert.match(read('src/client/ui/needsyou/feed.ts'), /export const waitingCount = \(items: readonly NeedItem\[\], admin = true\): number => needsCount\(items, \{ admin \}\)\.forYou;/);
+  assert.match(read('src/client/ui/lead-panel/panel.ts'), /countOf\(s, /);
 });
 
 /** A storage stand-in, and one that throws (a private window that blocks it). */

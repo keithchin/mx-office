@@ -8,6 +8,7 @@
 
 import { h, timeAgo } from '../dom';
 import { liveStatus } from '../../../shared/liveapp/status';
+import { previewOff } from '../../../shared/liveapp/not-running';
 import type { WorkspaceStage } from '../../../shared/app-workspace/words';
 import { liveViewer, type LiveViewer } from '../liveapp/viewer';
 import type { WorkspaceData } from './data';
@@ -75,7 +76,13 @@ export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
       frameBox.hidden = true;
       frameBox.replaceChildren();
       empty.hidden = false;
-      line.replaceChildren(h('span', {}, h('b', {}, 'No version running')));
+      // Why, in one line: a failed build names its commit and reason; stopped and never started say so (shared/liveapp/not-running.ts).
+      const off = previewOff(s);
+      const failed = !!off && (off.kind === 'failed' || off.kind === 'crashed' || off.kind === 'timeout');
+      line.replaceChildren(
+        h('span.aw-offline', { class: failed ? 'bad' : '', 'data-off': off?.kind ?? '' }, h('b', {}, 'No version running'), off ? ` · ${off.line}` : ''),
+        failed ? h('button.aw-link', { type: 'button', onclick: () => deps.open('live') }, 'Open the Live app page') : '',
+      );
       if (!s) {
         empty.replaceChildren(h('p.aw-muted', {}, 'Checking whether the app is running…'));
       } else {

@@ -30,6 +30,7 @@ import { workspaceStage, type WorkspaceStage } from '../../../shared/app-workspa
 import { pageSource, type WorkspaceData, type WorkspaceSource } from './data';
 import { workspaceCanvas } from './canvas';
 import { validationPart } from './validation';
+import { previewOff } from '../../../shared/liveapp/not-running';
 import { createDock, type Dock } from './dock';
 import type { DevContext } from './dock/logic';
 import './app-workspace.css';
@@ -128,8 +129,11 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
     crumb.textContent = d.project ? `${d.project} · ${DEVELOPER_VIEW}` : DEVELOPER_VIEW;
     for (const t of [modelTab, liveTab]) t.setAttribute('aria-selected', String(t.dataset.view === view));
     liveDot.className = `aw-livedot ${d.appUrl ? 'on' : ''}`;
-    liveTab.title = d.appUrl ? 'The running app' : 'The app isn’t running: the Model preview works without it';
-    liveTab.firstChild!.textContent = d.appUrl ? 'Live preview' : 'Live preview · not running';
+    // Why it isn't showing the app, when it isn't: a failed build with its commit and reason, never a bare "not running" (shared/liveapp/not-running.ts).
+    const off = d.appUrl ? undefined : previewOff(d.live);
+    liveTab.title = off ? `${off.line} The Model preview works without it.` : 'The running app';
+    liveTab.firstChild!.textContent = off ? `Live preview · ${off.short}` : 'Live preview';
+    liveTab.classList.toggle('aw-tab-bad', !!off && (off.kind === 'failed' || off.kind === 'crashed' || off.kind === 'timeout'));
     xslot.hidden = !explorer;
     body.classList.toggle('ax-has', !xslot.hidden);
     loadExplorer();

@@ -5,11 +5,12 @@
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
 import { aheadOf, askReview } from '../../branch-ahead/index.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 const BRANCH_OK = /^[\w./-]{1,200}$/;
 
 export const branchAheadRoutes = {

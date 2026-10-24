@@ -27,7 +27,8 @@ import { h } from '../dom';
 import { icon, type PortalIcon } from './icons';
 import { portalSlot } from './slot';
 import {
-  groupBadge,
+  foldedBadge,
+  NEEDS_TAB,
   groupOpen,
   NAV_BOTTOM,
   navGroups,
@@ -288,7 +289,9 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     for (const g of navGroups()) {
       const els = groupEls.get(g.id)!;
       const closed = !groupOpen(state, g.id, current) || state.rail;
-      const b = closed ? groupBadge(visibleItems(g, admin).map((i) => badges.get(i.id) ?? null)) : null;
+      // Never a sum of overlapping tab counts: the Overview's group shows the one Needs-you count, the others a dot or "!" (nav-logic.ts foldedBadge).
+      const items = visibleItems(g, admin);
+      const b = closed ? foldedBadge(items.filter((i) => i.id !== NEEDS_TAB).map((i) => badges.get(i.id) ?? null), items.some((i) => i.id === NEEDS_TAB) ? (badges.get(NEEDS_TAB) ?? null) : undefined) : null;
       paintBadge(els.badge, b);
       // Folded, the head is only an icon: its name (and its badge) are said by its label.
       if (state.rail) els.head.setAttribute('aria-label', b ? `${g.label}, ${b.kind === 'count' ? b.text : 'new'}` : g.label);

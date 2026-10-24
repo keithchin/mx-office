@@ -78,6 +78,7 @@ import { walkthroughRoutes } from './walkthroughs.js';
 import { securityRoutes } from './security.js';
 import { pushCheckRoutes } from './push-check.js';
 import { dataImpactRoutes } from './data-impact.js';
+import { csrfRoutes } from './csrf.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -100,6 +101,7 @@ export const routes: readonly Route[] = [
   mobileRoutes.icons,
   // Signed in.
   authRoutes.whoami,
+  csrfRoutes.token,
   agentRoutes.models,
   fileRoutes.whiteboardFile,
   fileRoutes.termDrop,

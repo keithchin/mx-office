@@ -18,7 +18,8 @@ import { store } from '../../state';
 import { h, timeAgo, toast } from '../dom';
 import { answer as answerEscalation } from '../pm/escalations';
 import { setRoster } from '../teams/world';
-import { onNeeds, waitingCount, type NeedsSnapshot } from '../needsyou/feed';
+import { onNeeds, countOf, type NeedsSnapshot } from '../needsyou/feed';
+import { countWords } from '../../../shared/needs-count';
 import type { NeedItem } from '../needsyou/logic';
 import { leadOf } from '../lead-panel/logic';
 import { askLead } from '../lead-panel/hooks';
@@ -201,13 +202,19 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
     const lead = leadOf(r);
     const leadName = lead && lead.kind === 'lead' ? lead.name : undefined;
     const items = s.items.filter((n) => !(n.target.to === 'escalation' && answered.has(n.target.id)));
-    const n = waitingCount(items);
+    // The one count the strip worked out (shared/needs-count.ts): the same number as the bell, the navigation and the lead panel.
+    const c = countOf(s, !!r?.admin || !!store.me.admin);
+    // An escalation just answered here leaves the count now; the strip says the same once the team's change comes in.
+    const gone = s.items.filter((it) => it.target.to === 'escalation' && answered.has(it.target.id) && it.level !== 'info').length;
+    const n = Math.max(0, c.forYou - gone);
     const cardOf = new Map((s.cards ?? []).map((c) => [c.need.key, c]));
     const shownCards = items.map((it) => cardOf.get(it.key)).filter((c): c is DecisionCard => !!c);
-    counts.textContent = s.cards ? countsWords(cardCounts(shownCards)) : '';
-    counts.hidden = !s.cards || !items.length;
+    // A member isn't counted cards only the Project Manager can act on: those are said apart.
+    counts.textContent = !c.admin ? countWords(c) : s.cards ? countsWords(cardCounts(shownCards)) : '';
+    counts.hidden = !items.length || (c.admin && !s.cards);
     drawHidden(s.go);
-    count.textContent = n ? `${n} now` : 'All clear';
+    count.textContent = n ? `${n} for you` : c.forPm ? 'Nothing for you' : 'All clear';
+    count.title = countWords(c);
     count.className = `pt-badge ${n ? 'pt-warn' : 'pt-ok'}`;
     const keep = new Map<string, { sig: string; el: HTMLElement }>();
     const nodes: HTMLElement[] = [];

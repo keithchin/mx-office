@@ -4,6 +4,7 @@
 // it. Pure: the tests import it.
 
 import type { NeedItem, NeedKind, NeedTarget } from '../needsyou/logic';
+import { needsCount, type NeedsCount } from '../../../shared/needs-count';
 
 export type NoteVoice = 'jeff' | 'office';
 
@@ -63,12 +64,17 @@ export function noteOf(n: NeedItem, admin: boolean): PhoneNote {
 
 export const notesOf = (items: readonly NeedItem[], admin: boolean) => items.map((n) => noteOf(n, admin));
 
-/** The red count: what needs the person on this floor, and everyone waiting on other floors. */
-export function redCount(items: readonly NeedItem[], floors: readonly { id: string; waiting: number; cloning?: boolean }[], here: string | undefined): number {
-  const mine = items.filter((n) => n.kind !== 'floor').length;
-  const elsewhere = floors.filter((f) => f.id !== here && !f.cloning && f.waiting > 0).reduce((s, f) => s + f.waiting, 0);
-  return mine + elsewhere;
+/**
+ * The red count: the one Needs-you count (shared/needs-count.ts) for this project and this viewer, the same
+ * number as the bell, the navigation and the Overview. Other projects' waiting agents are never added to it:
+ * the phone shows them as a dot and in words (phoneCount).
+ */
+export function redCount(items: readonly NeedItem[], floors: readonly { id: string; waiting: number; cloning?: boolean }[], here: string | undefined, admin = true): number {
+  return phoneCount(items, floors, here, admin).forYou;
 }
+
+/** The whole count, for the badge's words and its dot for other projects. */
+export const phoneCount = (items: readonly NeedItem[], floors: readonly { id: string; waiting: number; cloning?: boolean }[], here: string | undefined, admin = true): NeedsCount => needsCount(items, { admin, floor: here, floors });
 
 /**
  * The kinds the phone sends a desktop alert for itself: the others already have theirs (a worker

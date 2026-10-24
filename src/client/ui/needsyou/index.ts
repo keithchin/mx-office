@@ -11,7 +11,8 @@ import type { SetupView } from '../../../shared/wizard';
 import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
-import { collectDecisions, hereCount, type BudgetNeed, type NeedItem, type NeedKind, type NeedTarget } from './logic';
+import { needsCount, countWords } from '../../../shared/needs-count';
+import { collectDecisions, type BudgetNeed, type NeedItem, type NeedKind, type NeedTarget } from './logic';
 import { hasPhone, openPhone } from '../phone/api';
 import { batched } from '../batch';
 import { publishNeeds } from './feed';
@@ -145,17 +146,19 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   function draw() {
     // The same input every surface builds (./input.ts), as decision cards and their compact rows (shared/decisions/).
     const { cards, needs: items } = collectDecisions(pageNeedsInput(floor, roster, { setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), budget: deps.budget?.() }));
-    const n = hereCount(items);
+    // The one count every surface shows (shared/needs-count.ts): yours on this project, the Project Manager's apart, other projects apart.
+    const count = needsCount(items, { admin: !!store.me.admin, floor, floors: store.floors });
+    const n = count.forYou;
     // The time ago on each item is part of what it shows: the half-minute timer moves it on.
-    const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? '', i.sources ?? 0]), cardsKey(cards)]);
+    const key = JSON.stringify([count, all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? '', i.sources ?? 0]), cardsKey(cards)]);
     // The Overview's Needs you card and the team-lead panel's count hear it too (./feed.ts).
     if (key === drawnKey && roster === sentRoster) return;
     sentRoster = roster;
-    publishNeeds({ floor, items, cards, roster, go: deps.go });
+    publishNeeds({ floor, items, cards, roster, go: deps.go, count });
     if (key === drawnKey) return;
     drawnKey = key;
     badge.textContent = n ? String(n) : '';
-    badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this project need${n === 1 ? 's' : ''} you` : '';
+    badge.title = n || count.forPm ? countWords(count) : '';
     root.classList.toggle('ny-calm', !items.length);
     if (!items.length) return void root.replaceChildren(h('p.ny-empty', { role: 'status' }, '✅ Nothing needs you right now.'));
     // With the team phone on the page, one row of counts that opens its Needs you section (the full list is there).

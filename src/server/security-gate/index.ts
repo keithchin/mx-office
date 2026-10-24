@@ -195,6 +195,23 @@ export function acceptanceRefusal(ctx: Ctx, floor: Floor, commit: string): Promi
   return securityOf(ctx).refusal(floor, 'release', what, commit).catch(couldntCheck(what));
 }
 
+/**
+ * What acceptanceRefusal would answer at `commit`, worked out the same way but without starting an mx check
+ * (Accept's preflight, acceptance/preflight.ts): the refusal's words when the policy enforces an unmet gate, the
+ * gate as judged, and a note when the policy is advisory.
+ */
+export async function acceptancePreview(ctx: Ctx, floor: Floor, commit: string): Promise<{ refusal?: string; gate?: GateResult; advisory?: string }> {
+  const what = 'Accepting this delivery';
+  try {
+    const g = await securityOf(ctx).gate(floor, 'release', commit);
+    if (g.meets) return { gate: g };
+    if (!g.enforced) return { gate: g, advisory: `The security policy is advisory: not met at ${commit.slice(0, 7)} (${g.missing.join('; ')}), and Accept goes ahead anyway.` };
+    return { gate: g, refusal: gateRefusal(g, what) };
+  } catch (err) {
+    return { refusal: couldntCheck(what)(err as Error) };
+  }
+}
+
 /** Stages at which the build has started: the Needs-you item applies from here. */
 const BUILDING = new Set(['5', '6', '7', 'all']);
 

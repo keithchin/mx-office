@@ -11,6 +11,7 @@ import path from 'node:path';
 import WebSocket from 'ws';
 import { loadConfig } from '../src/server/config.js';
 import { startServer } from '../src/server/server.js';
+import { REFUSED } from '../src/server/http/origin.js';
 import type { ServerMsg } from '../src/shared/protocol.js';
 
 type Office = Awaited<ReturnType<typeof startServer>>;
@@ -283,17 +284,19 @@ test('answers the signed-in routes', async () => {
   await bad(await get('/api/whiteboard/file?floor=nope', me), 404, 'No such project');
   await bad(await get(`/api/whiteboard/file?floor=${floor}&id=nope`, me), 404, 'No such picture');
   await bad(await get('/api/term/drop', me), 405, 'Method not allowed');
-  await bad(await post('/api/term/drop', '', me), 403, 'Forbidden');
+  // No Origin and no request token: refused before the route (server/http/origin.ts); with the office's Origin, the route's own check.
+  await bad(await post('/api/term/drop', '', me), 403, REFUSED);
+  await bad(await post('/api/term/drop', '', { ...me, origin: 'https://elsewhere.test' }), 403, REFUSED);
   await bad(await get('/api/changes/file', me), 400, 'Bad request');
   await bad(await get(`/api/docs/file?floor=${floor}`, me), 400, 'Bad request');
   await bad(await get(`/api/docs/other?floor=${floor}&path=x`, me), 404, 'Not found');
-  assert.deepEqual(await (await fetch(base + '/api/whoami', { method: 'POST', headers: me })).json(), { ok: true, me: { admin: true } });
+  assert.deepEqual(await (await fetch(base + '/api/whoami', { method: 'POST', headers: { ...me, origin: base } })).json(), { ok: true, me: { admin: true } });
   const page = await get('/nothing-here.txt', me);
   assert.equal(page.status, 404);
   assert.equal(await page.text(), 'Not found');
   // A call no route answers is JSON saying what it was, so the page can show it (Edit in Studio Pro's unregistered sync, 2026-10-16).
   for (const [method, p] of [['PUT', '/api/login'], ['POST', '/api/docs'], ['POST', '/api/search']]) {
-    const missing = await fetch(base + p, { method, headers: me });
+    const missing = await fetch(base + p, { method, headers: { ...me, origin: base } });
     assert.equal(missing.status, 404, `${method} ${p}`);
     assert.ok(((await missing.json()) as { error: string }).error.startsWith(`The office has no ${method} ${p}:`), `${method} ${p}`);
   }

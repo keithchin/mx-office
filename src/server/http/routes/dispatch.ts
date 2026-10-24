@@ -8,12 +8,13 @@ import type { Ctx } from '../../office/context.js';
 import { DISPATCH_PERSON_ACTIONS, isDispatchPersonAction, type DispatchView } from '../../../shared/dispatch.js';
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
 import { personAct } from '../../roster/dispatch-person.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 /** The floor's records a person must settle (outcome unknown), the answer's text only for admins. */
 export async function dispatchView(ctx: Ctx, floorId: string, admin: boolean): Promise<DispatchView> {

@@ -27,7 +27,9 @@ import { pendingOn, sendMessage, setPhoneOpener, type PendingReply, type PhoneOp
 import { openChatWindow } from './chatwin';
 import { composer, type ComposeTarget } from './composer';
 import { phoneFrame, wasOpen } from './frame';
-import { notesOf, redCount, type NoteAction, type PhoneNote } from './notes';
+import { notesOf, phoneCount, type NoteAction, type PhoneNote } from './notes';
+import { countWords, type NeedsCount } from '../../../shared/needs-count';
+import { currentNeeds, onNeeds } from '../needsyou/feed';
 import { readState } from './reads';
 import type { RowActions } from './rows';
 import { allLog, channelLog, dmLog, filterChips, homeList, needsLog, STREAM_CAP, threadLog, type PhoneAgentView, type PhoneModel, type Screen } from './screens';
@@ -125,6 +127,17 @@ export function installPhone(deps: PhoneDeps): Phone {
     return ownSetup.view;
   }
 
+  /** The count the badge last showed, so a snapshot that says the same paints nothing. */
+  let shownCount = '';
+  const countKey = (c: NeedsCount) => `${c.forYou}|${c.forPm}|${c.elsewhere}|${c.elsewhereProjects}`;
+
+  /** The one count: the Needs-you strip's when it has one for this project (so the bell and the Overview agree at the same moment), else worked out the same way. */
+  function countNow(): NeedsCount {
+    const s = currentNeeds();
+    const f = store.floor ?? undefined;
+    return s?.count && s.floor === f ? s.count : phoneCount(items, store.floors, f, !!store.me.admin);
+  }
+
   function collect() {
     const extra = deps.needs?.() ?? { setup: setupNow() };
     const studio = store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined;
@@ -147,7 +160,7 @@ export function installPhone(deps: PhoneDeps): Phone {
       floors: store.floors,
       agents: agents(),
       notes: notesOf(items, admin()),
-      red: redCount(items, store.floors, store.floor ?? undefined),
+      red: countNow().forYou,
       pending,
       escalations: new Map((r?.floor === store.floor ? r.escalations : []).map((e) => [e.id, e])),
       feed: (f) => {
@@ -211,8 +224,11 @@ export function installPhone(deps: PhoneDeps): Phone {
   function paint() {
     collect();
     const m = model();
-    const b = badgeOf(m.red, store.floors.reduce((n, f) => n + unreadFloor(f.id), 0) + m.agents.reduce((n, a) => n + unreadDm(a.workerId), 0));
-    frame.setBadge(b, b.kind === 'count' ? `${b.n} thing${b.n === 1 ? '' : 's'} need${b.n === 1 ? 's' : ''} you` : b.kind === 'dot' ? 'unread messages' : '');
+    // The one count (shared/needs-count.ts): this project's for you as the number; other projects' waiting agents only as a dot and in words.
+    const c = countNow();
+    shownCount = countKey(c);
+    const b = badgeOf(m.red, store.floors.reduce((n, f) => n + unreadFloor(f.id), 0) + m.agents.reduce((n, a) => n + unreadDm(a.workerId), 0) + c.elsewhere);
+    frame.setBadge(b, b.kind === 'count' ? countWords(c) : b.kind === 'dot' ? (c.elsewhere ? countWords(c) : 'unread messages') : '');
     if (!frame.isOpen()) return;
     const s = shown();
     frame.body.classList.toggle('tp-at-home', screen.s === 'home');
@@ -401,6 +417,10 @@ export function installPhone(deps: PhoneDeps): Phone {
   // ---- Keeping up ----------------------------------------------------------------------------------------
   for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, draw);
   onNeedsFeeds(draw); // incidents, stuck items, surfaced asks, questions, the decision cards' Separate choices (ui/needsyou/input.ts)
+  // The strip worked out a count the badge doesn't show yet: say it at the same moment (only then: a paint works out every channel).
+  onNeeds((s) => {
+    if (s.count && s.floor === (store.floor ?? undefined) && countKey(s.count) !== shownCount) draw();
+  });
   deps.net.onMessage(needsFeedsMessage);
   let lastFloor = store.floor;
   store.on('floor', () => {

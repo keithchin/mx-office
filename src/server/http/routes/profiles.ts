@@ -9,11 +9,12 @@ import type { Ctx } from '../../office/context.js';
 import { profilesOf } from '../../profiles/index.js';
 import { isMoveId, isProfileId } from '../../../shared/profiles.js';
 import { isRoleId } from '../../../shared/roster/roles.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 async function jsonBody(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {

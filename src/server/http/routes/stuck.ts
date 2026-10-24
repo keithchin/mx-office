@@ -7,12 +7,13 @@ import { refuseStale } from '../../phone-access/reauth.js';
 import { stuckFloor, stuckOf } from '../../stuck/index.js';
 import { setStuckSettings, stuckSettings } from '../../stuck/settings.js';
 import type { StuckAction } from '../../../shared/stuck.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
 const ACTIONS: readonly StuckAction[] = ['ask-lead', 'answer', 'accept', 'blockers', 'snooze', 'dismiss'];
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 async function jsonBody(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {

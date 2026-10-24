@@ -213,7 +213,7 @@ test('decisions-perms: every new action (Separate, Noted, I\'ve done it, Resolve
     let status = 0;
     let body = '';
     const res = { writeHead: (s: number) => (status = s), end: (b: string) => (body = b) } as never;
-    const req = { headers: { 'content-type': 'application/json' } } as never;
+    const req = { headers: { 'content-type': 'application/json', host: 'office.test', origin: 'http://office.test' } } as never;
     const ctx = { cfg: {}, meOf: () => ({ admin: false }), floors: new Map() } as never;
     await decisionRoutes.act.handle(ctx, { req, res, session: { account: { id: 'u1', name: 'Guest' } } } as never);
     assert.equal(status, 403, action);

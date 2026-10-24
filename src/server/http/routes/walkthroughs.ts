@@ -11,11 +11,12 @@ import type { Ctx } from '../../office/context.js';
 import { audit, human } from '../../audit/index.js';
 import { walkthroughsOf } from '../../walkthroughs/office.js';
 import { isRecId } from '../../../shared/walkthroughs/types.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 const TYPES: Record<string, string> = { mp4: 'video/mp4', webm: 'video/webm', vtt: 'text/vtt; charset=utf-8', png: 'image/png', json: 'application/json; charset=utf-8' };
 
 /** Sends a file, honouring one Range (a video player seeks with them). */

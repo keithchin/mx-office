@@ -14,11 +14,12 @@ import { designOf } from '../../design/index.js';
 import { isDesignId, type DesignOwner, type SelectionScope } from '../../../shared/design/types.js';
 import { cleanInput } from '../../../shared/design/tokens.js';
 import { isPortfolioId } from '../../../shared/portfolios.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 const ONLY_ADMINS = 'Only an admin can change design systems';
 /** The package files a page may read (never a path from the request). */
 const PACKAGE_FILE = /^(summary\.md|tokens\.css|manifest\.json|import\.json|import\/excerpts\.txt|patterns\/[a-z0-9.-]+\.md)$/;

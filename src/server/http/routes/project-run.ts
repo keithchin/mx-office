@@ -9,7 +9,8 @@ import { projectRunsOf } from '../../project-run/adapter.js';
 import { setPacing } from '../../project-run/store.js';
 import { safeRestartOf } from '../../restart/office.js';
 import type { Ctx } from '../../office/context.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { whoOf } from './notify-teams.js';
@@ -18,7 +19,7 @@ import { refuseStale } from '../../phone-access/reauth.js';
 const ACTIONS = new Set<ResumeAction>(['wake', 'rehire', 'send-home', 'skip']);
 
 /** The office's own page, or a script sending JSON with no Origin at all. */
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 async function body(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {

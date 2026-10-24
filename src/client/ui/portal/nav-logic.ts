@@ -228,3 +228,20 @@ export function groupBadge(badges: readonly NavBadge[]): NavBadge {
   }
   return { text: '', kind: 'dot' };
 }
+
+/** The tab whose badge is the one Needs-you count (shared/needs-count.ts): the Overview. */
+export const NEEDS_TAB = 'command';
+
+/**
+ * A closed group's badge without adding up counts that overlap: the tabs' own counts (Approvals, the Board's
+ * cards for a human, agents waiting) are parts of, or beside, what Needs you counts, so a sum of them was a
+ * fourth number that agreed with nothing. The group holding the Overview shows the Overview's count (the one
+ * count); any other group shows a "!" when something broke, else a dot when one of its tabs has something.
+ */
+export function foldedBadge(badges: readonly NavBadge[], needs?: NavBadge | undefined): NavBadge {
+  if (needs !== undefined) return needs ?? foldedBadge(badges);
+  const shown = badges.filter((b): b is NonNullable<NavBadge> => !!b);
+  if (!shown.length) return null;
+  if (shown.some((b) => b.kind === 'bang')) return { text: '!', kind: 'bang' };
+  return { text: '', kind: 'dot' };
+}

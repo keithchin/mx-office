@@ -33,6 +33,7 @@ weight: 40
 | Credentials given to agents | One shared agents GitHub token (`GH_TOKEN`/`GITHUB_TOKEN`), the Mendix token, the Claude sign-in (an API key is never passed without its base URL) | `src/server/connections/env.ts`, `src/server/claude-auth/` |
 | Test offices | GitHub token variables dropped, an empty `GH_CONFIG_DIR`, credential helpers cleared | `src/server/testcreds.ts` |
 | Network | The office's HTTP server listens on 127.0.0.1 by default; the hook server always does. Phone access goes through a tunnel, and forwarded headers are trusted only from loopback | `src/server/config.ts`, `src/server/hooks/server.ts`, `src/server/phone-access/` |
+| Where a change may come from | Every signed-in request that changes something (any method but GET, HEAD and OPTIONS) must come from the office's own page, its `Origin` header naming the office's address, or carry the session's request token in the `X-Mx-Office-Csrf` header (`GET /api/csrf` gives a tool the token for its session). Anything else gets a 403 before any route runs. Until now a JSON request with no `Origin` at all counted as the office's page. Not covered: the public routes (sign-in), and the agents' own calls (the hook server's `/office/*` endpoints with their bearer token, the MCP server, the `office-*` tools), which aren't signed-in routes. The desktop app sends the office's address as its `Origin`. **Protection against mistakes and drive-by requests** (another site's page, a script pointed at the wrong office, a pasted `curl` with a session cookie), **not a boundary against an agent**: an agent runs as the same OS user, can read the browser's cookies or the office's data folder and send a matching `Origin` itself (see [What holds against an agent](#what-holds-against-an-agent)) | `src/server/http/origin.ts`, `src/server/http/router.ts` |
 
 See [Security and tokens](../administration/security-and-tokens.md) for the how-to.
 
@@ -73,6 +74,7 @@ These are documented limitations, not bugs to work around in prompts.
 | Control | Enforced by the office | Hook the office installs | Instruction to agents only | External enforcement |
 |---|---|---|---|---|
 | Loopback bind (HTTP default; hook server always) | ✔ | | | |
+| A signed-in change comes from the office's page (matching `Origin`) or carries the session's request token | ✔ (against mistakes and other sites; an agent of the same user can send either) | | | |
 | Task record on disk before a task id is typed | ✔ | | | |
 | No typing into an agent's prompt; hold for turn end; refuse when paused or over the spend cap | ✔ (bypassed by the idle-lead console prompt) | | | |
 | Durable answer and hand-off, no blind replay | ✔ (your answers and tells; agent-to-agent tells are not durable) | | | |
@@ -96,7 +98,7 @@ These are documented limitations, not bugs to work around in prompts.
 
 ## What holds against an agent
 
-Two kinds of control are easy to mix up. **Protection against mistakes** (the merge gate on the office's own Merge button, the review status, the direct-push check, Playbook rules) catches an agent or a person that gets it wrong while trying to do it right. A **security boundary** holds against an agent that tries to get around it on purpose. Almost everything in the office is the first kind; nothing in the office is the second, because of the table below. Where the docs or the pages say *Enforced*, they mean GitHub enforces it against the agents' token, not that the office does.
+Two kinds of control are easy to mix up. **Protection against mistakes** (the merge gate on the office's own Merge button, the review status, the direct-push check, the `Origin` / request-token rule for signed-in changes, Playbook rules) catches an agent or a person that gets it wrong while trying to do it right. A **security boundary** holds against an agent that tries to get around it on purpose. Almost everything in the office is the first kind; nothing in the office is the second, because of the table below. Where the docs or the pages say *Enforced*, they mean GitHub enforces it against the agents' token, not that the office does.
 
 Agents run as the same operating-system user as the office. So, today, an agent can do anything the office's user can, whatever the office's own pages allow. The `review-enforcement` tests probe this with fake values (`tests/review-enforcement.test.ts`), run as an agent's environment would:
 

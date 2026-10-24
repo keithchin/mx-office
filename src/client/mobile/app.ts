@@ -116,7 +116,8 @@ export function installMobile(deps: MobileDeps): MobileApp {
       floors: store.floors,
       agents: agents(),
       notes: notesOf(items, admin()),
-      red: redCount(items, store.floors, store.floor ?? undefined),
+      // The one count (shared/needs-count.ts), for this viewer: the same number the project page's bell and Overview say.
+      red: redCount(items, store.floors, store.floor ?? undefined, !!store.me.admin),
       pending,
       escalations: new Map((r?.floor === store.floor ? r.escalations : []).map((e) => [e.id, e])),
       feed: (f) => (listen(f), messages(f)),

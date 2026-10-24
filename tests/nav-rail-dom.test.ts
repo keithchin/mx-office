@@ -125,7 +125,8 @@ test('in a browser: the Portal navigation folds to an icon rail and back, rememb
         assert.ok(x.ico && x.words === 'none' && x.popup === 'menu' && x.label?.startsWith(x.title!), `${at}: ${x.id} an icon with its label: ${JSON.stringify(x)}`);
         assert.ok(x.w <= 56, `${at}: ${x.id} inside the rail`);
       }
-      assert.equal(heads.find((x) => x.id === 'pm')!.label, 'Project Management, 3', `${at}: the badge in the label`);
+      // A group never adds up its tabs' counts (they overlap Needs you): the Approvals count folds into a dot; only the Overview's group shows a number (nav-logic.ts foldedBadge).
+      assert.equal(heads.find((x) => x.id === 'pm')!.label, 'Project Management, new', `${at}: the badge in the label`);
       // The group icons are all different (General isn't Home's house).
       const glyphs = await page.$$eval('.pt-nav .pt-group-ico, .pt-nav .pt-item-ico', (els) => els.filter((e) => getComputedStyle(e).display !== 'none' && (e as SVGElement).getBoundingClientRect().width > 0).map((e) => e.innerHTML));
       assert.equal(new Set(glyphs).size, glyphs.length, `${at}: no icon twice in the rail`);
@@ -142,7 +143,7 @@ test('in a browser: the Portal navigation folds to an icon rail and back, rememb
         const nav = document.getElementById('pt-nav')!.getBoundingClientRect();
         return { shown: !(e as HTMLElement).hidden && r.width > 0, text: e.textContent, inside: r.left >= nav.left && r.right <= nav.right - 1 };
       });
-      assert.deepEqual(badge, { shown: true, text: '3', inside: true }, `${at}: Project Management's 3 on its icon`);
+      assert.deepEqual(badge, { shown: true, text: '', inside: true }, `${at}: Project Management's dot on its icon (a group's counts are never added up)`);
       assert.equal(await page.$eval('.pt-group-h[data-group="general"] .pt-nbadge', (e) => !(e as HTMLElement).hidden && e.classList.contains('dot')), true, `${at}: General's dot`);
 
       // The page you're on: its group highlighted.

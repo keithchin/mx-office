@@ -129,7 +129,7 @@ test('perms: every portfolio change and card button is refused on the server unl
     let status = 0;
     let out = '';
     const res = { writeHead: (s: number) => (status = s), end: (b: string) => (out = b) } as never;
-    const req = { headers: { 'content-type': 'application/json' }, body } as never;
+    const req = { headers: { 'content-type': 'application/json', host: 'office.test', origin: 'http://office.test' }, body } as never;
     const ctx = { cfg: {}, meOf: () => ({ admin: false }), floors: new Map() } as never;
     await route.handle(ctx, { req, res, session: { account: { id: 'u1', name: 'Guest' } } } as never);
     assert.equal(status, 403);
