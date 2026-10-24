@@ -35,7 +35,7 @@ const running = { floor: 'f1', status: 'running', phase: 'running', log: [], ava
 /** A change as GET /api/dev-changes gives it, with its four facts worked out the way the server does. */
 const change = (o: Record<string, unknown>) => {
   const c = change0(o) as Record<string, any>;
-  c.facts = changeFour({ state: c.state, words: c.words, tone: CHANGE_TONE[c.state as keyof typeof CHANGE_TONE], ...(c.revision ? { revision: c.revision, ...(c.state === 'implemented' ? { merged: c.revision } : {}) } : {}), ...(o.preview ? { preview: o.preview as { running: boolean; served?: string } } : {}), ...(o.inServed !== undefined ? { inServed: o.inServed as boolean } : {}), ...(c.reviews ? { reviews: c.reviews } : {}) });
+  c.facts = changeFour({ state: c.state, words: c.words, tone: CHANGE_TONE[c.state as keyof typeof CHANGE_TONE], ...(c.revision ? { revision: c.revision, ...(c.state === 'implemented' ? { merged: c.revision } : {}) } : {}), ...(o.preview ? { preview: o.preview as { running: boolean; served?: string } } : {}), ...(o.inServed !== undefined ? { inServed: o.inServed as boolean } : {}), ...(o.held ? { held: o.held as { env: string; reason: string; findings: number } } : {}), ...(c.reviews ? { reviews: c.reviews } : {}) });
   return c;
 };
 const change0 = (o: Record<string, unknown>) => ({ text: 'Show the host’s name next to each visitor.\n\nAbout: Today’s visitors (page VisitorDesk.Visitor_Overview)', by: 'Alex Lee', owner: 'u1', at: now - 900_000, source: { sha: A, kind: 'viewed' }, ref: { docType: 'page', docQn: 'VisitorDesk.Visitor_Overview', label: 'Today’s visitors' }, candidates: [], branch: 'dev/DC-5', mayCancel: false, via: 'chat', ...o });
@@ -357,6 +357,22 @@ test('no lead at work: the chat still takes requests (they queue); a phone: the 
     assert.ok(sheet.top > 80 && Math.abs(sheet.bottom - 844) < 2, `a bottom sheet (${sheet.top}–${sheet.bottom})`);
     assert.equal(await page.isVisible('#lead-panel .lp-ctx-chip'), true);
     await shot(page, '07-phone-chat.png');
+    // Increment B's receipts on a phone: the four facts apart (a hold among them), the dependency note, a commit
+    // possibly related with Confirm / Dismiss, a cancelled change's late PR "not counted"; nothing scrolls sideways.
+    const rich = change({ id: 'DC-7', queue: 'active', state: 'candidate', words: 'Working · candidate', revision: M, detail: 'Candidate @c0ffee1 on dev/DC-7. Not merged: the live preview runs main, not this.', mayCancel: true, at: now - 60_000, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-7', seenAt: now - 30_000 }], held: { env: 'candidate:DC-7', reason: 'Held: possible data impact', findings: 2 }, depends: [{ id: 'DC-6', docs: ['page:VisitorDesk.Visitor_Overview'] }], relatedView: [{ sha: '1'.repeat(40), subject: 'Tidy the overview page', docs: ['page:VisitorDesk.Visitor_Overview'], at: now, mayDecide: true }] });
+    const gone = change({ id: 'DC-6', queue: 'cancelled', state: 'cancelled', words: 'Cancelled', detail: 'Cancelled by Alex Lee while the team had it: its worker was stopped mid-turn (its session kept) before the next change could start.', at: now - 120_000, late: 'After cancellation: PR #12 merged: not counted. It never settles this change or moves the queue.' });
+    await set(page, { ...DATA, dev: DEV([rich, gone]) });
+    await page.waitForSelector('#lead-panel .dk-asked[data-change="DC-7"] [data-fact="preview"]');
+    const r7 = (await text(page, '#lead-panel .dk-asked[data-change="DC-7"] .dk-receipt')) ?? '';
+    assert.match(r7, /→ DC-7 · Working · candidate @c0ffee1[\s\S]*Work[\s\S]*Checks[\s\S]*Incomplete @c0ffee1: no CI[\s\S]*Preview[\s\S]*Held: possible data impact · Findings \(2\)[\s\S]*Your review[\s\S]*No review yet/);
+    assert.match(r7, /Depends on DC-6 \(not yet tried\)/);
+    assert.match(r7, /Possibly related: @1111111 “Tidy the overview page”[\s\S]*Confirm[\s\S]*Dismiss/);
+    assert.match(r7, /Cancel \(stops the work\)/);
+    assert.doesNotMatch(r7, /accepted/i);
+    assert.match((await text(page, '#lead-panel .dk-asked[data-change="DC-6"] .dk-receipt')) ?? '', /After cancellation: PR #12 merged: not counted/);
+    const wide = await page.evaluate(() => [document.documentElement.scrollWidth, document.querySelector('#lead-panel')!.scrollWidth - document.querySelector('#lead-panel')!.clientWidth]);
+    assert.ok(wide[0] <= 391 && wide[1] <= 1, `nothing scrolls sideways on a phone (${wide})`);
+    await shot(page, '08-phone-lifecycle.png');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(250);
     assert.equal(await page.evaluate(() => document.body.classList.contains('lp-sheet')), false);

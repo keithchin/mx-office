@@ -100,6 +100,8 @@ test('Project Management’s card is the same feed, hidden while nothing is in f
   assert.equal(el.hidden, false);
   assert.match(el.outerHTML, /Developer changes[\s\S]*1 queued behind it[\s\S]*data-change="DC-1"[\s\S]*data-change="DC-2"/);
   assert.equal(devFeed.get('shop'), answer, 'the Developer view reads the same answer');
+  // Approvals' list shows the same four facts apart.
+  assert.match(el.outerHTML, /data-change="DC-1"[\s\S]*data-fact="execution"[\s\S]*data-fact="verification"[\s\S]*data-fact="preview"[\s\S]*data-fact="review"/);
 });
 
 test('phone width: the strip takes its own line and wraps; rows wrap long words', () => {

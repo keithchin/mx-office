@@ -348,6 +348,23 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.selectOption('.ax-revsel', 'served');
     await page.waitForFunction(() => !document.querySelector('.ax-status')?.textContent);
 
+    // The active Developer change's candidate (dev/DC-3 @C) can be opened, labelled as not merged; a late one never is.
+    const dc = (cands: { sha: string; late?: true }[]) => ({ floor: 'f1', strip: { preview: { status: 'off' } }, current: 'DC-3', changes: [{ id: 'DC-3', queue: 'active', candidates: cands.map((c) => ({ ...c, via: 'branch', branch: 'dev/DC-3', seenAt: now })) }] });
+    await set(page, { ...DATA(A), dev: dc([{ sha: B, late: true }]) });
+    assert.equal(await page.locator('.ax-revsel option[value="candidate"]').count(), 0, 'a late candidate isn’t offered');
+    await set(page, { ...DATA(A), dev: dc([{ sha: B }]) });
+    await page.waitForSelector('.ax-revsel option[value="candidate"]', { state: 'attached' });
+    assert.equal(await page.textContent('.ax-revsel option[value="candidate"]'), 'Candidate of DC-3 (not merged) · 9e1c2d3');
+    const before = (await get<string[]>(page, '__calls')).length;
+    await page.selectOption('.ax-revsel', 'candidate');
+    await page.waitForSelector('[data-id="page:VisitorDesk.Host_Dashboard"]');
+    assert.ok((await get<string[]>(page, '__calls')).slice(before).some((c) => c.startsWith('level 9e')), 'read at the candidate');
+    assert.match((await page.getAttribute('.ax-revsel', 'title')) ?? '', /Reading DC-3’s candidate 9e1c2d3.*not merged, not in the live preview/);
+    assert.equal(await page.isHidden('.ax-stale'), true, 'reading the candidate isn’t "stale"');
+    // The candidate gone (merged or cancelled): back to main.
+    await set(page, { ...DATA(A), dev: dc([]) });
+    await page.waitForFunction(() => (document.querySelector('.ax-revsel') as HTMLSelectElement).value === 'main');
+
     // Width by keyboard, collapse and back, remembered.
     await page.focus('.ax-grip');
     await page.keyboard.press('ArrowRight');
