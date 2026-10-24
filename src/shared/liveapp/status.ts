@@ -109,7 +109,7 @@ export function liveNeeds(live: LiveAppState | null | undefined, floor: string |
   if (!live || live.floor !== floor) return [];
   const out: NeedItem[] = [];
   const f = live.failure;
-  if (live.status === 'failed') {
+  if (live.status === 'failed' && f?.kind !== 'held') {
     if (f?.kind === 'crash') {
       out.push({ key: `live-crash@${f.at}`, kind: 'live', icon: '🌐', text: `The live app stopped by itself (crashed at ${stamp(f.at)}${f.sha ? `, ${live.branch ?? 'main'} @${short(f.sha)}` : ''}): ${f.why}. Restart it on the Live app tab`, since: f.at, level: 'warn', action: 'Live app', target: { to: 'live' } });
     } else out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${live.message ? `: ${live.message}` : ''}${f?.sha ? `. ${revisionLine(live)}` : ''}`, since: f?.at ?? live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });

@@ -48,6 +48,9 @@ export class Assessments {
     try {
       const [a, b] = await Promise.all([this.units.commit(dir, base), this.units.commit(dir, target)]);
       if (!a || !b) return out({ status: 'unknown', findings: [], error: "the model couldn't be read (node:sqlite missing or no unit table)" });
+      // A unit that changed and can't be read could be a domain model: never read it as "gone".
+      const unread = [...b.ix.units.values(), ...a.ix.units.values()].filter((u) => !u.type && (a.ix.units.get(u.id)?.hash !== b.ix.units.get(u.id)?.hash)).length;
+      if (unread) return out({ status: 'unknown', findings: [], error: `the model couldn't be read: ${unread} changed unit${unread === 1 ? '' : 's'} unreadable` });
       if (impactKey(a) === impactKey(b)) return out({ status: 'clear', findings: [] });
       const [x, y] = await Promise.all([snapshotOf(a), snapshotOf(b)]);
       const findings = diffSnapshots(x, y);
