@@ -20,6 +20,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_AGENT`, `AGENT_OFFICE_AGENT_ARGS` | The default agent command (`claude`) and extra arguments. A command named after no provider (a fake, a wrapper) also runs Claude Code workers, whatever its file name |
 | `AGENT_OFFICE_TEST_MODE` | `1`: test mode, no real agent CLI starts (see [Test offices](../administration/test-offices.md#running-a-test-office-safely)) |
 | `AGENT_OFFICE_TEST_ALLOW_GH_TOKEN` | `1`: tests with a fake `gh` only. Lets GitHub and other outside tokens through in test mode (otherwise a test office drops them; see [Test offices](../administration/test-offices.md#running-a-test-office-safely)) |
+| `AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY` | `1`: the only way to run **real agents** in a test office. Passes the Claude variables the office was started with (`ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` and the rest of that set, nothing else) to agents and to the wizard's planner. Every GitHub, Mendix and other token stays withheld exactly as without it. Never use `AGENT_OFFICE_TEST_ALLOW_GH_TOKEN` for this |
 | `AGENT_OFFICE_ALLOW_REAL_AGENTS` | `1`: let real agent CLIs start in test mode anyway (each one opens an incident) |
 | `AGENT_OFFICE_SEED_INCIDENTS` | `0`: skip the one-off import of the 2026-10-06 incidents; `1`: apply it to any office without incidents |
 | `AGENT_OFFICE_BUDGET`, `AGENT_OFFICE_BUDGET_PAUSE` | Office-wide daily budget for Claude Code spend, and stop hiring when it's spent |
