@@ -15,7 +15,7 @@
 // already trusted, and a file that can't be parsed is left alone. Test offices and test folders never
 // touch a real config (isolated()).
 
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { isTestPath } from './testmode.js';
@@ -171,6 +171,26 @@ export function approveApiKey(file: string, key: string): 'approved' | 'already'
     return 'changed';
   });
   return r === 'changed' ? 'approved' : r;
+}
+
+/**
+ * A test office's own Claude config folder (providers/claude.ts, test offices running real agents only): made, its
+ * first-run questions answered (hasCompletedOnboarding), so its workers neither stop at the onboarding screens nor
+ * touch the machine's real config. Only ever a throwaway folder (a test office's or a temporary one).
+ */
+export function seedTestClaudeConfig(dir: string): 'seeded' | 'already' | 'skipped' | 'unreadable' | 'failed' {
+  if (!throwaway(dir)) return 'skipped';
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    return 'failed';
+  }
+  const r = editClaudeConfig(path.join(dir, '.claude.json'), 'answer Claude Code’s first-run questions', (c) => {
+    if (c.hasCompletedOnboarding === true) return 'already';
+    c.hasCompletedOnboarding = true;
+    return 'changed';
+  });
+  return r === 'changed' ? 'seeded' : r;
 }
 
 /** Marks a floor the office manages trusted for the Claude that starts with `env` (the office's own, or an account's). */

@@ -18,7 +18,8 @@ import { studioGuardHook } from '../studio/guard.js';
 import { worktreeGuardHook } from '../worktree-guard.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
-import { approveApiKey, claudeConfigFile, trustFloor } from '../claude-trust.js';
+import { approveApiKey, claudeConfigFile, seedTestClaudeConfig, trustFloor } from '../claude-trust.js';
+import { claudeGatewayAllowed, tokensWithheld } from '../testcreds.js';
 import { officeClaudeKey } from '../claude-auth/source.js';
 import type { ProviderAdapter } from './types.js';
 
@@ -42,6 +43,8 @@ interface ClaudeSetup {
   settings: string;
   /** Its --mcp-config: the office's MCP server. */
   mcp?: string;
+  /** A test office running real agents (testcreds.ts claudeGatewayAllowed): the Claude config folder of its own its workers use. */
+  testClaudeDir?: string;
 }
 
 /** Claude Code's --settings for every worker: each hook event posted to the office, with curl or else the office's own node. */
@@ -263,6 +266,7 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     floorDir: dir,
     settings: writeHookSettings(dataDir),
     mcp: mcpScript ? writeClaudeMcpConfig(dataDir, mcpScript) : undefined,
+    testClaudeDir: tokensWithheld() && claudeGatewayAllowed() ? path.join(dataDir, 'claude-config') : undefined,
   }),
   launch({ h: { info }, args, prompt, resumeSessionId, station, setup }) {
     args.unshift('--settings', setup.settings);
@@ -284,6 +288,16 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     return {
       args,
       finishEnv: (env) => {
+        // A test office with real agents never writes the machine's real Claude config (claude-trust.ts isolated()):
+        // its workers get a config folder of its own under the office's data, first-run questions answered, where the
+        // floor is trusted and the Claude key it passes on (testcreds.ts: its own Claude set, nothing else) approved.
+        if (setup.testClaudeDir) {
+          env.CLAUDE_CONFIG_DIR = setup.testClaudeDir;
+          seedTestClaudeConfig(setup.testClaudeDir);
+          trustFloor(setup.floorDir, env);
+          if (env.ANTHROPIC_API_KEY) approveApiKey(claudeConfigFile(env), env.ANTHROPIC_API_KEY);
+          return;
+        }
         trustFloor(setup.floorDir, env);
         // The key 🔑 Claude for agents passes, approved where this Claude reads it: else its screen ignores it and asks for /login.
         const key = officeClaudeKey(env);
