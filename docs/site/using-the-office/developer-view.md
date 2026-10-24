@@ -26,7 +26,7 @@ At the top: the project's name and the canvas's two views, **Model preview** and
 
 **Model preview** is the default. It shows the page open in the explorer, drawn from the model at the revision the explorer reads ([The Model preview](#the-model-preview)); until you pick one, the app's own first page (one with an address first; Marketplace pages left out). Nothing on this path needs the app to be running.
 
-**Live preview** is the running app, when you ask for it: the tab says **Live preview · not running** while nothing serves. While the [live app](live-app.md) runs, it's shown in the Live app page's viewer, under a line that names the **running version** (*Running version 7d3f0b1 · ready since 10:31*): the version that actually answers, never one it's still updating to. **Open in a new tab ↗** is always there. Some parts of an app only work in a tab of their own, and the office can't tell from here which, so if a page doesn't work in the canvas, open it in a new tab. Under the app are the version's [guided checks](#guided-validation).
+**Live preview** is the running app, when you ask for it: the tab says why while nothing serves: **Live preview · build failed** after a failed build (the line over the canvas and the chat's header then say *Preview not running: the last build failed at 1a2b3c4: CE1613 … (details on the Live app page)*, with a link there), **· stopped by itself** after a crash, **· starting**, or **· not running** when it was simply stopped or never started (*it was stopped by Pat*, *the app hasn't been started yet*). While the [live app](live-app.md) runs, it's shown in the Live app page's viewer, under a line that names the **running version** (*Running version 7d3f0b1 · ready since 10:31*): the version that actually answers, never one it's still updating to. **Open in a new tab ↗** is always there. Some parts of an app only work in a tab of their own, and the office can't tell from here which, so if a page doesn't work in the canvas, open it in a new tab. Under the app are the version's [guided checks](#guided-validation).
 
 When nothing runs there is **no frame** at all, never an empty one: the Live preview says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens Project Management's Live app page where it's started.
 
@@ -117,10 +117,12 @@ On the right of the Developer view is the **team-lead panel** you know from Proj
 
 Above the conversation, in a few lines:
 
-- the project's [business status](progress-and-acceptance.md) chip (*Being built*, *Ready to try*…);
+- the project's [business status](progress-and-acceptance.md) chip (*Being built*, *Ready to try*…); when it says **Status unknown**, a note under it says why and gives one link per reason: *main's head couldn't be read* (Check the folder on Git), *the live app hasn't run since the office started* (Start the app), *milestone X isn't in the build plan* (Open Documents);
 - the [revision strip](#the-revision-strip): **main @M**, **preview @S** (or *preview: not running*) and the change with the team's candidate;
 - **N changes this session** (asked in the last 12 hours, or still on their way), counted by where the work is (*1 queued · 1 with the team · 2 merged · 1 in the preview*), and each change's id with its state;
 - when the project is paused, who paused it and when: *Project paused by Keith (Fri 14:02). Queued changes start when someone resumes it in Project Management (▶ Resume).*
+- when the preview isn't showing the app, why: a failed build with its commit and short reason, a crash, or stopped / never started, never a bare *not running*;
+- above the conversation, the lead panel's **N waiting on you** banner: the same [one count](needs-you.md#the-one-count-on-a-projects-page) as the bell and the Overview (a member sees what waits on the Project Manager apart).
 
 ### Context chips
 

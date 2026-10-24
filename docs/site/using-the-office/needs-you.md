@@ -1,6 +1,6 @@
 ---
 title: Needs you
-description: What Needs you is made of - one list built in one place, its card kinds and levels - where it shows (the Overview, Home, the desktop tray, Teams, web push, the phone) and what each of those counts today, how answers are kept and typed, and what no count includes.
+description: What Needs you is made of - one list built in one place, its card kinds and levels - the one count every surface on a project's page shows (and how a member's differs), what the notification channels post instead, how answers are kept and typed, and what no count includes.
 weight: 3.1
 ---
 
@@ -34,14 +34,26 @@ Each card has a **kind**, which decides its buttons (see [Decision cards](comman
 
 ## Where it shows, and what each place counts
 
-Every place below starts from the same list, but each one **filters and counts it differently today**. So the numbers can disagree: Home can say 0 while a project's Overview says 3.
+### The one count on a project's page
+
+On a project's page every surface says **one number**, worked out once by the Needs-you strip and handed to the others, so they agree at the same moment: the top bar's **bell** and the **team phone**'s badge, the navigation's **Overview** item, the **Overview › Needs you** card (and the classic strip's Command Center tab), the lead panel's **N waiting on you** banner (in Project Management and docked in the Developer view), and the **phone version**'s Needs you tab (which works it out with the same rule). The rule is `needsCount` in `src/shared/needs-count.ts`:
+
+- **For you**: a decision or an action on this project (not an FYI or `info` row, not another project's row) that **you** can act on. The Project Manager (an admin) can act on all of them. A **member** can act only on an agent asking, an agent's finished turn and a lost worktree; the rest (escalations, approvals, the budget, settings, sign-offs…) need an admin on the server.
+- **Waiting on the Project Manager**: for a member, the decisions and actions only an admin can act on. They are never counted as the member's: the Overview card and the lead panel say *N waiting on the Project Manager* instead.
+- **In other projects**: agents asking or finished elsewhere. Said apart (*2 agents waiting in another project*, in the bell's and the phone's label, and as a dot on the phone when nothing waits here) and never added to this project's number.
+
+Where scopes differ the words say so, for example *3 for you in this project · 2 waiting on the Project Manager · 4 agents waiting in 2 other projects*.
+
+Two places count a **part** of it, labelled as such: **Approvals** counts its own items (*1 to approve · part of what needs you*; a member sees *waiting on the Project Manager* and no badge), and a closed navigation group never adds up its tabs' counts: the group holding the Overview shows the Overview's number, the others a dot (or **!** when something broke).
+
+### The notification channels
+
+The places below are not the page's count: they **post or list what is urgent enough to buzz**, for every project, and say what they post.
 
 | Where | What it counts | Code |
 |---|---|---|
-| **Overview › Needs you** (Portal) and the **classic strip** on the Command Center | Every item on this project that isn't `info` and isn't a row for another project | `hereCount`, `src/shared/needsyou.ts` |
 | **Home › Needs you, across everything**, a project's count on Home, the **desktop tray** and its taskbar badge, **Teams** cards | "Red" items only (see below), for every project, minus a ✋ sign-off already given and waiting for the lead to record it | `redItems`, `src/server/notify-teams/gather.ts`, with `isRedNeed`, `src/shared/notify-teams.ts` |
 | **Web push** to a phone | The same red items, but it **keeps** the `info` setup rows (a sign-off waiting to be recorded, the stage-paperwork note) and **drops** an agent asking from a turn the office started itself | `pushItemsOf`, `src/server/webpush/notifier.ts` |
-| **Phone › 🔴 Needs you** badge (and the team phone's badge) | **Every** item on this project, `info` and FYI rows included, plus the agents waiting in their terminal on other projects | `redCount`, `src/client/ui/phone/notes.ts` |
 | **Phone › 📊 Status**, per project | Open escalations that aren't FYI, and nothing else | `src/server/mobile/status.ts` |
 
 **What "red" means.** `isRedNeed` posts these kinds:
@@ -63,7 +75,7 @@ Everything else is never red, so it never reaches Home, the tray, Teams or push:
 
 **The Claude credentials alert** is counted on every project in the browser, but the server posts it with the first project only, so one alert is one post.
 
-**Another project's agents.** The *N waiting on &lt;project&gt;* row and the phone's count for other projects count only agents stopped in their terminal or finished and not looked at. Escalations on those projects aren't in that number.
+**Another project's agents.** The *N waiting on &lt;project&gt;* row and the *agents waiting in other projects* words count only agents stopped in their terminal or finished and not looked at. Escalations on those projects aren't in that number: open the project to see its own count.
 
 ## Not counted anywhere
 
@@ -106,12 +118,13 @@ Approving a risky escalation (merge order, security, data loss, budget overrun) 
 
 ## Known gaps
 
-- **The counts disagree by design today**, as the table above shows. Read a number as "what this surface counts", not as the project's total.
+- **The notification channels count a subset** (what's urgent enough to post), so Home or the tray can say 0 while a project's page says 3. On a project's page the surfaces agree.
+- **Other projects are counted only by their waiting agents**, not by their full Needs you: the office doesn't send every page every project's list.
 - **An unconfirmed answer is invisible** away from the Portal Overview: not on the tray, Teams, push or the phone.
 - **Some urgent items are never pushed or posted**: a sev1 incident or an approval stays on the project's own Needs you.
 - **Some `info` rows are red**: an answered-but-unrecorded client question, and "live app ready".
 
-Proposals to give every surface one count, and to make unconfirmed answers and follow-through visible everywhere, are in [Proposals](../architecture/proposals.md). They are **proposals**, not current behaviour.
+Proposals to make unconfirmed answers and follow-through visible everywhere are in [Proposals](../architecture/proposals.md). They are **proposals**, not current behaviour.
 
 ## See also
 

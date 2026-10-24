@@ -128,7 +128,16 @@ Accepting happens here only: the Developer view has no Accept button. Its guided
 
 ### Accepting a delivery
 
-Open the acceptance record (click Accepted or the line on the right of the bar), then click **✅ Accept v1…**. The dialog shows what will be recorded:
+Open the acceptance record (click Accepted or the line on the right of the bar), then click **✅ Accept v1…**.
+
+**Before you accept**, the record window and the top of the dialog list what would refuse it, worked out by the server with Accept's own checks, without starting anything:
+
+- **Enforced by the office** (Accept is refused while one fails, with the same words): you are the Project Manager (an admin); the version isn't already accepted; the delivery commit can be read; the [security baseline](security-baseline.md) with a clean `mx check` is met at the delivery commit, unless the project's security policy is advisory (then it's listed as informational).
+- **Informational** (recorded with the acceptance, never a refusal): the testing policy at the delivery commit, the guided checks of that version (how many were marked *Works* or *Something's wrong*), and code reviews, which the merge gate checks when each change merges and Accept doesn't check again.
+
+While an enforced check fails, the dialog's **✅ Accept** is disabled and says which, each with a link to where it's fixed (Security, Git). The record window's button says how many things will refuse it. The server's refusal itself is unchanged.
+
+The dialog shows what will be recorded:
 
 - **Scope agreed**: the BRDs on main, the build plan, and the confirmed decisions in the register.
 - **Scope delivered**: the deliverables on main for each stage, and the merged pull requests. The office can't tell which BRDs have been built, so that line says *unknown*.
@@ -137,7 +146,7 @@ Open the acceptance record (click Accepted or the line on the right of the bar),
 - **Documents**: each deliverable on main at the accepted commit.
 - **Spend**: what was spent, by stage, against the plan and the budget. The record freezes it at the moment you confirm (agents still at work may add a little while you read). The budget ledger keeps counting afterwards.
 
-**The security baseline must be met at the delivery commit.** Unless the project's security policy is advisory, ✅ Accept is refused, with what's missing, while the app's security at that commit is below the policy, or there's no clean `mx check` (0 errors) of that commit; when only the check is missing, the office starts one so you can accept once it has passed. See [Security baseline](security-baseline.md). The same rule holds your sign-off of Stage 4 and later.
+**The security baseline must be met at the delivery commit.** Unless the project's security policy is advisory, ✅ Accept is refused, with what's missing, while the app's security at that commit is below the policy, or there's no clean `mx check` (0 errors) of that commit. The list above shows it before you press Accept; run the check on App Insights › Security (**Run mx check**). A request that reaches Accept without a check there still starts one, as before. See [Security baseline](security-baseline.md). The same rule holds your sign-off of Stage 4 and later.
 
 Add the **exceptions** that are still open, each with an owner. The dialog suggests gaps and failures it found (a failing gate, a missing deliverable, failing CI), and **+ owner** adds one to your list. Then tick the confirmation and click **✅ Accept**.
 
@@ -147,7 +156,7 @@ If the delivery revision, the reviewed evidence (documents, gates, CI), the budg
 
 Accepting and reopening happen here only. The Developer view's **Looks right** on a change it asked for is a review of one version, kept with that version, not an acceptance ([Accepting a version](developer-view.md#accepting-a-version)).
 
-API clients must GET `/api/acceptance/draft?floor=<id>` and send its `reviewToken` with `action: "accept"` and `confirm: true` to POST `/api/acceptance`. Missing or stale tokens return HTTP 409 with `stale: true`. Tokens bind the reviewed draft and cycle; they do not replace sign-in, admin permission or same-origin checks.
+API clients must GET `/api/acceptance/draft?floor=<id>` (its `gates` list what will refuse Accept, each with `enforced` and `state`) and send its `reviewToken` with `action: "accept"` and `confirm: true` to POST `/api/acceptance`. Missing or stale tokens return HTTP 409 with `stale: true`. Tokens bind the reviewed draft and cycle; they do not replace sign-in, admin permission or the office's [Origin or request-token rule](../architecture/trust-and-authority.md#credentials-and-permission-boundaries) (a script sends the office's address as its `Origin`, or the `X-Mx-Office-Csrf` header from `GET /api/csrf`).
 
 ### Reading the record
 
