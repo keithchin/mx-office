@@ -15,7 +15,7 @@
 // It never merges, rebases or pushes, and holds back no other work: only Developer-view changes queue here.
 // The seams (deps) are what index.ts wires to the real office, so the tests drive it with fakes.
 
-import { activeOf, cleanRef, cleanSha, KEY_RE, queuedOf, settledWhy, type ChangeFacts, type DevChange, type DevChangeEvent, type ElementRef, type QueueWhy } from '../../shared/dev-changes.js';
+import { activeOf, CHANGE_ID, cleanRef, cleanSha, cleanVia, KEY_RE, queuedOf, settledWhy, type ChangeFacts, type DevChange, type DevChangeEvent, type ElementRef, type QueueWhy } from '../../shared/dev-changes.js';
 import { cleanPage, REQUEST_MAX } from '../../shared/change-requests.js';
 import type { AuditInput } from '../../shared/audit.js';
 import type { ChangeStore } from './store.js';
@@ -47,6 +47,10 @@ export interface ChangeAsk {
   source?: unknown;
   ref?: unknown;
   key?: unknown;
+  /** The change this one corrects (DC-<n> of the same project), when it's a correction. */
+  of?: unknown;
+  /** Which entry point asked (chat, dialog, validation, try). */
+  via?: unknown;
   by: string;
   owner?: string;
 }
@@ -88,6 +92,8 @@ export class DevChanges {
       const page = cleanPage(ask.page);
       const revision = cleanSha(ask.revision);
       const ref = cleanRef(ask.ref);
+      const of = typeof ask.of === 'string' && CHANGE_ID.test(ask.of) && (await this.deps.store.get(floorId, ask.of)) ? ask.of : undefined;
+      const via = cleanVia(ask.via);
       const id = await this.deps.store.nextId(floorId);
       const by = ask.by || 'The Project Manager';
       const change = await this.deps.store.create(floorId, {
@@ -102,14 +108,16 @@ export class DevChanges {
         ...(page && ask.pageMoved === true ? { pageMoved: true } : {}),
         ...(revision ? { revision } : {}),
         ...(ref ? { ref } : {}),
+        ...(of ? { of } : {}),
+        ...(via ? { via } : {}),
       });
       this.deps.record({
         floor: floorId,
         actor: { kind: 'human', name: by, ...(ask.owner ? { id: ask.owner } : {}) },
         action: 'dev-change.queued',
         target: { kind: 'project', id: floorId, label: id },
-        summary: `Asked for a change (${id}) from the Developer view`,
-        details: { id, source: change.source.sha, page, ref: ref ? `${ref.docQn}${ref.widgetName ? `/${ref.widgetName}` : ''}` : undefined, length: text.length },
+        summary: of ? `Asked for a correction of ${of} (${id})` : `Asked for a change (${id}) from the Developer view`,
+        details: { id, source: change.source.sha, page, ...(of ? { of } : {}), ...(via ? { via } : {}), ref: ref ? `${ref.docQn}${ref.widgetName ? `/${ref.widgetName}` : ''}` : undefined, length: text.length },
       });
       return { change, again: false };
     });

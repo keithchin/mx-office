@@ -1,9 +1,9 @@
-// The Developer view (the code's App Workspace, C3, src/client/ui/app-workspace/) in headless Chromium, with
-// the page's own styles and a test source in place of the page's feeds: its five sections, the canvas naming
-// the served revision (and never a blank frame when nothing serves), the side panel's parts wired to the data
-// and the marked slots for change requests, the empty states, the business status chip in the bar (no stage
-// bar), a phone width with no sideways scrolling, and Portal Light, Dark and phone screenshots (AW_SHOTS=<dir>
-// saves them). The Developer | Project Management switch is tests/view-switch-dom.test.ts.
+// The Developer view's shell (src/client/ui/app-workspace/shell.ts) in headless Chromium, with the page's own
+// styles and a test source in place of the page's feeds, and no chat on the page: the canvas's two views (Model
+// preview by default, Live preview naming the served revision, never a blank frame when nothing serves, "not
+// running" in its tab), no section tabs and no status panel (they moved to Project Management), the project's
+// name, a phone width with no sideways scrolling, and Portal Light, Dark and phone screenshots (AW_SHOTS=<dir>).
+// The docked chat is tests/docked-chat-dom.test.ts; the switch is tests/view-switch-dom.test.ts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -96,7 +96,7 @@ async function open(page: Page, h: { js: string; css: string }, theme: string) {
 const set = (page: Page, d: object) => page.evaluate((x) => (window as unknown as { __set(d: unknown): void }).__set(x), d as Record<string, unknown>);
 const show = (page: Page, s: string) => page.evaluate((x) => (window as unknown as { __show(s: string): void }).__show(x), s);
 const text = (page: Page, sel: string) => page.evaluate((s) => document.querySelector(s)?.textContent ?? null, sel);
-test('in a browser: sections, canvas, panel, status chip, no stage bar, empty states and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 120_000 }, async () => {
+test('in a browser: the canvas’s two views, no sections or status panel, empty states and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 120_000 }, async () => {
   const h = await harness();
   const browser = await chromium.launch({ headless: true, executablePath: chrome! });
   try {
@@ -107,102 +107,44 @@ test('in a browser: sections, canvas, panel, status chip, no stage bar, empty st
     await set(page, FULL);
     await show(page, 'app');
 
-    // The five sections, App on.
-    assert.deepEqual(await page.$$eval('.aw-tab', (b) => b.map((x) => x.textContent)), ['App', 'Requirements', 'Decisions', 'Review', 'Release']);
-    assert.equal(await page.getAttribute('.aw-tab[data-section="app"]', 'aria-current'), 'page');
+    // The bar: the project's name and the canvas's two views; no section tabs, no status panel.
     assert.equal(await text(page, '.aw-crumb'), 'Visitor Registration · Developer view');
     assert.equal(await page.getAttribute('.aw', 'aria-label'), 'Developer view');
-    // The canvas: the running app in its frame, the served revision named, Open in a new tab always there.
+    assert.deepEqual(await page.$$eval('.aw-views .aw-tab', (b) => b.map((x) => x.textContent)), ['Model preview', 'Live preview']);
+    assert.equal(await page.getAttribute('.aw-tab[data-view="model"]', 'aria-selected'), 'true', 'the Model preview is the default');
+    assert.equal(await page.locator('.aw-tab[data-section], .aw-side, [data-part]').count(), 0, 'no sections, no status panel');
+    assert.equal(await page.locator('.aw .aw-switch, .aw .aw-seg').count(), 0, 'the view switch is the top bar’s, not the workspace’s');
+    // The live frame isn't on screen until Live preview is picked.
+    assert.equal(await page.isVisible('.aw-frame'), false);
+    if (shots) await page.screenshot({ path: path.join(shots, 'c3-01-model-light.png') });
+
+    // Live preview: the running app in its frame, the served revision named, Open in a new tab always there.
+    await page.click('.aw-tab[data-view="live"]');
+    assert.equal(await page.getAttribute('.aw-tab[data-view="live"]', 'aria-selected'), 'true');
     assert.equal(await page.locator('.aw-frame iframe').count(), 1);
     assert.match((await text(page, '.aw-runline')) ?? '', /Running version 7d3f0b1 · ready since/);
     assert.equal(await page.getAttribute('.aw-open', 'href'), 'http://127.0.0.1:8123/');
-    // The panel: the shared status with its version, in business words; the decision; progress; changes; the slot.
-    assert.equal(await text(page, '[data-part="status"] .aw-pill'), 'Verification incomplete');
-    assert.equal(await text(page, '[data-part="status"] .aw-ver'), 'v1 · running 7d3f0b1');
-    assert.deepEqual(await page.$$eval('[data-part="status"] .aw-small', (p) => p.map((x) => x.textContent)), ['No guided check has run on this version yet', 'Some agreed work isn’t in the running app yet']);
-    assert.equal(await text(page, '[data-part="decision"] .aw-q'), 'Can a host approve a visitor who arrives early?');
-    assert.match((await text(page, '[data-part="progress"]')) ?? '', /6 of 9 steps done · now: Build/);
-    assert.match((await text(page, '[data-part="changes"]')) ?? '', /Host approval screen/);
-    assert.match((await text(page, '[data-part="request"]')) ?? '', /Reading your requests/, 'C4: the current request (none read here)');
-    assert.equal(await text(page, '[data-part="next"] .aw-primary'), 'Answer the decision');
-    assert.match((await text(page, '.aw-foot')) ?? '', /The team works at 2 Guided · change/);
-    // No stage bar: the business status (C2) is a small chip in the bar's first row, beside the project's name.
-    assert.equal(await page.locator('.aw-stages, .aw-stage, .aw-stagenote').count(), 0, 'no stage bar');
-    assert.equal(await text(page, '.aw-bar-top .aw-statuschip'), 'Verification incomplete');
-    assert.match((await page.getAttribute('.aw-statuschip', 'class')) ?? '', /\bbusy\b/);
-    const rows = await page.evaluate(() => ({ crumb: document.querySelector('.aw-crumb')!.getBoundingClientRect(), chip: document.querySelector('.aw-statuschip')!.getBoundingClientRect() }));
-    assert.ok(Math.abs(rows.crumb.top + rows.crumb.height / 2 - (rows.chip.top + rows.chip.height / 2)) < 4, 'the chip shares the name’s row, no row of its own');
-    assert.equal(await page.locator('.aw .aw-switch, .aw .aw-seg').count(), 0, 'the view switch is the top bar’s, not the workspace’s');
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-01-app-light.png') });
-
-    // The section bar goes through the page's own opener.
-    await page.click('.aw-tab[data-section="decisions"]');
-    assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['decisions']);
-
-    // Every section; the slots marked; Answer goes through the decision's own way.
-    for (const s of ['requirements', 'decisions', 'review', 'release']) {
-      await show(page, s);
-      assert.equal(await page.getAttribute(`.aw-tab[data-section="${s}"]`, 'aria-current'), 'page');
-      assert.equal(await page.locator('.aw-frame iframe').count(), 0, `${s}: the page in place of the canvas`);
-      if (shots && s === 'decisions') await page.screenshot({ path: path.join(shots, 'c3-02-decisions-light.png') });
-      if (shots && s === 'review') await page.screenshot({ path: path.join(shots, 'c3-03-review-light.png') });
-    }
-    await show(page, 'requirements');
-    assert.match((await text(page, '.aw-page')) ?? '', /Visitors sign in at reception[\s\S]*Reception[\s\S]*approve from a phone/);
-    await show(page, 'decisions');
-    assert.equal(await page.locator('.aw-decision').count(), 2);
-    await page.click('.aw-decision >> nth=0 >> button:has-text("Answer")');
-    assert.deepEqual(await page.evaluate(() => (window as unknown as { __answered: string[] }).__answered), ['esc:1']);
-    assert.match((await text(page, '.aw-page')) ?? '', /2 more items wait on someone/);
-    await show(page, 'review');
-    assert.match((await text(page, '.aw-page')) ?? '', /Sign in at receptionVerification passed[\s\S]*Guided checks on this version[\s\S]*No version is running in the app right now/);
-    await show(page, 'release');
-    assert.match((await text(page, '.aw-page')) ?? '', /Accept this version[\s\S]*Versionv1[\s\S]*No deployment recorded/);
-
-    // Dark.
-    await show(page, 'app');
+    assert.equal(await text(page, '.aw-tab[data-view="live"]'), 'Live preview');
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-dark'));
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-04-app-dark.png') });
-    await show(page, 'decisions');
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-05-decisions-dark.png') });
+    if (shots) await page.screenshot({ path: path.join(shots, 'c3-02-live-dark.png') });
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-light'));
 
-    // Empty states: no frame at all when nothing serves; each part says what will appear.
+    // Nothing serves: no frame at all; the tab says not running; Start the app goes to the Live app page.
     await set(page, EMPTY);
-    await show(page, 'app');
     assert.equal(await page.locator('.aw-frame iframe').count(), 0, 'nothing serves: no frame, never a blank one');
+    assert.equal(await text(page, '.aw-tab[data-view="live"]'), 'Live preview · not running');
     assert.match((await text(page, '.aw-canvas-empty')) ?? '', /The app isn’t running right now[\s\S]*Last ran version 7d3f0b1[\s\S]*Start the app/);
-    assert.match((await text(page, '[data-part="status"]')) ?? '', /Working out the status/);
-    assert.match((await text(page, '[data-part="decision"]')) ?? '', /Nothing waits on you right now/);
-    assert.match((await text(page, '[data-part="changes"]')) ?? '', /Finished changes show here/);
-    assert.match((await text(page, '[data-part="progress"]')) ?? '', /Reading the project’s progress/);
-    assert.equal(await page.locator('.aw-foot .aw-link').count(), 0, 'not an admin: no change link');
     await page.click('.aw-canvas-empty button');
     assert.equal((await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).at(-1), 'live', 'Start the app: the Live app page, with its own checks');
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-06-app-not-running-light.png') });
-    for (const s of ['app', 'requirements', 'decisions', 'review', 'release']) {
-      await show(page, s);
-    }
-    await show(page, 'requirements');
-    assert.match((await text(page, '.aw-page')) ?? '', /No brief yet/);
-    await show(page, 'decisions');
-    assert.match((await text(page, '.aw-page')) ?? '', /Nothing waits on you\. When the team needs a decision/);
+    if (shots) await page.screenshot({ path: path.join(shots, 'c3-03-not-running-light.png') });
 
-    // A phone: the panel under the canvas, no sideways scrolling.
+    // A phone: no sideways scrolling.
     await page.setViewportSize({ width: 400, height: 860 });
     await set(page, FULL);
-    await show(page, 'app');
     await page.waitForTimeout(100);
-    const phone = await page.evaluate(() => {
-      const main = document.querySelector('.aw-main')!.getBoundingClientRect();
-      const side = document.querySelector('.aw-side')!.getBoundingClientRect();
-      return { scroll: document.documentElement.scrollWidth, below: side.top >= main.bottom - 1, sideW: side.width };
-    });
-    assert.ok(phone.scroll <= 400, `no sideways scrolling at 400 px (${phone.scroll})`);
-    assert.ok(phone.below, 'the panel stacks under the canvas');
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-07-phone-light.png'), fullPage: true });
-    await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-dark'));
-    if (shots) await page.screenshot({ path: path.join(shots, 'c3-08-phone-dark.png'), fullPage: true });
+    const scroll = await page.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(scroll <= 400, `no sideways scrolling at 400 px (${scroll})`);
+    if (shots) await page.screenshot({ path: path.join(shots, 'c3-04-phone-light.png'), fullPage: true });
 
     assert.deepEqual(errors, []);
     await page.close();

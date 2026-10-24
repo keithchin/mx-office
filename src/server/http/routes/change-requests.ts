@@ -23,7 +23,7 @@ export const changeRequestRoutes = {
     },
   },
   /**
-   * POST /api/change-requests {floor, text, page?, pageMoved?, revision?, source?, ref?, key?, by?}: a Developer change
+   * POST /api/change-requests {floor, text, page?, pageMoved?, revision?, source?, ref?, key?, of?, via?, by?}: a Developer change
    * (server/dev-changes/), queued and on disk, handed to the lead as a task when it's its turn and the team can take it
    * (else it waits, saying why). The same `key` again gives back the same change. Audited.
    */
@@ -43,7 +43,7 @@ export const changeRequestRoutes = {
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
       if (!floor) return send(res, 404, { error: 'No such project' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
-      const r = await devChangesOf(ctx).changes.intake(floor.id, { text: body.text, page: body.page, pageMoved: body.pageMoved, revision: body.revision, source: body.source, ref: body.ref, key: body.key, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
+      const r = await devChangesOf(ctx).changes.intake(floor.id, { text: body.text, page: body.page, pageMoved: body.pageMoved, revision: body.revision, source: body.source, ref: body.ref, key: body.key, of: body.of, via: body.via, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
       if (typeof r === 'string') return send(res, 400, { error: r });
       return send(res, 200, { change: r.change, again: r.again });
     },

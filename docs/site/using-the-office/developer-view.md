@@ -1,46 +1,38 @@
 ---
 title: Developer view
-description: Developer in the top-right switch - the project page first, for the people building it - the running app as the canvas with an explorer beside it, its status for that exact version, the decision that needs you and one next step. The Developer | Project Management switch at the top right of every project page goes back and forth without losing your place.
+description: Developer in the top-right switch - the project for the people building it - an explorer of the app on the left, its Model preview (or the live app) in the middle, and the coordinator chat docked on the right, where you ask for changes, see where each one is and answer what the team needs. The Developer | Project Management switch at the top right of every project page goes back and forth without losing your place.
 weight: 1.5
 aliases: [using-the-office/app-workspace]
 ---
 
-The **Developer view** (**Developer** in the **Developer | Project Management** switch at the top right of every project page, `/lite?floor=<project>&ws=dev`) shows a project the way the people building it look at it: the **running app is the main thing on screen**, an explorer of its pages, data and logic beside it, and a panel that says where the work is, for which version, what needs you and what to do next. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which is called **Project Management** (the Overview, Board, Agents, Live app, Approvals, Settings and every other page, with the navigation).
+The **Developer view** (**Developer** in the **Developer | Project Management** switch at the top right of every project page, `/lite?floor=<project>&ws=dev`) shows a project the way the people building it look at it: an **explorer** of its pages, data and logic on the left, the **canvas** in the middle (the page's Model preview, drawn from the model, or the live app), and the **coordinator chat** docked on the right: the main way to ask for a change, see where each change is, answer the team's decisions and try what's done. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which is called **Project Management** (the Overview, Board, Agents, Live app, Approvals, Settings and every other page, with the navigation).
 
 ## The switch
 
 **Developer | Project Management** sits at the top right of every project page, in the top bar, in the same place and at the same size in both views, in Portal Light and Dark, the classic themes and on a phone (where it reads **Dev | PM**). The view you're in is the one drawn filled in.
 
-- **Developer** opens the section closest to the page you're on (Approvals → Decisions, Documents → Requirements, Testing → Review, anything else → App).
-- **Project Management** goes back to the page you came from, or the one closest to the section you were on (App → Live app, Requirements → Documents, Decisions → Approvals, Review → Testing, Release → Overview).
+- **Developer** opens the Developer view.
+- **Project Management** goes back to the page you came from, or the Live app page.
 
 The page doesn't reload, so you stay on the same project and the same running version. From the keyboard, Tab to the switch and press ← (Developer) or → (Project Management).
 
-Switching changes what you see, never what you may do: every button in the Developer view goes to what the office already does, with that page's own checks (starting the app, answering a decision, accepting, changing the level). Anyone signed in can open it.
+Switching changes what you see, never what you may do: every button in the Developer view goes to what the office already does, with that page's own checks (starting the app, answering a decision, cancelling a change). Anyone signed in can open it.
 
 ## What's on screen
 
-At the top: the project's name with a small chip of its [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*…; its tooltip says the full line), the [revision strip](#the-revision-strip) (main, the live preview, the change with the team), and the five **sections**. Then the canvas (or a section's page) and, on the right, the panel. On a phone the panel comes under the canvas.
-
-### The sections
-
-| Section | Address | What it shows |
-| --- | --- | --- |
-| **App** | `?tab=app` | The running app, with the panel |
-| **Requirements** | `?tab=requirements` | The approved brief: its goal, the areas of the app, the open questions, and a link to the whole file in [Documents](deliverables.md) |
-| **Decisions** | `?tab=decisions` | The business decisions the team needs from you, most blocking first, each with what to look at beside it when the team named something, and answered here ([Decisions](#decisions)). What else waits on someone (sign-ins, permissions, the team's own questions, other hands-on steps) is counted, with a link to Project Management. Under them, **Requests**: every change you asked for, with its state |
-| **Review** | `?tab=review` | The status of the version running now and of each part of the plan, what is still to check, in plain words, and the **guided checks** of that version: each with its result on exactly that version, its steps, **Try it**, and your own mark ([Guided validation](#guided-validation)) |
-| **Release** | `?tab=release` | What you'd be accepting (the version, the latest finished version it is, its status and what's missing, the guided checks, the open corrections), **Accept this version** and **Reopen** through the [acceptance](progress-and-acceptance.md#acceptance) you know, and the deployment, which stays with people: the office doesn't deploy ([Accepting from here](#accepting-from-here)) |
+At the top: the project's name and the canvas's two views, **Model preview** and **Live preview**. Under it, the explorer on the left, the canvas in the middle and the [coordinator chat](#the-coordinator-chat) docked on the right. On a phone the explorer is a drawer and the chat a bottom sheet.
 
 ### The canvas
 
-While the [live app](live-app.md) runs, it's shown here, in the Live app page's viewer, under a line that names the **running version** (*Running version 7d3f0b1 · ready since 10:31*): the version that actually answers, never one it's still updating to. **Open in a new tab ↗** is always there. Some parts of an app only work in a tab of their own (in a frame on another address some widgets can't reach the page around them), and the office can't tell from here which, so if a page doesn't work in the canvas, open it in a new tab.
+**Model preview** is the default. It shows the page open in the explorer, drawn from the model at the revision the explorer reads ([The Model preview](#the-model-preview)); until you pick one, the app's own first page (one with an address first; Marketplace pages left out). Nothing on this path needs the app to be running.
 
-When nothing runs there is **no frame** at all, never an empty one: the canvas says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens Project Management's Live app page where it's started. Before the build, or before the app has run, the canvas also shows the brief.
+**Live preview** is the running app, when you ask for it: the tab says **Live preview · not running** while nothing serves. While the [live app](live-app.md) runs, it's shown in the Live app page's viewer, under a line that names the **running version** (*Running version 7d3f0b1 · ready since 10:31*): the version that actually answers, never one it's still updating to. **Open in a new tab ↗** is always there. Some parts of an app only work in a tab of their own, and the office can't tell from here which, so if a page doesn't work in the canvas, open it in a new tab. Under the app are the version's [guided checks](#guided-validation).
+
+When nothing runs there is **no frame** at all, never an empty one: the Live preview says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens Project Management's Live app page where it's started.
 
 ### The explorer
 
-On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words. It reads the **project's repository at one revision**: by default **main's newest commit**. It never needs the app to be running, so stopping the app, a failed start or a slow restart doesn't change what you can explore.
+A sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words. It reads the **project's repository at one revision**: by default **main's newest commit**. It never needs the app to be running, so stopping the app, a failed start or a slow restart doesn't change what you can explore.
 
 The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and where the live app is, as information only: *Live app runs 6a1f09c, 3 commits behind main*, or *Live app isn't running (last ran 6a1f09c, main's newest)*. When the live app is on another revision, the menu there lets you read that one instead.
 
@@ -53,7 +45,7 @@ The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and
 
 **Counts say what they count.** A group's number is the app's own content (pages, kinds of records, logic in the app's own modules); a muted **+15** next to it is what Marketplace modules add, and the tooltip says both and the total. Modules and folders without content of that kind are left out, so they never inflate a count.
 
-**Find…** searches the whole tree at once, folded Marketplace modules and folders you haven't opened included, by title or technical name, and documents by title or path. Select an item and its bar shows the details line, **Open in the live app** for a page with an address (only while the app runs: the one, explicit way to see a page running), **Request a change** with the item as its context (for a page: the page in the model, or the widget picked on its preview, and the revision shown; see [Select element](#select-element)), and, for admins, **Change this** where the Model page offers it. Anything opened in the canvas's place has **← Close** (**← Back to the live app** while it runs); the live app isn't reloaded meanwhile.
+**Find…** searches the whole tree at once, folded Marketplace modules and folders you haven't opened included, by title or technical name, and documents by title or path. Select an item and its bar shows the details line, **Open in the live app** for a page with an address (only while the app runs: the one, explicit way to see a page running), **Request a change** with the item as its context (for a page: the page in the model, or the widget picked on its preview, and the revision shown; see [Select element](#select-element)), and, for admins, **Change this** where the Model page offers it. Opening an item shows it in the Model preview view; **Live preview** above the canvas goes to the app, which isn't reloaded meanwhile. Opening an item also puts it in the chat's composer as a chip ([Context chips](#context-chips)).
 
 #### The Model preview
 
@@ -74,7 +66,7 @@ What it shows, and how it stays honest:
 **⌖ Select element** on the Model preview's bar lets you point at a widget:
 
 - Hovering outlines a widget (every copy of it in the sample rows) with its plain label (*Save button*, *Filter card*, *“Today’s visitors” heading*).
-- A click selects it. The chip above the preview shows *Today’s visitors › Check in button*, with ✕ to clear it, and **Request a change to this**. Without a selection the same place offers **Request a change to this page**.
+- A click selects it. The chip above the preview shows *Today’s visitors › Check in button*, with ✕ to clear it, and **Request a change to this**, which opens the chat's composer with that chip. Without a selection the same place offers **Request a change to this page**. The chat's chip follows what you pick.
 - By keyboard: **Tab** goes from widget to widget (each once), **Enter** or **Space** selects, **Esc** leaves picking and puts the focus back on the button.
 - A widget inside a snippet belongs to the snippet: when other pages show it too, the chip's line says *This is in snippet Header, used on 5 pages: a change to it changes all of them.*
 - The selection is kept by the widget's **name** on its page or snippet (names are unique there and survive edits; the internal id doesn't). When the preview is drawn again, at another revision or with the layout arriving, the same name is selected again; if it's gone, the chip says **no longer on this page** and a request asks about the page instead.
@@ -117,38 +109,77 @@ The **Show all files** switch (for builders and IT; remembered in your browser) 
 
 Some files are **never shown**, whatever the project contains: git's own folder (`.git`), the office's data folder (`.agent-office`), environment files (`.env`, `.env.*`), keys and certificates (`*.key`, `*.pem`, `*.pfx`, `*.p12`, …), anything named `credentials*` or `secret*`, every `config.json` (the office's own holds tokens), token files and tool settings that keep tokens (`.npmrc`, `.git-credentials`, `.claude/settings.local.json`, SSH keys), and everything the project's `.gitignore` matches. The office only reads the files from the project's history at that version, never from elsewhere on the computer, and refuses any path with `..` or an absolute path.
 
-### The panel
+## The coordinator chat
 
-| Part | What it says | Where it comes from |
-| --- | --- | --- |
-| **Status** | The project's [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*, *Business accepted*…) with the version it's about (*v1 · running 7d3f0b1*; click to copy the full version) and the first things still missing, in business words | The same status Home, the progress bar, the Overview, the phone and the Teams digest show |
-| **Current request** | The change with the team (else the next queued one): its `DC-<n>`, its state (*Queued*, *With the team*, *On candidate @C*, *In preview*…) with why it waits or where it is, its branch, how many more are queued, and **Request a change** | [Change requests](#change-requests) |
-| **Decision needed** | The most blocking decision that waits on you, and how many there are | Needs you |
-| **Progress** | Steps done of the project's steps, and the one it's on | The progress bar |
-| **Finished changes** | The newest finished changes, as the team titled them | The project's finished work |
-| **Next action** | One button: **Answer the decision** when one blocks the team, else by stage (**Read the brief**, **Request a change** while the app runs, **Start the app**, **Check this version**, **See the release**) | |
-| footer | The team's level of independence (*The team works at 2 Guided*), with **change** for admins | Settings › Team |
+On the right of the Developer view is the **team-lead panel** you know from Project Management's pages, docked beside the canvas: the same agent (whoever leads the team: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead), the **same conversation** and history, Chat and Terminal. It's not a second chat. **»** folds it to a rail (**«** opens it again), as on every page; on a phone a round button opens it as a bottom sheet (✕ or Esc closes it). It shows here even if you turned the panel off for Project Management's pages in ⚙️ Settings.
 
-A part that has nothing yet says what will appear in it. Nothing in the workspace is a placeholder value.
+### The header
+
+Above the conversation, in a few lines:
+
+- the project's [business status](progress-and-acceptance.md) chip (*Being built*, *Ready to try*…);
+- the [revision strip](#the-revision-strip): **main @M**, **preview @S** (or *preview: not running*) and the change with the team's candidate;
+- **N changes this session** (asked in the last 12 hours, or still on their way), counted by where the work is (*1 queued · 1 with the team · 2 merged · 1 in the preview*), and each change's id with its state;
+- when the project is paused, who paused it and when: *Project paused by Keith (Fri 14:02). Queued changes start when someone resumes it in Project Management (▶ Resume).*
+
+### Context chips
+
+What you select in the explorer becomes a **chip** in the composer: a page you open (📄 *My check sheets*), the widget you pick on its Model preview with Select element (*My check sheets › New check sheet button*), or another item (*Logic: Save order*). ✕ takes it off; **+ Context** puts the current selection back. **Request a change to this** anywhere in the view (the explorer's bar, the Model preview's chip bar) opens the chat, puts the chip on and focuses the box: there is no dialog in between. The old dialog is only used where there's no chat on the page.
+
+### Ask or Request a change
+
+Under the box, **Ask | Request a change** says what Enter does:
+
+- **Request a change** (the default when a chip is on) makes a **Developer change** (`DC-<n>`) through the one intake every entry point uses ([Change requests](#change-requests)): your words, the chip's page or widget, the **revision you were viewing** (main's head unless you picked another) and a key that makes sending again after a dropped connection the same change. It works with no lead at work and with the app stopped: the change waits in the queue. When it waits, the lead gets a short note after its turn, so it knows (it reaches the lead as its own task when it's next).
+- **Ask** is a message to the lead, as on every page, with what the chip points at said first (*About: My check sheets › New check sheet button (widget btnNew on page Sheets.Overview) at revision @7d3f0b1*). It makes no change. Ask needs a lead at work.
+
+The office doesn't guess which one you meant: the choice is yours.
+
+### What shows in the conversation
+
+The conversation is the lead's own, with the Developer view's cards merged in by time:
+
+- **Your request, with its receipt.** What you asked (without the context line), the chip it carried, and under it **→ DC-4 · Queued**. The receipt keeps four things apart, each from the record: **where the work is** (*Queued* and why, *With the team*, *On candidate @C*, *Merged @M*), the **checks** that ran on exactly that revision (or *None reported yet*), whether the **preview** has it (*The live preview runs @S, which contains it*, *Not in the preview yet: it runs an older version*, *The live preview isn't running*, *Not in the preview: it runs main, not this candidate*), and **your review** (*Looks right on @S*, or *None yet*). Merged never reads as accepted or as ready to try. A queued change has **Cancel request** (click twice). Nothing is timed or guessed.
+- **Decision needed.** Each business decision that waits on you, with its options, answered right there through the same record and path as Project Management's Approvals (Project Manager only; a question that changed meanwhile says so and sends nothing). It's still listed in Approvals.
+- **Please try this.** When a change's merge is in the live preview: *Try it: …*, the version it's in, **✓ Looks right** and **Something's wrong**. **Looks right** keeps your review of that exact version (a mark, like a guided check's) and accepts nothing. **Something's wrong** asks what went wrong and sends it as a **correction**: a new change, linked to the one you tried.
+
+### When nobody leads the team
+
+With no lead at work (none hired, or benched), the chat still shows the cards and takes **Request a change**: the change is kept and waits in the queue until the team is started in Project Management. **Ask** is off until there's a lead.
+
+### What moved to Project Management
+
+The Developer view used to have five sections and a status panel. Their lists live in Project Management now, and old links land there:
+
+| Was | Now |
+| --- | --- |
+| **Requirements** (`?tab=requirements`) | [Documents](deliverables.md) (the brief is there) |
+| **Decisions** (`?tab=decisions`) and its Requests list | **Approvals** (decisions and the Developer changes in flight), and inline in the chat |
+| **Review** (`?tab=review`) | **Testing**; the guided checks of the running version are under the Live preview |
+| **Release** (`?tab=release`) | The Overview's progress bar: ✅ Accept and ↩ Reopen, unchanged |
+| The status panel | The chat's header (status, revisions, this session's changes) |
 
 ## Change requests
 
-**Request a change** (in the panel, as the next action while the app runs, and above the Requests list) asks for a change in your own words: *what should behave differently*. You don't fill in anything else. The office takes from the screen what it's about and shows it in the dialog:
+**One record for every entry point.** Every way of asking for a change in the Developer view makes the same record, a Developer change (`DC-<n>`), through the same intake:
 
-- the **project**;
-- the **page** of the app the canvas shows (the address it last opened; if the app moved on to another page by itself, after a click inside it, the office can't read which, and says so);
-- the **version** running there.
+- the chat's **Request a change** (with the chip: the page or widget, the revision viewed);
+- the dialog, where there's no chat on the page;
+- a guided check's **Something's wrong** (with the check and the version);
+- a **Please try this** card's **Something's wrong** (a correction linked to the change tried).
 
-From the explorer (the selected item's bar, or the Model preview's **Request a change to this**) the request carries **what it points at in the model** instead of the live frame: the page, or the page and the widget picked on it (its name, its type and, as a hint only, its internal id), with the chip (*Today’s visitors › Check in button*), the **revision you were viewing** (*main @7d3f0b1*) and, for a widget in a shared snippet, how many pages show it. It works with the app stopped: the dialog says *Not running: not needed, the request points at the model*. The office checks that page and widget again by name when the change starts.
+The Model page's **Change this** still makes its own request for now (it reaches flows and data too, which a Developer change can't point at yet); it's for the Project Manager only, checked by the office.
 
-**Send request** makes it a **Developer change**, numbered `DC-<n>`, kept by the office at once (it survives an office restart, and sending again after a dropped connection never makes a second one). The office also notes the **source revision**: main's head when you asked. Then:
+What a request is about is taken from the screen, never typed: **what it points at in the model** (the page, or the page and the widget picked on it: its name, its type and, as a hint only, its internal id), the chip (*Today’s visitors › Check in button*), the **revision you were viewing** (*main @7d3f0b1*) and, for a widget in a shared snippet, how many pages show it, plus the page and version of the live app when it runs. It works with the app stopped. The office checks that page and widget again by name when the change starts.
+
+Each one becomes a **Developer change**, numbered `DC-<n>`, kept by the office at once (it survives an office restart, and sending again after a dropped connection never makes a second one). The office also notes the **source revision**: main's head when you asked. Then:
 
 - **One change is worked on at a time** in each project. If nothing else is with the team and the team can take it, the change goes to the team lead (whoever leads the team on its shape: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead; the analyst when the lead isn't at work) as a task with a task id, after the lead's current turn. The task asks the lead to do the work on its own branch, `dev/DC-<n>`, and keep the task's `Task:` line on the PR.
 - **Otherwise it waits in the queue, and says why**: another change is with the team; no team lead is at work; the project is paused; the team's daily spend cap is reached; the lead is asleep. It starts by itself when that changes, and the next queued change starts when the one before it is merged, cancelled or set aside.
 - **Just before it starts, the office checks what it's about is still there.** When a request points at a page or a widget of the model and that's gone at main's head, the change is marked **Needs clarification** and isn't started; the next one goes.
 - A change that hasn't started has **Cancel request** (click it twice), for whoever asked for it and for admins. It's recorded in the audit log.
 
-Project Management's **Approvals** shows the same changes (the one with the team and the queue behind it), with the same Cancel: it's one record, not a copy.
+Project Management's **Approvals** shows the same changes (the one with the team and the queue behind it), with the same Cancel: it's one record, not a copy. Cancelling is for a change that hasn't started; one with the team is stopped by asking the team lead.
 
 Each change shows its state, worked out each time from what the office already knows (its task, the PR list, the running app), never stored on its own:
 
@@ -158,7 +189,7 @@ Each change shows its state, worked out each time from what the office already k
 | **With the team** | The team lead has it; nothing saved on its branch yet |
 | **On candidate @C** | The newest work seen on `dev/DC-<n>` (or on a PR with its `Task:` line), commit C. Not merged: the live preview runs main, not this |
 | **Merged into main @M** | Its PR merged as commit M; whether the preview has it couldn't be told |
-| **In preview** | The running app contains M: try it |
+| **In preview** | The running app contains M: its **Please try this** card shows |
 | **Preview behind** | M is on main, but the running app still runs an older version |
 | **Preview not running** | M is on main and the app isn't running: start it on Project Management's Live app page |
 | **Needs clarification** | The page or widget it pointed at isn't in the app any more: ask again, or cancel it |
@@ -167,17 +198,17 @@ Each change shows its state, worked out each time from what the office already k
 
 Each new head the team pushes is a new **candidate**; earlier ones are kept. **Checks** are shown against a candidate only when they ran on exactly that commit (*2 checks passed on @c111111*); results on an earlier candidate are labelled as such, and a project without CI shows *No checks on this candidate*, never *passed*. Missing facts never move a change forward.
 
-Requests made before the change queue, and corrections from guided checks, are listed under **Earlier requests and corrections** with their old states (*Received*, *Being worked on*, *Ready to try*, *Done*, *Needs your answer*, *Stopped*).
+Requests and corrections made before the change queue keep their `CR-<n>` ids and are listed where they were made (a guided check shows its old correction as *Received*).
 
 ### The revision strip
 
-The header shows one compact line of revisions, each a chip that copies the full commit on a click:
+The chat's header shows one compact line of revisions, each a chip that copies the full commit on a click:
 
 - **main @M**: main's head;
 - **preview @S**: what the live app runs, with **behind main by N** when it's older than main, or **preview: not running**;
 - **DC-n candidate @C**: while a change is with the team, its newest candidate (or *no candidate yet*).
 
-On a phone the strip takes a line of its own under the project's name. How the revisions fit together is in [Revisions and Developer changes](../architecture/revisions-and-changes.md).
+It wraps in the narrow panel. How the revisions fit together is in [Revisions and Developer changes](../architecture/revisions-and-changes.md).
 
 ## Decisions
 
@@ -189,34 +220,32 @@ The Developer view shows only the decisions meant for you as the business owner:
 
 ## Guided validation
 
-The **Review** section lists the **guided checks** of the version running in the app: the project's test journeys (`tests/e2e/*.journey.json`) as they are in that very version. Each one shows:
+Under the **Live preview**, the **guided checks** of the version running in the app are listed: the project's test journeys (`tests/e2e/*.journey.json`) as they are in that very version. Each one shows:
 
 - its **result on exactly this version**: **Passed**, **Failed** or **Not run on this version**. A result recorded for another version never counts here; when a check hasn't run on this version but did on an earlier one, it says so in a note (*Passed on an earlier version (5e21c9d); that doesn't count for this one*);
 - its **steps**, in the journey's own words, and where it starts (a page of the app, or a menu item);
-- **Try it**: the App section opens, with the canvas at the check's start page when the journey names one (else the app's home page);
+- **Try it**: the live preview opens at the check's start page when the journey names one (else the app's home page);
 - your **mark**, if you made one on this version, with who and when.
 
 Under the summary (*1 of 3 passed, 1 failed, 1 not run on this version; 1 marked working*), a line counts the other automatic checks that ran on this version.
 
-**Works as expected** and **Something's wrong** open a small dialog (✕ and Esc close it and put you back on the button) with a note, the check, the version and the page the canvas shows, captured for you as **Request a change** does. A mark is kept with the project and that version and recorded in the audit log (`validation.mark`). **Something's wrong** needs a note, and goes to the team lead as a **correction**: a change request through the same path as [Request a change](#change-requests), with a task id, the check and the version in its words. It shows on its check (*Sent to the team as CR-5 · Being worked on*) and under **Requests** (in *Earlier requests and corrections*) with its state: corrections don't go through the change queue yet. If the request can't be made (nobody leads the team yet), nothing is kept and the dialog says why. If the app moved on to another version while you looked, the mark is refused and nothing is kept: mark the new version.
+**Works as expected** and **Something's wrong** open a small dialog (✕ and Esc close it and put you back on the button) with a note, the check, the version and the page the canvas shows, captured for you as **Request a change** does. A mark is kept with the project and that version and recorded in the audit log (`validation.mark`). **Something's wrong** needs a note, and goes to the team as a **correction**: a Developer change (`DC-<n>`) through the same intake as [Request a change](#change-requests), queued like any other, with the check and the version in its words and the version as its source. It shows on its check (*Sent to the team as DC-5 · With the team*) and in the chat. With nobody leading the team it isn't refused: it waits in the queue. If the app moved on to another version while you looked, the mark is refused and nothing is kept: mark the new version.
 
-Your marks are shown beside the status. They don't change it: the business status counts what was checked automatically on the version, and a mark is your evidence, not a passed check. When no version runs, Review says there is nothing to try.
+Your marks are shown beside the status. They don't change it: the business status counts what was checked automatically on the version, and a mark is your evidence, not a passed check. When no version runs there are no guided checks to show.
 
-## Accepting from here
+## Accepting a version
 
-The **Release** section shows what you'd be accepting: the version (*v1*), the latest finished version it is (*a4776d3*), the project's status with what's still missing, the guided checks of the version on screen and the open corrections, with their state. When the app on screen runs another version than the one being accepted, it says so.
-
-**Accept this version** (the Project Manager only, as in Project Management) asks the office what it would record, lists the open corrections as still open (ticked, each with who owns it; untick what you don't want noted) and an optional line for anything else, and asks you to confirm. It's the same acceptance as the progress bar's ✅ Accept: the same route, permissions and checks (the review of what's recorded, the [security baseline](security-baseline.md) at the version, the version's and the cycle's checks), nothing added or skipped. When the office refuses, the dialog says why in plain words (*This version can't be accepted yet: the security checks haven't passed on it*, with what's missing; *Something changed while you were looking … Look at it again and confirm*), and nothing is recorded. Once a version is accepted, **Reopen for the next version** starts the next one with what it's for, as **↩ Reopen** does. The full record, with every piece of evidence, stays on Project Management's acceptance record.
+Accepting stays in Project Management: the Overview's progress bar has **✅ Accept** and **↩ Reopen**, with the same route, permissions and checks as always. A **Looks right** in the chat is your review of one version; it accepts nothing.
 
 ## Addresses
 
 Every address that worked before still opens the same page: `?tab=board`, `?tab=agents`, `?tab=live` and the rest open Project Management, as always. The Developer view adds:
 
-- `&ws=dev` (or the older `&ws=app`): the Developer view, on its App section, or on the section closest to the `tab` given (`&ws=dev&tab=approvals` opens Decisions);
-- `&tab=app|requirements|decisions|review|release`: that section;
-- `&ws=pm` (or the older `&ws=eng`): Project Management (`&ws=pm&tab=decisions` opens Approvals).
+- `&ws=dev` (or the older `&ws=app`): the Developer view (`&tab=app`);
+- `&ws=pm` (or the older `&ws=eng`): Project Management;
+- the old sections' addresses, `&tab=requirements|decisions|review|release` (with or without `ws`), open the Project Management page that has their list: Documents, Approvals, Testing and the Overview.
 
-A reload keeps the section you're on, and changing project from the Developer view keeps you in it. The old address of this page, `/docs/using-the-office/app-workspace`, opens it too.
+A reload keeps you in the Developer view, and changing project from the Developer view keeps you in it. The old address of this page, `/docs/using-the-office/app-workspace`, opens it too.
 
 ## What the team writes
 

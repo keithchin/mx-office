@@ -1,6 +1,7 @@
 // The Model tab's "Change this" (server/model-change/): POST a change request (the element(s), the branch
 // and commit they were read at, what should change, who it goes to and when), and GET the floor's open
-// requests with their PRs for the badges. Signed in, as prompting a worker from the Board is.
+// requests with their PRs for the badges. Reading is for anyone signed in; asking is for the Project Manager
+// (an admin), checked here as the page's Change this button is shown only to admins: a view never grants it.
 import type { Route } from '../router.js';
 import { changeRequestsOf } from '../../model-change/index.js';
 import { readBody, sameOrigin, send } from '../util.js';
@@ -25,6 +26,7 @@ export const modelChangeRoutes = {
     auth: 'session',
     async handle(ctx, { req, res, session }) {
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can ask for a change from the Model tab. Use Request a change in the Developer view instead.' });
       let body: Record<string, unknown>;
       try {
         body = JSON.parse((await readBody(req, 64 * 1024)) || '{}');

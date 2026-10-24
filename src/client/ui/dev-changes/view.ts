@@ -31,7 +31,7 @@ export function revisionStrip(v: DevChangesView | undefined): HTMLElement {
 }
 
 /** Cancel on a change that hasn't started: a second click within a few seconds confirms (no modal). */
-function cancelButton(floor: string, c: DevChangeView): HTMLElement {
+export function cancelButton(floor: string, c: DevChangeView): HTMLElement {
   const b = h('button.dc-cancel', { type: 'button', 'data-cancel': c.id }, 'Cancel request') as HTMLButtonElement;
   let armed: ReturnType<typeof setTimeout> | undefined;
   b.addEventListener('click', () => {

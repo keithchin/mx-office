@@ -159,7 +159,7 @@ For example: *Task tsk_… "Visitor checkout" (Linus): candidate · acknowledged
 
 The [Developer view](../using-the-office/developer-view.md#decisions) shows the business owner only their decisions, by the escalation's trigger: `plan`, `scope`, `design`, `milestone`, `client-milestone` and `question` are theirs; the others (`architecture`, review rounds, `blocked`, repeated failures, budget, `security`, `data-loss`, `blocked-no-path`, `needs-human`) and permission cards are the team's. An escalation with no trigger stays on Project Management, so give one when it's for the business owner. Client questions, stage sign-offs and a design system to adopt are theirs too. The Engineering view keeps showing everything.
 
-A **change request** from the Developer view reaches the team lead as a task, `Change request CR-<n> from <name>: …`, with the page and version the person was looking at. Keep its `Task:` line and `CR-<n>` on the work that delivers it (commit trailers, the PR description): that's how the person sees where their request is.
+A **change request** from the Developer view (its docked chat, its dialog, a guided check's or a try card's *Something's wrong*) is a Developer change `DC-<n>`; when it's its turn it reaches the team lead as a task, `Change request CR-<n> from <name>: …`, naming the change, its branch `dev/DC-<n>`, the page or widget and the revision the person was looking at. While it waits in the queue the lead may get a short note saying so: don't start it before its task arrives. Keep its `Task:` line and `CR-<n>` on the work that delivers it (commit trailers, the PR description): that's how the person sees where their request is.
 
 ## Asks that need a person: `needs-human` and `question`
 

@@ -52,7 +52,7 @@ async function harness(): Promise<{ js: string; css: string }> {
           window.__opened.push(t);
           if (!isAppSection(t)) came = t;
           tab = t;
-          if (isAppSection(t)) ws.show(t);
+          if (isAppSection(t)) ws.show();
           else ws.hide();
           vs.draw();
         };`,
@@ -130,14 +130,14 @@ test('in a browser: one switch, the same place and size on a Project Management 
     await page.click('.vs-seg[data-view="app"]');
     await page.click('.vs-seg[data-view="eng"]');
     await page.click('.vs-seg[data-view="eng"]'); // already there: nothing
-    await go(page, 'release');
+    await page.click('.vs-seg[data-view="app"]');
     await page.evaluate(() => ((window as unknown as { __opened: string[] }).__opened = []));
     await page.click('.vs-seg[data-view="eng"]');
     assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['approvals'], 'back to the page you came from');
     await go(page, 'documents');
     await page.evaluate(() => ((window as unknown as { __opened: string[] }).__opened = []));
     await page.click('.vs-seg[data-view="app"]');
-    assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['requirements'], 'Documents → Requirements');
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['app'], 'any page → the Developer view (its one tab)');
     // Keys: ← Developer, → Project Management, focus following.
     await page.focus('.vs-seg[data-view="app"]');
     await page.keyboard.press('ArrowRight');

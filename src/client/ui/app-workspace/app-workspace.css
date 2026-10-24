@@ -1,12 +1,13 @@
-/* The Developer view (ui/app-workspace/): the running app as the canvas, the side panel on the right (below
-   it on a phone), the section bar and the business status chip above. In the color tokens, so Portal Light and
-   Dark (and the other themes) only change their values. While it shows (body.aw-on) Project Management's
-   navigation, page header, team-lead panel, progress line and tab rows step aside and the page is its. */
+/* The Developer view (ui/app-workspace/): explorer | canvas (Model preview or Live preview) | the team-lead
+   panel docked on the right as the view's coordinator chat (ui/lead-panel/, ./dock/dock.css). In the color
+   tokens, so Portal Light and Dark (and the other themes) only change their values. While it shows (body.aw-on)
+   Project Management's navigation, page header, progress line and tab rows step aside and the page is its; the
+   panel stays, and the page makes room for it as on every project page (--lp-space). */
 
-body.lite.aw-on :is(#pt-nav, #pt-head, #lead-panel, .lp-rail, .lp-fab, .lp-backdrop, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch) { display: none !important; }
+body.lite.aw-on :is(#pt-nav, #pt-head, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch) { display: none !important; }
 /* The phone's navigation button keeps its place (hidden, not gone), so the top bar's view switch doesn't move. */
 body.lite.aw-on .pt-navbtn { visibility: hidden !important; pointer-events: none; }
-html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
+html body.lite.aw-on .lite-main { margin: 0 var(--lp-space, 0px) 0 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
 
 .aw { display: flex; flex-direction: column; min-height: calc(100vh - var(--pt-top, 56px)); background: var(--paper-2, var(--paper)); color: var(--ink); font-size: 14px; line-height: 1.45; }
 .aw[hidden] { display: none; }
@@ -24,29 +25,35 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
 .aw .aw-tab.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
 
 
-/* Canvas and panel. */
-.aw .aw-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
-.aw .aw-main { min-width: 0; padding: 16px 24px 24px; border-right: 1px solid var(--line); }
-.aw .aw-side { background: var(--card); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.aw .aw-sec { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
-.aw .aw-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-bottom: 6px; }
-.aw .aw-small, .aw .aw-hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
-.aw .aw-none, .aw .aw-muted { color: var(--muted); margin: 4px 0; }
-.aw .aw-q { margin: 0; font-weight: 600; }
+/* The canvas (the explorer sits left of it, ./explorer/explorer.css; the chat is the docked panel). */
+.aw .aw-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.aw .aw-main { min-width: 0; padding: 12px 12px 20px; }
+.aw .aw-main > [hidden] { display: none !important; }
+.aw .aw-views { margin-left: auto; }
+.aw .aw-views .aw-tab[aria-selected='true'] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.aw .aw-livedot { display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; border: 1.5px solid var(--faint, var(--muted)); vertical-align: middle; }
+.aw .aw-livedot.on { background: var(--good); border-color: var(--good); }
+.aw .aw-livebox { display: flex; flex-direction: column; gap: 14px; }
+.aw .aw-modelnote { max-width: 640px; }
+.aw .ax-pane .ax-back { display: none; }
+:is(.aw, .lp) .aw-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-bottom: 6px; }
+:is(.aw, .lp) .aw-small, .aw .aw-hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+:is(.aw, .lp) .aw-none, .aw .aw-muted { color: var(--muted); margin: 4px 0; }
+:is(.aw, .lp) .aw-q { margin: 0; font-weight: 600; }
 .aw .aw-foot { font-size: 12px; color: var(--muted); margin: 0; }
-.aw .aw-statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.aw .aw-pill { display: inline-block; white-space: nowrap; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
-.aw .aw-pill.good { background: var(--good-soft); color: var(--good-ink); }
-.aw .aw-pill.busy { background: var(--info-soft, var(--accent-soft)); color: var(--link, var(--ink)); }
-.aw .aw-pill.bad { background: var(--bad-soft); color: var(--bad-ink); }
+:is(.aw, .lp) .aw-statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+:is(.aw, .lp) .aw-pill { display: inline-block; white-space: nowrap; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
+:is(.aw, .lp) .aw-pill.good { background: var(--good-soft); color: var(--good-ink); }
+:is(.aw, .lp) .aw-pill.busy { background: var(--info-soft, var(--accent-soft)); color: var(--link, var(--ink)); }
+:is(.aw, .lp) .aw-pill.bad { background: var(--bad-soft); color: var(--bad-ink); }
 .aw .aw-ver { font: 12px var(--mono, monospace); border: 1px solid var(--line); background: var(--sunken, var(--paper)); color: var(--ink); border-radius: 4px; padding: 1px 6px; cursor: copy; }
 .aw .aw-prog { height: 6px; background: var(--sunken, var(--line)); border-radius: 3px; overflow: hidden; }
 .aw .aw-prog > i { display: block; height: 100%; background: var(--good); }
-.aw .aw-btn { display: inline-block; border: 1px solid var(--rule-strong, var(--line)); background: var(--card); color: var(--ink); border-radius: 4px; padding: 6px 12px; font: inherit; cursor: pointer; text-decoration: none; }
-.aw .aw-btn:hover { background: var(--hover, var(--sunken)); }
-.aw .aw-primary { background: var(--accent); border-color: var(--accent); color: var(--on-fill, #fff); }
-.aw .aw-primary:hover { background: var(--accent); filter: brightness(1.08); }
-.aw .aw-link { border: 0; background: none; padding: 0; color: var(--link, var(--accent)); text-decoration: underline; font: inherit; cursor: pointer; }
+:is(.aw, .lp) .aw-btn { display: inline-block; border: 1px solid var(--rule-strong, var(--line)); background: var(--card); color: var(--ink); border-radius: 4px; padding: 6px 12px; font: inherit; cursor: pointer; text-decoration: none; }
+:is(.aw, .lp) .aw-btn:hover { background: var(--hover, var(--sunken)); }
+:is(.aw, .lp) .aw-primary { background: var(--accent); border-color: var(--accent); color: var(--on-fill, #fff); }
+:is(.aw, .lp) .aw-primary:hover { background: var(--accent); filter: brightness(1.08); }
+:is(.aw, .lp) .aw-link { border: 0; background: none; padding: 0; color: var(--link, var(--accent)); text-decoration: underline; font: inherit; cursor: pointer; }
 .aw .aw-list { margin: 4px 0 0; padding-left: 18px; }
 .aw .aw-list li { margin: 2px 0; }
 .aw .aw-slot { border: 1px dashed var(--rule-strong, var(--line)); border-radius: 6px; padding: 8px 10px; background: var(--paper-2, var(--paper)); }
@@ -64,20 +71,20 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
 .aw .aw-canvas-empty h3, .aw .aw-canvas-brief h3, .aw .aw-card h3 { margin: 0 0 8px; font-size: 15px; }
 .aw .aw-page { display: flex; flex-direction: column; gap: 12px; max-width: 860px; }
 .aw .aw-badge { display: inline-block; margin: 0 0 8px; font-size: 12px; color: var(--good-ink); background: var(--good-soft); border-radius: 10px; padding: 1px 8px; }
-.aw .aw-warn { color: var(--warn-ink); background: var(--warn-soft); border-radius: 4px; padding: 6px 8px; }
+:is(.aw, .lp) .aw-warn { color: var(--warn-ink); background: var(--warn-soft); border-radius: 4px; padding: 6px 8px; }
 .aw .aw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .aw .aw-chip { font-size: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 2px 8px; }
-.aw .aw-decisions, .aw .aw-parts { list-style: none; margin: 0; padding: 0; }
-.aw .aw-decision { border-top: 1px solid var(--line); padding: 10px 0; }
-.aw .aw-decision:first-child { border-top: 0; padding-top: 0; }
-.aw .aw-decision[data-level='block'] .aw-q::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; vertical-align: middle; }
-.aw .aw-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+:is(.aw, .lp) .aw-decisions, .aw .aw-parts { list-style: none; margin: 0; padding: 0; }
+:is(.aw, .lp) .aw-decision { border-top: 1px solid var(--line); padding: 10px 0; }
+:is(.aw, .lp) .aw-decision:first-child { border-top: 0; padding-top: 0; }
+:is(.aw, .lp) .aw-decision[data-level='block'] .aw-q::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; vertical-align: middle; }
+:is(.aw, .lp) .aw-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .aw .aw-parts li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
 .aw .aw-parts li:first-child { border-top: 0; }
 
 /* Change requests (C4): the panel's current request, Decisions' Requests and the Request a change dialog. */
-.aw .aw-pill.warn { background: var(--warn-soft); color: var(--warn-ink); }
-.aw .aw-pill.idle { background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
+:is(.aw, .lp) .aw-pill.warn { background: var(--warn-soft); color: var(--warn-ink); }
+:is(.aw, .lp) .aw-pill.idle { background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
 .aw .aw-request { display: flex; flex-direction: column; gap: 4px; }
 .aw .aw-ask { margin-top: 8px; align-self: flex-start; }
 .aw .aw-requests { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -94,23 +101,23 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
 .aw-reqdlg .aw-warn[hidden] { display: none; }
 
 /* Decision cards with the related artifact beside them. */
-.aw .aw-decision.with-artifact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
-.aw .aw-artifact { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper-2, var(--paper)); min-width: 0; overflow-wrap: anywhere; }
-.aw .aw-artifact p { margin: 4px 0; }
-.aw .aw-shot { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
-.aw .aw-dcard { min-width: 0; }
-.aw .aw-dcard > .aw-row:first-child { margin-top: 0; align-items: flex-start; }
-.aw .aw-answer { margin-top: 8px; }
-.aw .aw-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.aw .aw-opt { text-align: left; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 6px; padding: 8px 10px; font: inherit; cursor: pointer; }
-.aw .aw-opt[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-.aw .aw-rec { margin-left: 8px; font-size: 12px; color: var(--link, var(--accent)); }
-.aw .aw-note { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); resize: vertical; }
-.aw .aw-warn[hidden] { display: none; }
-.aw .aw-note-msg { border-left: 3px solid var(--good); background: var(--good-soft); border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
-.aw .aw-note-msg.stale { border-left-color: var(--warn, var(--accent)); background: var(--warn-soft); }
-.aw .aw-note-msg.error { border-left-color: var(--bad); background: var(--bad-soft); }
-.aw .aw-note-msg p { margin: 2px 0; }
+:is(.aw, .lp) .aw-decision.with-artifact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
+:is(.aw, .lp) .aw-artifact { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper-2, var(--paper)); min-width: 0; overflow-wrap: anywhere; }
+:is(.aw, .lp) .aw-artifact p { margin: 4px 0; }
+:is(.aw, .lp) .aw-shot { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
+:is(.aw, .lp) .aw-dcard { min-width: 0; }
+:is(.aw, .lp) .aw-dcard > .aw-row:first-child { margin-top: 0; align-items: flex-start; }
+:is(.aw, .lp) .aw-answer { margin-top: 8px; }
+:is(.aw, .lp) .aw-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+:is(.aw, .lp) .aw-opt { text-align: left; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 6px; padding: 8px 10px; font: inherit; cursor: pointer; }
+:is(.aw, .lp) .aw-opt[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+:is(.aw, .lp) .aw-rec { margin-left: 8px; font-size: 12px; color: var(--link, var(--accent)); }
+:is(.aw, .lp) .aw-note { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); resize: vertical; }
+:is(.aw, .lp) .aw-warn[hidden] { display: none; }
+:is(.aw, .lp) .aw-note-msg { border-left: 3px solid var(--good); background: var(--good-soft); border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
+:is(.aw, .lp) .aw-note-msg.stale { border-left-color: var(--warn, var(--accent)); background: var(--warn-soft); }
+:is(.aw, .lp) .aw-note-msg.error { border-left-color: var(--bad); background: var(--bad-soft); }
+:is(.aw, .lp) .aw-note-msg p { margin: 2px 0; }
 @media (max-width: 760px) {
   .aw .aw-decision.with-artifact { grid-template-columns: 1fr; }
 }

@@ -63,7 +63,7 @@ export async function validationAt(o: { dataDir: string; floorId: string; dir: s
     revision: o.revision,
     scenarios: list.map((d) => scenarioView(d, r, o.marks)),
     checks: checksAt(records, o.revision, ids),
-    corrections: o.corrections.map((c) => ({ id: c.correction!.id, taskId: c.correction!.taskId, scenario: c.scenario, title: c.title, revision: c.revision, at: c.at })),
+    corrections: o.corrections.map((c) => ({ id: c.correction!.id, ...(c.correction!.taskId ? { taskId: c.correction!.taskId } : {}), scenario: c.scenario, title: c.title, revision: c.revision, at: c.at })),
     ...(readable ? {} : { note: 'The office can’t read this version in the project’s folder, so it can’t list its guided checks.' }),
   };
 }
