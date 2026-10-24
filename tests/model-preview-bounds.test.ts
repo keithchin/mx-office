@@ -100,12 +100,15 @@ test('widgets it can’t draw are labelled boxes with their type (contents insid
     listview lv (DataSource: microflow Desk.DS) { fileuploader fuPhoto (uploadMode: 'images') }
     signaturepad spSign
     customchart chVisits { dynamictext t (Content: 'Inside a chart') }
+    pluggablewidget com.example.widget.web.rating.Rating (Attribute: Score)
   }`);
   const { html, report } = previewRender(m, { docs: new Map(), now: NOW });
   assert.match(html, /mx-unknown"><span class="mx-unknown-tag">Not drawn<\/span> fileuploader · fuPhoto/);
   assert.match(html, /mx-unsupported"><span class="mx-unknown-tag">Not drawn: customchart · chVisits, its contents:<\/span><span class="mx-text">Inside a chart/);
-  assert.deepEqual(report.placeholders, [{ kind: 'customchart', count: 1 }, { kind: 'fileuploader', count: 1 }, { kind: 'signaturepad', count: 1 }], 'a widget in three sample rows counts once');
-  assert.match(reportWords(report), /Not drawn, shown as labelled boxes: customchart, fileuploader, signaturepad/);
+  assert.match(html, /mx-unknown"><span class="mx-unknown-tag">Not drawn<\/span> pluggable Rating</, 'a pluggable widget by the last part of its id');
+  assert.deepEqual(report.placeholders, [{ kind: 'customchart', count: 1 }, { kind: 'fileuploader', count: 1 }, { kind: 'pluggable Rating', count: 1 }, { kind: 'signaturepad', count: 1 }], 'a widget in three sample rows counts once');
+  assert.match(reportWords(report), /Not drawn, shown as labelled boxes: customchart, fileuploader, pluggable Rating, signaturepad/);
+
 });
 
 test('layout: grid columns, Atlas helpers, gallery columns and a pop-up as a dialog; the project’s layout classes go in after ours', () => {

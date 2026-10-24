@@ -191,7 +191,7 @@ class Writer {
   mark(it: MdlItem, html: string, row: number): string {
     this.s.used++;
     const o = this.owner;
-    if (!this.ctx.marks || !o || !it.name || UNPICKED.has(it.kind) || it.kind.startsWith('mx-') || !html.startsWith('<')) return html;
+    if (!this.ctx.marks || !o || !it.name || it.name.includes('.') || UNPICKED.has(it.kind) || it.kind.startsWith('mx-') || !html.startsWith('<')) return html;
     const key = `${o.qn}\u0000${it.name}`;
     let el = this.s.byKey.get(key);
     if (el === undefined) {
@@ -207,9 +207,13 @@ class Writer {
 
   /** A widget the preview can't draw: a labelled box with its type (its contents inside, when it has any). */
   unsupported(it: MdlItem, row: number, inForm: boolean): string {
-    const seen = this.s.placeholders.get(it.kind) ?? this.s.placeholders.set(it.kind, new Set()).get(it.kind)!;
-    seen.add(`${this.owner?.qn ?? ''}/${it.name ?? seen.size}`);
-    const label = `${esc(it.kind)}${it.name ? ` · ${esc(it.name)}` : ''}`;
+    // A pluggable widget is named by its widget id (com.mendix.widget.web.x.Thing): said as "pluggable Thing".
+    const id = /\./.test(it.name ?? '') ? (it.name as string) : (it.props.WidgetId ?? it.props.widgetId ?? '');
+    const kind = id && /pluggable|custom/.test(it.kind) ? `pluggable ${id.slice(id.lastIndexOf('.') + 1)}` : it.kind;
+    const name = it.name && !/\./.test(it.name) ? it.name : '';
+    const seen = this.s.placeholders.get(kind) ?? this.s.placeholders.set(kind, new Set()).get(kind)!;
+    seen.add(`${this.owner?.qn ?? ''}/${name || seen.size}`);
+    const label = `${esc(kind)}${name ? ` · ${esc(name)}` : ''}`;
     if (!it.children.length) return `<div class="mx-unknown"><span class="mx-unknown-tag">Not drawn</span> ${label}</div>`;
     return `<div class="mx-unsupported${classes(it) ? ` ${esc(classes(it))}` : ''}"><span class="mx-unknown-tag">Not drawn: ${label}, its contents:</span>${this.all(it.children, row, inForm)}</div>`;
   }
