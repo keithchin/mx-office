@@ -129,7 +129,8 @@ test('isolation: everything escaped, no scripts, a frame that is sandboxed and f
   assert.doesNotMatch(PREVIEW_CSS, /url\(|@import/, 'the stylesheet fetches nothing');
   const frame = ui('page-frame.ts');
   assert.match(frame, /h\('iframe\.pgp-frame', \{ sandbox: '',/, 'the frame is sandboxed with nothing allowed');
-  assert.match(frame, /frame\.srcdoc = previewDocument\(/);
+  assert.match(frame, /setDoc\(previewDocument\(/);
+  assert.match(frame, /frame\.srcdoc = html;/, 'only ever srcdoc, into a sandboxed frame (a fresh one for each new document: page-frame-dom.test.ts)');
 });
 
 test('laziness: the Preview is drawn only when chosen; its snippets, layout and menu are asked for only then', () => {

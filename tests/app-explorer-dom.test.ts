@@ -182,13 +182,35 @@ const focused = (page: Page) => page.evaluate(() => (document.activeElement as H
 const frameSrc = (page: Page) => page.evaluate(() => (document.querySelector('.aw-frame iframe') as HTMLIFrameElement | null)?.src ?? '');
 /** Every frame on the page that points at the live app (the Live app viewer's own frame is the only one allowed). */
 const liveFrames = (page: Page) => page.$$eval('iframe', (els) => els.filter((e) => (e as HTMLIFrameElement).src.startsWith('http://127.0.0.1:8123/')).map((e) => (e.closest('.aw-frame') ? 'canvas' : 'elsewhere')));
+/** How many pixels of a screenshot aren't empty grey or white (the Preview's frame must show the page). */
+const inkOf = (page: Page, png: Buffer) =>
+  page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const g = c.getContext('2d')!;
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.min(d[i], d[i + 1], d[i + 2]) < 230) n++;
+    return n;
+  }, png.toString('base64'));
+const previewPainted = async (page: Page, name?: string) => {
+  await page.waitForTimeout(300);
+  const png = await page.locator('.ax-pane:not([hidden]) .pgp-frame').screenshot(shots && name ? { path: path.join(shots, name) } : {});
+  const ink = await inkOf(page, png);
+  assert.ok(ink > 1500, `the Model preview is painted (${ink} inked pixels)`);
+};
 const shot = async (page: Page, name: string) => {
   if (shots) await page.screenshot({ path: path.join(shots, name) });
 };
 
 test('in a browser: main’s revision, pages open their Model preview (never the live frame), documents, search, stale, layout and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 180_000 }, async () => {
   const h = await harness();
-  const browser = await chromium.launch({ headless: true, executablePath: chrome! });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.AX_BROWSER || chrome!, ...(process.env.AX_NEW_HEADLESS ? { args: ['--headless=new'] } : {}) });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const errors: string[] = [];
@@ -227,6 +249,7 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     assert.ok((await get<string[]>(page, '__calls')).includes('doc 7d page VisitorDesk.Visitor_Overview'), 'rendered at the revision shown');
     assert.equal(await page.textContent('.ax-bar-detail'), 'VisitorDesk.Visitor_Overview · VisitorDesk', 'the technical name in the details line');
     assert.equal(await page.isDisabled('.ax-live-open'), true, 'Open in the live app: off while the app is stopped');
+    await previewPainted(page, 'p0-01b-preview-frame.png');
     await shot(page, 'p0-01-preview-stopped-light.png');
 
     // The app starts: the page click still opens the preview; only Open in the live app goes to the app.
@@ -399,6 +422,14 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.waitForTimeout(250);
     assert.equal(await page.isVisible('.ax-tree'), false);
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('ax-drawer-btn')), true, 'Esc gives the focus back to the button');
+    // Opening a page from the drawer: its Model preview, painted at a phone's width.
+    await page.click('.ax-drawer-btn');
+    await page.waitForTimeout(250);
+    await row(page, 'New visitor').click();
+    await page.waitForTimeout(250);
+    await page.waitForSelector('.ax-pane:not([hidden]) .pgp-frame');
+    await previewPainted(page, 'p0-11b-phone-preview-frame.png');
+    await shot(page, 'p0-11-phone-preview-light.png');
     // Opening a document from the drawer closes it and shows its card.
     await page.click('.ax-drawer-btn');
     await page.waitForTimeout(250);

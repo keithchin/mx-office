@@ -38,7 +38,10 @@ export function pageFrame(fetch: Fetch): PageFrame {
   } catch {
     // the default, then
   }
-  const frame = h('iframe.pgp-frame', { sandbox: '', referrerpolicy: 'no-referrer', title: 'Page preview' }) as HTMLIFrameElement;
+  const newFrame = () => h('iframe.pgp-frame', { sandbox: '', referrerpolicy: 'no-referrer', title: 'Page preview' }) as HTMLIFrameElement;
+  let frame = newFrame();
+  /** The frame on screen has had a document (a fresh one is needed for the next). */
+  let used = false;
   const btns = (Object.keys(WIDTHS) as Width[]).map((w) => h('button.btn', { type: 'button', 'aria-pressed': String(w === width), onclick: () => setWidth(w) }, w[0].toUpperCase() + w.slice(1)));
   const stage = h('div.pgp-stage', {}, frame);
   const el = h('div.pgp-host', {}, h('div.pgp-bar', {}, h('span.mx-seg', { role: 'group', 'aria-label': 'Width' }, ...btns), h('span.pgp-note', {}, 'Sample data · drawn from the model')), stage);
@@ -52,8 +55,11 @@ export function pageFrame(fetch: Fetch): PageFrame {
       // just for this visit
     }
     paintWidth();
-    // Drawn again at the new width (a sandboxed frame resized in place can stay blank until it repaints).
-    if (current) draw(current);
+    // Drawn again at the new width in a fresh frame (a sandboxed frame resized in place can stay blank).
+    if (current) {
+      frame.removeAttribute('srcdoc');
+      draw(current);
+    }
   }
   function paintWidth() {
     btns.forEach((b, i) => {
@@ -68,11 +74,28 @@ export function pageFrame(fetch: Fetch): PageFrame {
 
   const ctx = (): PreviewContext => ({ docs, menu });
 
+  /**
+   * Puts `html` on screen. A sandboxed frame given a second srcdoc in Chromium loads it but is never painted
+   * again (it shows blank until something resizes it), so each new document gets a fresh frame, and the same
+   * document isn't set again.
+   */
+  function setDoc(html: string) {
+    if (frame.getAttribute('srcdoc') === html) return;
+    if (used) {
+      const next = newFrame();
+      next.style.width = frame.style.width;
+      frame.replaceWith(next);
+      frame = next;
+    }
+    frame.srcdoc = html;
+    used = true;
+  }
+
   function draw(mdl: string): boolean {
     const t = performance.now();
     const m = pageModel(mdl);
     if (!m) return false;
-    frame.srcdoc = previewDocument(previewBody(m, ctx()), m.name);
+    setDoc(previewDocument(previewBody(m, ctx()), m.name));
     lastMs = performance.now() - t;
     void more(m, mdl);
     return true;
@@ -106,6 +129,7 @@ export function pageFrame(fetch: Fetch): PageFrame {
     },
     show(mdl: string) {
       current = mdl;
+      el.hidden = false;
       const ok = draw(mdl);
       el.hidden = !ok;
       return ok;
