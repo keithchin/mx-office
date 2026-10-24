@@ -27,7 +27,6 @@
 // drawer opened by a button. Keyboard and ARIA: ./tree.ts.
 
 import { h } from '../../dom';
-import { icon, type PortalIcon } from '../../portal/icons';
 import { MARKETPLACE, type ExplorerChanges, type ExplorerHead, type ExplorerNode } from '../../../../shared/app-explorer';
 import type { DocumentsView } from '../../../../shared/app-documents';
 import type { DeliverablesView } from '../../../../shared/deliverables';
@@ -36,6 +35,7 @@ import { explorerApi, type ExplorerApi } from './api';
 import { DOC_PREFIX, docGroups } from './docs';
 import { docPane, type Pane, type PaneDeps } from './pane';
 import type { ElementContext } from './element-ref';
+import { explorerRail, type RailTarget } from './rail';
 import { revisionLine } from './revision';
 import { TreeView, type TreeModel } from './tree';
 import './explorer.css';
@@ -94,21 +94,6 @@ const servedOf = (d: WorkspaceData) => d.live?.served?.sha ?? d.live?.lastServed
 const ABOUT: Record<string, string> = { page: 'Page', entity: 'Data', domainmodel: 'Data', microflow: 'Logic', nanoflow: 'Logic', doc: 'Document', file: 'File' };
 const isDocs = (id: string) => id.startsWith('docs:');
 
-/** The collapsed rail's buttons: the search, the business tree's sections (by their root's id), all files. */
-type RailTarget = 'find' | 'all' | 'pages' | 'data' | 'logic' | 'docs:documents' | 'docs:processmap' | 'docs:design';
-const RAIL: { at: RailTarget; label: string; icon: PortalIcon; sep?: boolean }[] = [
-  { at: 'find', label: 'Find', icon: 'search' },
-  { at: 'pages', label: 'Pages', icon: 'page', sep: true },
-  { at: 'data', label: 'Data', icon: 'database' },
-  { at: 'logic', label: 'Logic', icon: 'flow' },
-  { at: 'docs:documents', label: 'Documents', icon: 'doc' },
-  { at: 'docs:processmap', label: 'Process map', icon: 'map' },
-  { at: 'docs:design', label: 'Design', icon: 'palette' },
-  { at: 'all', label: 'Show all files', icon: 'folder', sep: true },
-];
-/** Process map and Design are only there when the project has some (as in the tree). */
-const SOMETIMES = new Set<RailTarget>(['docs:processmap', 'docs:design']);
-
 export function createExplorer(deps: ExplorerDeps): Explorer {
   const api = deps.api ?? explorerApi();
   const prefs = recall();
@@ -146,25 +131,14 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   const allLabel = h('label.ax-switch', { title: 'The project’s files as they are, read-only (for builders and IT)' }, allBox, h('span', {}, 'Show all files'));
   const collapseBtn = h('button.ax-icon.ax-collapse', { type: 'button', 'aria-label': 'Collapse the explorer', title: 'Collapse the explorer to icons', 'aria-controls': 'ax-side' }, '«');
   const expandBtn = h('button.ax-icon.ax-expand', { type: 'button', 'aria-label': 'Expand the explorer', title: 'Expand the explorer', 'aria-controls': 'ax-side' }, '»');
-  const railBtns = new Map<RailTarget, HTMLButtonElement>();
-  const rail = h(
-    'div.ax-rail',
-    { role: 'toolbar', 'aria-label': 'Explorer sections', 'aria-orientation': 'vertical' },
-    expandBtn,
-    ...RAIL.flatMap((r) => {
-      const b = h('button.ax-icon.ax-rail-btn', { type: 'button', 'data-ax-rail': r.at, title: r.label, 'aria-label': r.label }, icon(r.icon, 'ax-rail-ico')) as HTMLButtonElement;
-      b.addEventListener('click', () => openAt(r.at));
-      railBtns.set(r.at, b);
-      return r.sep ? [h('span.ax-rail-sep', { 'aria-hidden': 'true' }), b] : [b];
-    }),
-  );
+  const rail = explorerRail(expandBtn, (at) => openAt(at));
   const heading = h('span.ax-title', {}, 'Explorer');
   const status = h('p.ax-status', { role: 'status' });
   const bar = h('div.ax-bar', { 'aria-live': 'polite' });
   const scroll = h('div.ax-scroll', {}, tree.el);
   const rows = h('div.ax-rows', {}, status, scroll, bar);
   const grip = h('div.ax-grip', { role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Explorer width', tabindex: '0', 'aria-valuemin': String(W_MIN), 'aria-valuemax': String(W_MAX) });
-  const side = h('aside.ax-side', { id: 'ax-side', 'aria-label': 'Explorer' }, h('div.ax-head', {}, h('div.ax-headrow', {}, heading, h('span.aw-grow'), collapseBtn), revLine.el, search, allLabel), rows, rail, grip);
+  const side = h('aside.ax-side', { id: 'ax-side', 'aria-label': 'Explorer' }, h('div.ax-head', {}, h('div.ax-headrow', {}, heading, h('span.aw-grow'), collapseBtn), revLine.el, search, allLabel), rows, rail.el, grip);
   const drawerBtn = h('button.aw-btn.ax-drawer-btn', { type: 'button', 'aria-controls': 'ax-side', 'aria-expanded': 'false' }, '☰ Browse the app');
   const scrim = h('div.ax-scrim', { 'aria-hidden': 'true' });
   const el = h('div.ax', {}, drawerBtn, side, scrim);
@@ -181,11 +155,8 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     tree.setLabel(prefs.all ? 'The project’s files' : 'The app');
     paintRail();
   }
-  /** The rail's buttons: Show all files pressed in all files, a section only when the tree has it. */
   function paintRail() {
-    railBtns.get('all')!.setAttribute('aria-pressed', String(prefs.all));
-    // Before the tree is read: the sections every project has; after, the ones its tree has (none of Pages, Data, Logic when the model can't be read).
-    for (const [at, b] of railBtns) if (at !== 'find' && at !== 'all') b.hidden = biz.roots.length ? !biz.roots.some((n) => n.id === at) : SOMETIMES.has(at);
+    rail.paint(prefs.all, biz.roots);
   }
   /** A rail button: the explorer opens at that section (its group opened and focused), in the search box, or in all files. */
   function openAt(at: RailTarget) {
