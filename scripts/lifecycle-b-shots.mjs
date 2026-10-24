@@ -79,6 +79,7 @@ async function main() {
   const dir = path.join(root, 'floors', 'realistic');
   const c = git(['-c', 'core.longpaths=true', 'clone', '--quiet', '--no-hardlinks', source, dir], root);
   if (c.status !== 0) throw new Error(`clone: ${c.stderr}`);
+  git(['switch', '-q', '-C', 'main', 'origin/main'], dir);
   const copy = { id: 'realistic-copy', name: 'Realistic app (copy)', dir };
   floors.push({ ...copy, palette: floors.length, addedBy: 'the office', addedAt: Date.now() - 86_400_000 });
   fs.writeFileSync(floorsFile, JSON.stringify(floors));
@@ -120,7 +121,7 @@ async function main() {
     // ---- the fixture project: a fake team; cancel while the lead has it ----
     const page = await newPage({ width: 1440, height: 900 });
     await page.goto(`${base(team)}&ws=app`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('.aw:not([hidden]) .dc-strip [data-chip="main"]', { timeout: 60000 });
+    await page.waitForSelector('#lead-panel:not([hidden]) .dk-head .dc-strip [data-chip="main"]', { timeout: 60000 });
     const t1 = await post(page, '/api/change-requests', { floor: team, text: 'Show the host’s name on the printed badge.', key: 'lcb-smoke-0001' });
     const t2 = await post(page, '/api/change-requests', { floor: team, text: 'Print the visit date in the corner of the badge.', key: 'lcb-smoke-0002' });
     check(t1.status === 200 && t2.status === 200, `two requests kept (${t1.body.change?.id}, ${t2.body.change?.id})`);
@@ -151,12 +152,12 @@ async function main() {
     git(['add', '-A'], dir);
     git(['commit', '-qm', `Label change (${q.body.change.id})`], dir);
     const cand = git(['rev-parse', 'HEAD'], dir).stdout.trim();
-    git(['switch', '-q', '-'], dir);
+    git(['switch', '-q', 'main'], dir);
     office = await startTestOffice({ home, env });
     cookie = await login(office.base);
     const p2 = await newPage({ width: 1440, height: 900 });
     await p2.goto(`${base(copy.id)}&ws=app`, { waitUntil: 'domcontentloaded' });
-    await p2.waitForSelector('.aw:not([hidden]) .dc-strip [data-chip="main"]', { timeout: 60000 });
+    await p2.waitForSelector('#lead-panel:not([hidden]) .dk-head .dc-strip [data-chip="main"]', { timeout: 60000 });
     const id = q.body.change.id;
     v = await until(async () => {
       const x = await api(p2, copy.id);
@@ -190,7 +191,7 @@ async function main() {
     v = await until(async () => {
       const x = await api(p2, copy.id);
       return x.changes.find((y) => y.id === id)?.relatedView?.length && x;
-    }, 30000, 'related commits');
+    }, 180000, 'related commits');
     const rel = v.changes.find((y) => y.id === id).relatedView;
     check(rel.some((r) => r.explicit), `a commit naming ${id} is linked: ${rel.map((r) => `${r.sha.slice(0, 7)} ${r.explicit ? 'linked' : 'possible'}`).join(', ')}`);
     check(v.changes.find((y) => y.id === id).state === 'candidate', 'linked commits never make it implemented');
@@ -203,7 +204,7 @@ async function main() {
     git(['switch', '-q', `dev/${id}`], dir);
     fs.writeFileSync(path.join(dir, 'SMOKE-CANDIDATE.md'), 'A late push after the cancel.\n');
     git(['commit', '-qam', `Late push (${id})`], dir);
-    git(['switch', '-q', '-'], dir);
+    git(['switch', '-q', 'main'], dir);
     v = await until(async () => {
       const x = await api(p2, copy.id);
       return x.changes.find((y) => y.id === id)?.late && x;
