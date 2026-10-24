@@ -54,7 +54,7 @@ function retired(id: RetiredSection) {
   registerTab({
     id,
     group: 'general',
-    label: id,
+    label: id[0].toUpperCase() + id.slice(1),
     tooltip: `Moved to Project Management (${RETIRED_SECTIONS[id]})`,
     hidden: true,
     mount: () => ({ show: () => void queueMicrotask(() => openProjectTab(RETIRED_SECTIONS[id])) }),

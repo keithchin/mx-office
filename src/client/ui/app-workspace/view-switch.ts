@@ -1,15 +1,14 @@
 // The view switch, **Developer | Project Management**: one control at the top right of every project page
 // of the 1D view, in the page's top bar (.lite-bar, right after Go to Office), so it stands in the same place,
 // at the same size, on every Project Management tab and in the Developer view, in Portal Light/Dark, the
-// classic themes and at phone width (where it says Dev | PM). Developer is the code's app workspace (the five
-// section tabs, ./tab.ts and ./shell.ts); Project Management is every other tab and the navigation. It only
+// classic themes and at phone width (where it says Dev | PM). Developer is the code's app workspace (./tab.ts and
+// ./shell.ts); Project Management is every other tab and the navigation. It only
 // opens tabs the way the page does (tabs/host.ts openProjectTab): the project and the page stay (nothing
 // reloads, the running app's version with them), and the address follows (&ws=app while the Developer view
 // shows, shared/app-workspace/route.ts).
 //
-//   to Developer           the section closest to the page you're on (Approvals → Decisions, Documents →
-//                          Requirements, anything else → App)
-//   to Project Management  the page you came from, else the one closest to the section you're on
+//   to Developer           the Developer view (its one tab, ?tab=app)
+//   to Project Management  the page you came from, else the Live app page
 //
 // Keys: Tab to it, then ← / → move between the two (and switch), like the console's Chat / Terminal toggle;
 // the page has no page-wide shortcuts, so it never takes your typing.
@@ -35,7 +34,7 @@ export interface ViewSwitch {
 
 const SHORT = { app: 'Dev', eng: 'PM' } as const;
 const HINT = {
-  app: 'Developer view: the running app, its explorer and the panel, section by section (App · Requirements · Decisions · Review · Release)',
+  app: 'Developer view: the app’s explorer, its Model preview or the live app, and the coordinator chat docked on the right to ask for changes',
   eng: 'Project Management: every page of the project (Overview, Board, Agents, Live app, Approvals, Settings…), with the navigation',
 } as const;
 

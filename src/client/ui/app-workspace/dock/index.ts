@@ -19,13 +19,14 @@
 
 import { h } from '../../dom';
 import { dockChanged, dockSelection, focusDock, setPanelDock, type ChatExtra, type ContextChip, type DockSent, type PanelDock } from '../../lead-panel/dock';
-import { changePill, revisionStrip } from '../../dev-changes/view';
+import { revisionStrip } from '../../dev-changes/view';
+import { CHANGE_TONE } from '../../../../shared/dev-changes';
 import { draftKey } from '../../dev-changes/feed';
 import type { WorkspaceData, WorkspaceDecision, WorkspaceSource } from '../data';
 import type { RequestAsk } from '../requests';
 import { decisionCard, leftNotes, type CardsCtx } from '../decision-cards';
 import { askedCard, tryCard } from './cards';
-import { aboutLine, chipFor, pauseWords, queuedNote, sessionChanges, sessionSummary, tryAt, wantsTry, type DevContext } from './logic';
+import { aboutLine, chipFor, executionWords, pauseWords, queuedNote, sessionChanges, sessionSummary, tryAt, wantsTry, type DevContext } from './logic';
 import './dock.css';
 
 export interface DockDeps {
@@ -111,7 +112,7 @@ export function createDock(deps: DockDeps): Dock {
     const b = d.business;
     const s = sessionSummary(session);
     const chip = b ? h('span.aw-pill.aw-statuschip', { class: b.tone, title: `Business status: ${b.line || b.label}` }, b.label) : h('span.aw-pill.idle', {}, 'Status…');
-    const pills = session.slice(-6).map((c) => h('span.dk-dc', { 'data-change': c.id }, h('b', {}, c.id), ' ', changePill(c)));
+    const pills = session.slice(-6).map((c) => h('span.dk-dc', { 'data-change': c.id }, h('b', {}, c.id), ' ', h('span.dc-pill', { class: CHANGE_TONE[c.state], 'data-state': c.state }, executionWords(c))));
     header.replaceChildren(
       h('div.dk-row', {}, chip, revisionStrip(d.dev)),
       h('div.dk-row.dk-session', {}, h('b', {}, s.head), s.parts.length ? h('span.dk-parts', {}, s.parts.join(' · ')) : ''),
@@ -132,7 +133,7 @@ export function createDock(deps: DockDeps): Dock {
     const cards: CardsCtx = { floor: d.floor, admin: d.admin, open: deps.open, answer: (x, a) => deps.source.answer(x, a), redraw: () => ((noteGen++), (noteAt = now()), draw(deps.source.get())) };
     const out: ChatExtra[] = [];
     for (const c of session) {
-      out.push({ id: `dc:${c.id}`, at: c.at, sig: JSON.stringify([c.state, c.words, c.detail, c.revision, c.mayCancel, c.position, c.checks?.line, c.text, pause, me]), draw: () => askedCard(floor, c, pause, me) });
+      out.push({ id: `dc:${c.id}`, at: c.at, sig: JSON.stringify([c.state, c.words, c.detail, c.revision, c.mayCancel, c.position, c.checks?.line, c.text, c.reviews, pause, me]), draw: () => askedCard(floor, c, pause, me) });
       if (wantsTry(c)) out.push({ id: `try:${c.id}`, at: tryAt(c), sig: JSON.stringify([c.revision, served, c.reviews, !!mark]), draw: () => tryCard(c, { ...(served ? { served } : {}), ...(mark ? { mark } : {}), live: deps.live }) });
     }
     const list = d.decisions ?? [];

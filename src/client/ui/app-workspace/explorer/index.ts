@@ -314,15 +314,19 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   }
 
   /** Every level of the business tree at this revision, in one request (kept: the revision never changes). */
-  async function loadIndex() {
+  /** Every level at this revision (kept: the search and the first page share one request). */
+  let levels: Record<string, ExplorerNode[]> | undefined;
+  async function loadIndex(): Promise<Record<string, ExplorerNode[]> | undefined> {
     const f = floor;
     const r = rev;
-    if (!f || !r || indexed === r) return;
+    if (!f || !r || indexed === r) return indexed === r ? levels : undefined;
     const ix = await api.index(f, r).catch(() => undefined);
-    if (!ix || f !== floor || r !== rev) return;
-    if (ix.problem) return say(ix.problem);
+    if (!ix || f !== floor || r !== rev) return undefined;
+    if (ix.problem) return void say(ix.problem);
     indexed = r;
+    levels = ix.levels;
     for (const [at, nodes] of Object.entries(ix.levels)) if (at !== '' && !biz.kids.get(at)?.nodes.length) biz.kids.set(at, { nodes });
+    return levels;
   }
 
   async function loadRoots() {
@@ -547,9 +551,9 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     wantFirst = !r;
     if (!f || !r || pane.node || firstFor === r) return;
     firstFor = r;
-    const ix = await api.index(f, r).catch(() => undefined);
-    if (!ix?.levels || f !== floor || r !== rev || pane.node) return;
-    const n = firstPage(ix.levels);
+    const all = await loadIndex();
+    if (!all || f !== floor || r !== rev || pane.node) return;
+    const n = firstPage(all);
     if (!n) return;
     selected = n;
     tree.selectedId = n.id;

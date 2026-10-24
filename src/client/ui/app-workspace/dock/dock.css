@@ -36,3 +36,6 @@
 .dk-wrong { margin-top: 8px; }
 .dk-wrong[hidden], .dk-err[hidden] { display: none; }
 .dk-left { border-left: 0; }
+.dk-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 5px 0 0; }
+.dk-facts dt { color: var(--faint, var(--muted)); }
+.dk-facts dd { margin: 0; overflow-wrap: anywhere; }

@@ -40,9 +40,9 @@ export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView
       'div.dk-receipt',
       { 'data-state': c.state, class: CHANGE_TONE[c.state], role: 'status' },
       h('div.dk-rhead', {}, h('b.dk-rid', {}, r.head), h('span.dc-grow'), c.mayCancel ? cancelButton(floor, c) : ''),
-      h('p.dk-rline', {}, r.line),
+      r.line ? h('p.dk-rline', {}, r.line) : '',
       c.of ? h('p.dk-rline', {}, `A correction of ${c.of}.`) : '',
-      c.checks ? h('p.dk-rline', { 'data-checks': c.checks.candidate }, `Checks: ${c.checks.line}`) : '',
+      r.facts.length ? h('dl.dk-facts', {}, ...r.facts.flatMap((f) => [h('dt', {}, f.label), h('dd', { 'data-fact': f.key }, f.text)])) : '',
     ),
   );
 }

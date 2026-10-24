@@ -17,28 +17,42 @@ export function sessionChanges(list: readonly DevChangeView[], now: number): Dev
   return list.filter((c) => now - c.at <= SESSION_MS || OPEN.has(c.state)).sort((a, b) => a.at - b.at || Number(a.id.slice(3)) - Number(b.id.slice(3)));
 }
 
-const GROUP: Partial<Record<DevChangeView['state'], string>> = {
+/** Where the work is, one fact (never the preview's or a review's): the record's execution state. */
+export type Execution = 'queued' | 'clarify' | 'working' | 'candidate' | 'merged' | 'cancelled' | 'not-found';
+const EXECUTION: Record<DevChangeView['state'], Execution> = {
   queued: 'queued',
-  clarify: 'need a word',
-  'with-team': 'with the team',
-  candidate: 'on a candidate',
+  clarify: 'clarify',
+  'with-team': 'working',
+  candidate: 'candidate',
   merged: 'merged',
-  'in-preview': 'in preview',
-  'preview-behind': 'merged, preview behind',
-  'preview-off': 'merged, preview off',
+  'in-preview': 'merged',
+  'preview-behind': 'merged',
+  'preview-off': 'merged',
   cancelled: 'cancelled',
-  'not-found': 'not found',
+  'not-found': 'not-found',
 };
+const EXEC_WORD: Record<Execution, string> = { queued: 'Queued', clarify: 'Needs clarification', working: 'With the team', candidate: 'On candidate', merged: 'Merged', cancelled: 'Cancelled', 'not-found': 'Candidate not found' };
+const EXEC_GROUP: Record<Execution, string> = { queued: 'queued', clarify: 'need a word', working: 'with the team', candidate: 'on a candidate', merged: 'merged', cancelled: 'cancelled', 'not-found': 'not found' };
+export const executionOf = (c: DevChangeView): Execution => EXECUTION[c.state];
+/** The execution fact in words, with the revision it names: "On candidate @c0ffee1", "Merged @f00d123". */
+export function executionWords(c: DevChangeView): string {
+  const e = executionOf(c);
+  const rev = (e === 'candidate' || e === 'merged') && c.revision ? ` @${short(c.revision)}` : '';
+  return `${EXEC_WORD[e]}${rev}`;
+}
 
-/** "3 changes this session" and "1 queued · 1 with the team · 1 in preview" (states in the record's order). */
+/** "3 changes this session" and "1 queued · 1 with the team · 2 merged · 1 in the preview" (execution, then the preview apart). */
 export function sessionSummary(list: readonly DevChangeView[]): { head: string; parts: string[] } {
   const n = list.length;
   const counts = new Map<string, number>();
   for (const c of list) {
-    const g = GROUP[c.state] ?? c.words.toLowerCase();
+    const g = EXEC_GROUP[executionOf(c)];
     counts.set(g, (counts.get(g) ?? 0) + 1);
   }
-  return { head: n ? `${n} change${n === 1 ? '' : 's'} this session` : 'No changes this session', parts: [...counts].map(([g, k]) => `${k} ${g}`) };
+  const inPreview = list.filter((c) => c.state === 'in-preview').length;
+  const parts = [...counts].map(([g, k]) => `${k} ${g}`);
+  if (inPreview) parts.push(`${inPreview} in the preview`);
+  return { head: n ? `${n} change${n === 1 ? '' : 's'} this session` : 'No changes this session', parts };
 }
 
 const short = (sha?: string) => (sha ?? '').slice(0, 7);
@@ -50,17 +64,34 @@ export function pauseWords(p: NonNullable<DevChangesView['pause']>): string {
   return `Project paused ${who} (${clock(p.at)}). Queued changes start when someone resumes it in Project Management (▶ Resume).`;
 }
 
-const NAMES_REV = new Set(['candidate', 'merged', 'in-preview', 'preview-behind', 'preview-off']);
+/** One of a receipt's facts: what it is about, and what the record says. */
+export interface ReceiptFact {
+  key: 'checks' | 'preview' | 'review';
+  label: string;
+  text: string;
+}
 
-/** A change's receipt: "→ DC-4 · Queued", the record's line under it (the pause said with who and when), its tone. */
-export function receiptWords(c: DevChangeView, pause?: DevChangesView['pause']): { head: string; line: string } {
-  const rev = NAMES_REV.has(c.state) && c.revision ? ` @${short(c.revision)}` : '';
-  const head = `→ ${c.id} · ${c.words}${rev}`;
-  if (c.state === 'queued' && pause) {
-    const place = c.position && c.position > 1 ? `Number ${c.position} in the queue. ` : '';
-    return { head, line: `${place}${pauseWords(pause)}` };
+/**
+ * A change's receipt: "→ DC-4 · On candidate @c0ffee1" (where the work is), then each fact apart, as the record
+ * backs it: the work (queued and why, the pause with who and when), the checks at exactly that revision, whether
+ * the live preview has it, and the person's review of a version. Merged is never "accepted" nor "ready to try":
+ * only a preview that contains it is, and only a review says it looks right.
+ */
+export function receiptWords(c: DevChangeView, pause?: DevChangesView['pause']): { head: string; line: string; facts: ReceiptFact[] } {
+  const e = executionOf(c);
+  const head = `→ ${c.id} · ${executionWords(c)}`;
+  const place = c.position && c.position > 1 ? `Number ${c.position} in the queue. ` : '';
+  const line = e === 'queued' && pause ? `${place}${pauseWords(pause)}` : e === 'merged' ? '' : c.detail;
+  const facts: ReceiptFact[] = [];
+  if (e === 'candidate' || e === 'merged') {
+    facts.push({ key: 'checks', label: 'Checks', text: c.checks ? c.checks.line : e === 'merged' ? `None shown here for @${short(c.revision)}: see Testing in Project Management` : 'None reported yet' });
+    const preview =
+      c.state === 'in-preview' ? c.detail.replace(/: try it in the app\.$/, '.') : c.state === 'preview-behind' ? 'Not in the preview yet: it runs an older version.' : c.state === 'preview-off' ? 'The live preview isn’t running.' : e === 'merged' ? 'Whether the preview has it couldn’t be told.' : 'Not in the preview: it runs main, not this candidate.';
+    facts.push({ key: 'preview', label: 'Preview', text: preview });
   }
-  return { head, line: c.detail };
+  const r = c.reviews?.at(-1);
+  if (r || e === 'merged') facts.push({ key: 'review', label: 'Your review', text: !r ? 'None yet' : r.verdict === 'works' ? `Looks right on @${short(r.revision)} (${r.by})` : `Something’s wrong on @${short(r.revision)} (${r.by})${r.correction ? `: ${r.correction}` : ''}` });
+  return { head, line, facts };
 }
 
 /** The words a person asked with, without the context line the office added ("About: …"). */

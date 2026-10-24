@@ -240,7 +240,7 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await row(page, 'Visitor desk').nth(1).click();
     await row(page, 'Host approval').click();
     await page.waitForSelector('.ax-pane:not([hidden]) .mx-svg');
-    await page.click('.ax-back');
+    await page.click('.aw-tab[data-view="live"]');
     await row(page, 'Logic').click();
     await page.click('[data-id="logic/VisitorDesk"] .ax-label');
     await row(page, 'Visitor save').click();
@@ -284,7 +284,7 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.waitForFunction(() => document.querySelector('.ax-pane-title')?.textContent === 'Look and feel');
     await shot(page, 'p0-04-document-versions-dark.png');
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-light'));
-    await page.click('.ax-back');
+    await page.click('.aw-tab[data-view="live"]');
 
     // The search: the whole tree at once, the folded Marketplace group too; a document by its path.
     await page.fill('.ax-search', 'atlas');
@@ -312,7 +312,7 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.waitForFunction(() => [...document.querySelectorAll('.ax-tree .ax-label')].some((e) => e.textContent === 'README.md'));
     await page.click('.ax-switch');
     await page.waitForFunction(() => [...document.querySelectorAll('.ax-tree .ax-label')].some((e) => e.textContent === 'Pages'));
-    await page.click('.ax-back');
+    await page.click('.aw-tab[data-view="live"]');
 
     // Main moves (and the live app with it): the tree is marked stale, never swapped under the viewer; Show it reads B.
     await row(page, 'Today’s visitors').click();
