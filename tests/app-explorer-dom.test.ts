@@ -273,9 +273,11 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.fill('.aw-reqtext', 'Show the arrival time next to each visitor');
     await page.click('.aw-reqsend');
     await page.waitForFunction(() => (window as unknown as { __asked: unknown[] }).__asked.length === 1);
-    const asked = (await get<{ text: string; page?: string }[]>(page, '__asked'))[0];
-    assert.equal(asked.text, 'Show the arrival time next to each visitor\n\nAbout: Page: Today’s visitors');
+    const asked = (await get<{ text: string; page?: string; ref?: { docQn: string }; source?: string }[]>(page, '__asked'))[0];
+    assert.equal(asked.text, 'Show the arrival time next to each visitor\n\nAbout: Today’s visitors (page VisitorDesk.Visitor_Overview)');
     assert.equal(asked.page, '/p/visitors');
+    assert.equal(asked.ref?.docQn, 'VisitorDesk.Visitor_Overview', 'the page as a model reference');
+    assert.match(asked.source ?? '', /^[0-9a-f]{40}$/, 'with the revision viewed');
     await page.evaluate(() => document.getElementById('toasts')!.replaceChildren());
     await page.click('.ax-change');
     assert.deepEqual(await get<string[]>(page, '__changeThis'), ['page VisitorDesk.Visitor_Overview main 7d']);

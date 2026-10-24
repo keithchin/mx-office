@@ -5,6 +5,7 @@
 
 import type { ExplorerChanges, ExplorerFile, ExplorerHead, ExplorerIndex, ExplorerLevel, ExplorerSearch } from '../../../../shared/app-explorer';
 import type { DocumentsView } from '../../../../shared/app-documents';
+import type { PageFacts } from '../../../../shared/page-facts';
 
 export type Fetch = (url: string) => Promise<Response>;
 
@@ -23,6 +24,8 @@ export interface ExplorerApi {
   search(floor: string, rev: string, q: string): Promise<ExplorerSearch>;
   /** The documents with their relationships. */
   documents(floor: string, rev: string): Promise<DocumentsView>;
+  /** A page's widgets ($Type, $ID), who shares its snippets, and the project's layout classes (the Model preview). */
+  facts?(floor: string, rev: string, qn: string): Promise<PageFacts>;
 }
 
 export function explorerApi(fetcher: Fetch = (u) => fetch(u, { credentials: 'same-origin' })): ExplorerApi {
@@ -59,5 +62,6 @@ export function explorerApi(fetcher: Fetch = (u) => fetch(u, { credentials: 'sam
     index: (floor, rev) => ask(floor, rev, '/api/app-explorer/index', {}),
     search: (floor, rev, q) => ask(floor, rev, '/api/app-explorer/search', { q }),
     documents: (floor, rev) => ask(floor, rev, '/api/app-explorer/documents', {}),
+    facts: (floor, rev, qn) => ask(floor, rev, '/api/app-explorer/page-facts', { qn }),
   };
 }

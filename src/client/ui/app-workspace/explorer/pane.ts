@@ -16,9 +16,12 @@ import { modelApi } from '../../model/api';
 import { Canvas } from '../../model/canvas';
 import { drawDomain } from '../../model/domain-draw';
 import { drawFlow } from '../../model/flow-draw';
-import { pageFrame } from '../../model/page-frame';
+import { pageFrame, type PageFrame } from '../../model/page-frame';
+import type { PageFacts } from '../../../../shared/page-facts';
+import { elementContext, type ElementContext } from './element-ref';
 import '../../model/model.css';
 import '../../model/page.css';
+import './pick.css';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 
@@ -32,8 +35,19 @@ export interface PaneDeps {
   /** Opens another document from a document's card. */
   openEntry?(id: string): void;
   file(path: string): Promise<ExplorerFile>;
+  /** A page's facts at the revision shown (widget $Type/$ID, shared snippets, the theme's layout classes). */
+  facts?(qn: string): Promise<PageFacts | undefined>;
+  /** Request a change about the page shown, or the widget picked on it. */
+  request?(c: PaneRequest): void;
   /** For tests: the Model tab's requests. */
   api?: Pick<typeof modelApi, 'doc'>;
+}
+
+/** A request from the Model preview: the page (and widget) as context, at the revision viewed. */
+export interface PaneRequest {
+  node: ExplorerNode;
+  element: ElementContext;
+  rev: string;
 }
 
 export interface Pane {
@@ -44,6 +58,10 @@ export interface Pane {
   showDoc(e: DocEntry, view: DocumentsView): void;
   /** What's shown, if anything. */
   readonly node: ExplorerNode | undefined;
+  /** The context for a request about what's shown (the page, and the widget picked on it), when it's a page. */
+  element(): ElementContext | undefined;
+  /** The Model preview's frame (tests, Select element). */
+  readonly preview: PageFrame;
 }
 
 export function docPane(deps: PaneDeps): Pane {
@@ -57,18 +75,60 @@ export function docPane(deps: PaneDeps): Pane {
   const msg = h('p.aw-muted.ax-msg');
   const doc = h('div.ax-docwrap');
   const canvas = new Canvas(stage, { select: () => undefined });
-  const preview = pageFrame((type, qn) => {
-    const f = deps.floor();
-    const rev = deps.rev();
-    return f && rev ? api.doc(f, rev, type, qn, false).then((r) => (r.doc.kind === 'text' ? r.doc.mdl || null : null)) : Promise.resolve(null);
-  });
+  /** The page's facts at the revision shown (asked once per page and revision: the api keeps them). */
+  let facts: { key: string; v?: PageFacts | undefined } | undefined;
+  const factsOf = (qn: string): Promise<PageFacts | undefined> => {
+    const key = `${deps.rev()}\0${qn}`;
+    if (!deps.facts) return Promise.resolve(undefined);
+    return deps
+      .facts(qn)
+      .catch(() => undefined)
+      .then((v) => {
+        if (`${deps.rev()}\0${qn}` === key) facts = { key, v };
+        return v;
+      });
+  };
+  const preview = pageFrame(
+    (type, qn) => {
+      const f = deps.floor();
+      const rev = deps.rev();
+      return f && rev ? api.doc(f, rev, type, qn, false).then((r) => (r.doc.kind === 'text' ? r.doc.mdl || null : null)) : Promise.resolve(null);
+    },
+    { change: () => paintPick(), theme: (qn) => factsOf(qn).then((f) => f?.theme.css || undefined) },
+  );
   // The Preview's own note names how it's drawn in engineering words: said plainly here.
   const pnote = preview.el.querySelector('.pgp-note');
   if (pnote) pnote.textContent = 'Model preview (from the model, not the running app) · sample data';
+  // Select element's chip: the page › the widget picked (or that it's gone), what else shares it, and Request a change.
+  const pickBar = h('div.ax-pick', { 'aria-live': 'polite', hidden: true });
   const body = h('div.ax-pane-body', {}, stage, preview.el, text, img, msg, doc);
-  const el = h('section.ax-pane.mxv', { 'aria-label': 'Opened from the explorer', hidden: true }, h('div.ax-pane-bar', {}, backBtn, title), note, body);
+  const el = h('section.ax-pane.mxv', { 'aria-label': 'Opened from the explorer', hidden: true }, h('div.ax-pane-bar', {}, backBtn, title), note, pickBar, body);
   let shown: ExplorerNode | undefined;
   let seq = 0;
+  let readAt: string | undefined;
+
+  const pageOf = (n: ExplorerNode | undefined) => (n?.type === 'page' && n.qn ? { qn: n.qn, title: n.label } : undefined);
+  function element(): ElementContext | undefined {
+    const page = pageOf(shown);
+    if (!page) return undefined;
+    const sel = preview.selected;
+    return elementContext(page, sel, facts?.key === `${deps.rev()}\0${page.qn}` ? facts.v : undefined);
+  }
+  function paintPick() {
+    const page = pageOf(shown);
+    const sel = preview.selected;
+    pickBar.hidden = !page || preview.el.hidden;
+    if (pickBar.hidden || !page) return void pickBar.replaceChildren();
+    const c = element()!;
+    if (sel && deps.facts && facts?.key !== `${deps.rev()}\0${page.qn}`) void factsOf(page.qn).then(() => paintPick());
+    const ask = deps.request
+      ? h('button.aw-btn.primary.ax-pick-ask', { type: 'button', onclick: () => deps.request!({ node: shown!, element: element()!, rev: deps.rev() ?? '' }) }, sel && !sel.gone ? 'Request a change to this' : 'Request a change to this page')
+      : '';
+    const chip = sel
+      ? h('span.ax-chip', { class: sel.gone ? 'gone' : '', title: c.where }, h('span.ax-chip-text', {}, `${page.title} › ${sel.label}`), sel.gone ? h('span.ax-chip-gone', {}, 'no longer on this page') : '', h('button.ax-chip-x', { type: 'button', 'aria-label': 'Clear the selection', title: 'Clear the selection', onclick: () => preview.unselect() }, '✕'))
+      : h('span.ax-pick-hint', {}, 'Use ⌖ Select element to point at a widget, or ask about the whole page.');
+    pickBar.replaceChildren(chip, c.impact ? h('span.ax-impact', {}, c.impact) : '', h('span.aw-grow'), ask);
+  }
 
   const paintBack = () => {
     const live = deps.live?.() ?? false;
@@ -84,6 +144,7 @@ export function docPane(deps: PaneDeps): Pane {
     if (which !== 'doc') doc.replaceChildren();
     if (which !== 'preview') preview.clear();
     text.hidden = which !== 'text';
+    paintPick();
     img.hidden = which !== 'img';
     msg.hidden = which !== 'msg';
   }
@@ -106,7 +167,7 @@ export function docPane(deps: PaneDeps): Pane {
       if (n.type === 'page' && n.qn) {
         const r = await api.doc(f, rev, 'page', n.qn, false);
         if (mine !== seq) return;
-        if (r.doc.kind === 'text' && r.doc.mdl && preview.show(r.doc.mdl)) return only('preview');
+        if (r.doc.kind === 'text' && r.doc.mdl && preview.show(r.doc.mdl)) return void (only('preview'), paintPick());
         return say('This page can’t be previewed here.');
       }
       if ((n.type === 'entity' || n.type === 'domainmodel') && n.qn) {
@@ -144,8 +205,14 @@ export function docPane(deps: PaneDeps): Pane {
     get node() {
       return shown;
     },
+    get preview() {
+      return preview;
+    },
+    element,
     show(n, label, why) {
       shown = n;
+      // Another revision: what the preview read for the last one (layout, snippets, theme, facts) is let go.
+      if (deps.rev() !== readAt) ((readAt = deps.rev()), preview.forget(), (facts = undefined));
       el.hidden = false;
       paintBack();
       const at = shortSha(deps.rev());
