@@ -16,7 +16,8 @@ import { audit } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { outcomeOf, type Assignment } from '../roster/resume.js';
 import { isAsleepStatus } from '../roster/bench.js';
-import { projectPauseOf } from '../project-run/store.js';
+import { projectPause, projectPauseOf } from '../project-run/store.js';
+import { validationBook } from '../guided-validation/index.js';
 import { liveAppsIfMade } from '../liveapp/index.js';
 import { defaultBranch, floorRef } from '../liveapp/checkout.js';
 import { contains } from '../tasks/git.js';
@@ -209,10 +210,14 @@ export async function changesView(ctx: Ctx, floor: Floor, who: Who): Promise<Dev
     hasCI: base.pulls.some((p) => (p as { checks?: string }).checks && (p as { checks?: string }).checks !== 'none'),
     mayCancel: (c) => who.admin || (!!c.owner && c.owner === who.id),
   });
+  // What people said after trying each change (its "Please try this" card), from guided validation's book.
+  const reviews = validationBook(ctx).reviews(floor.id);
+  for (const v of views) if (reviews.has(v.id)) v.reviews = reviews.get(v.id);
+  const p = projectPause(floor.id);
   const main = await mainHead(floor.dir);
   const preview = previewOf(ctx, floor.id);
   const behind = main && preview.served ? await behindBy(floor.dir, preview.served, main) : undefined;
   const strip = stripFacts(main, preview, behind, views);
   const cur = currentChange(views);
-  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null };
+  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}) };
 }

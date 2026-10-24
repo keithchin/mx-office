@@ -1,6 +1,7 @@
 // The App Workspace's guided validation (C5, server/guided-validation/): GET the scenarios of one version with
 // their results at exactly that version and the marks made there; POST a mark ("Works as expected" or
-// "Something's wrong", which becomes a correction through the change requests' path). Who may mark is who may
+// "Something's wrong", which becomes a correction, DC-<n>, through the Developer change queue), on a guided
+// check or on a change tried from its "Please try this" card (`change` in place of `scenario`). Who may mark is who may
 // ask for a change: anyone signed in, from the office's own pages (another site's page is refused).
 import type { Route } from '../router.js';
 import { validationBook, validationOf } from '../../guided-validation/index.js';
@@ -23,7 +24,7 @@ export const guidedValidationRoutes = {
       return send(res, 200, await validationOf(ctx, floor, revision.toLowerCase()));
     },
   },
-  /** POST /api/guided-validation/mark {floor, revision, scenario, verdict: works|wrong, note?, page?, pageMoved?}: the mark as kept; audited. */
+  /** POST /api/guided-validation/mark {floor, revision, scenario | change, verdict: works|wrong, note?, page?, pageMoved?}: the mark as kept; audited. */
   mark: {
     method: 'POST',
     path: '/api/guided-validation/mark',
@@ -40,7 +41,7 @@ export const guidedValidationRoutes = {
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
       if (!floor) return send(res, 404, { error: 'No such project' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
-      const r = await validationBook(ctx).mark(floor.id, { revision: body.revision, scenario: body.scenario, verdict: body.verdict, note: body.note, page: body.page, pageMoved: body.pageMoved, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
+      const r = await validationBook(ctx).mark(floor.id, { revision: body.revision, scenario: body.scenario, change: body.change, verdict: body.verdict, note: body.note, page: body.page, pageMoved: body.pageMoved, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
       if (!r.ok) return send(res, r.status, { error: r.error, ...(r.served ? { served: r.served } : {}) });
       return send(res, 200, { finding: r.finding });
     },

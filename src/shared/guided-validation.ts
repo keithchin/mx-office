@@ -10,8 +10,11 @@
 //   findings    what a person marked, per project and version (server/guided-validation/, its own small
 //               file, audited); evidence shown beside the business status, never part of it: the business
 //               status (shared/business-status.ts) has no business-review input, so verification is unchanged
-//   correction  "Something's wrong" goes to the team as a change request (server/change-requests/, a real
-//               task id), linked to the scenario and the version by the finding that made it
+//   correction  "Something's wrong" goes to the team as a Developer change (DC-<n>, server/dev-changes/): queued
+//               like any other request, handed to the lead when it's its turn, so it never refuses because no
+//               lead is at work; linked to the scenario and the version by the finding that made it
+//   changes     a "Please try this" card's Looks right / Something's wrong is a mark too, on the scenario
+//               `change:DC-<n>` (shared/dev-changes.ts reviewScenario), for the exact version tried
 
 import { isKnown, sameRevision, statusOf, type TestRunRecord } from './testing/record.js';
 import type { WalkStep } from './walkthroughs/types.js';
@@ -46,8 +49,8 @@ export interface FindingRecord {
   by: string;
   owner?: string;
   at: number;
-  /** The change request "Something's wrong" made: its id and task id. */
-  correction?: { id: string; taskId: string };
+  /** The correction "Something's wrong" made: its id (DC-<n>; CR-<n> before the change queue) and, once handed to the lead, its task id. */
+  correction?: { id: string; taskId?: string };
 }
 
 /** Where a scenario starts, when its journey says: a page of the app (opened in the canvas), or a menu item. */
@@ -80,7 +83,7 @@ export interface ValidationView {
   /** The other automatic checks that ran on exactly this version (unit tests and the like), counted. */
   checks: { passed: number; failed: number; skipped: number };
   /** Every correction a finding made on this project, any version, newest first (its state is the request's). */
-  corrections: { id: string; taskId: string; scenario: string; title: string; revision: string; at: number }[];
+  corrections: { id: string; taskId?: string; scenario: string; title: string; revision: string; at: number }[];
   /** Why the office can't list scenarios for it (the version isn't readable here). */
   note?: string;
 }
@@ -179,6 +182,12 @@ const short = (sha: string) => sha.slice(0, 7);
 export function correctionText(title: string, scenario: string, revision: string, note: string): string {
   const head = requestTitle(note);
   return `${head ? `${head}\n\n` : ''}Something's wrong in the guided check "${title}" (${scenario}) on version ${short(revision)}: ${note}`;
+}
+
+/** A "Please try this" card's correction: what the person saw after trying a change, on which version, linked to it. */
+export function changeCorrectionText(change: string, title: string, revision: string, note: string): string {
+  const head = requestTitle(note);
+  return `${head ? `${head}\n\n` : ''}Something's wrong after trying ${change} ("${title}") on version ${short(revision)}: ${note}`;
 }
 
 /** The scenario summary in a line, for the Release section and the panel. */

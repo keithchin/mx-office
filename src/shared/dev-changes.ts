@@ -62,6 +62,15 @@ export interface Candidate {
   seenAt: number;
 }
 
+/**
+ * Where a change was asked from: the Developer view's docked chat, its fallback dialog (a phone or a page with no
+ * chat), a guided check's "Something's wrong", or a "Please try this" card's "Something's wrong". Every entry point
+ * makes the same record; this only says which one did.
+ */
+export type ChangeVia = 'chat' | 'dialog' | 'validation' | 'try';
+const VIAS: readonly ChangeVia[] = ['chat', 'dialog', 'validation', 'try'];
+export const cleanVia = (v: unknown): ChangeVia | undefined => (VIAS.includes(v as ChangeVia) ? (v as ChangeVia) : undefined);
+
 /** Why a queued change hasn't started: the condition that has to change first. */
 export type QueueWhy = 'behind' | 'no-lead' | 'paused' | 'cap' | 'asleep' | 'refused';
 
@@ -83,6 +92,10 @@ export interface DevChangeNew {
   revision?: string;
   /** The page or element it points at in the model, when one was picked. */
   ref?: ElementRef;
+  /** The change this one corrects (a "Something's wrong" after trying it), when it is a correction. */
+  of?: string;
+  /** Which entry point made it. */
+  via?: ChangeVia;
 }
 
 /** Something that happened to a change, oldest first. */
@@ -324,7 +337,30 @@ export interface DevChangeView extends DevChange, ChangeStatus {
   checks?: CandidateChecks;
   /** Whether the person asking may cancel it now (queued or flagged, and theirs or an admin's). */
   mayCancel: boolean;
+  /** What people said after trying it ("Looks right" / "Something's wrong"), each for the exact revision tried, oldest first. */
+  reviews?: ChangeReview[];
 }
+
+/**
+ * A person's scoped review of a change, from its "Please try this" card: kept as a guided-validation mark (C5's
+ * book, scenario `change:DC-n`) for the exact revision the live preview served then. Evidence, never acceptance.
+ */
+export interface ChangeReview {
+  /** The mark's id (GV-<n>). */
+  id: string;
+  verdict: 'works' | 'wrong';
+  revision: string;
+  by: string;
+  at: number;
+  note?: string;
+  /** The correction "Something's wrong" made (DC-<n>). */
+  correction?: string;
+}
+
+/** The scenario id a change's review is kept under in guided validation's book. */
+export const reviewScenario = (id: string) => `change:${id}`;
+/** The change a guided-validation scenario id names, when it's a change's review. */
+export const reviewedChange = (scenario: string): string | undefined => (scenario.startsWith('change:') && CHANGE_ID.test(scenario.slice(7)) ? scenario.slice(7) : undefined);
 
 /** The newest change that isn't cancelled, preferring the active one, then the next queued: the panel's current change. */
 export function currentChange(list: readonly DevChangeView[]): DevChangeView | undefined {
@@ -422,4 +458,6 @@ export interface DevChangesView {
   changes: DevChangeView[];
   strip: StripFacts;
   current: string | null;
+  /** The project's ⏸ pause (who, when, why), while it's paused: queued changes start only after ▶ Resume. */
+  pause?: { by: string; at: number; why: 'person' | 'restart' | 'budget' };
 }

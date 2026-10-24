@@ -3,8 +3,13 @@
 // (<data>/guided-validation/<project>.json: the marks, each with its version, and the correction a "wrong"
 // made), and audited as `validation.mark`. A mark is only ever for the version the live app serves now: a
 // page showing an older one is told so (409) and nothing is kept. "Something's wrong" becomes a correction
-// through the change requests' own path (server/change-requests/: a task minted before anything is typed);
-// when that is refused, the mark is refused with it, so a "wrong" never stands without its task.
+// through the Developer change queue (server/dev-changes/: DC-<n>, queued like any request and handed to the
+// lead when it's its turn, so no lead at work is no refusal); when the queue refuses it (no words), the mark is
+// refused with it, so a "wrong" never stands without its change.
+//
+// A "Please try this" card (the Developer view's docked chat) marks a change the same way: the scenario is
+// `change:DC-<n>` (shared/dev-changes.ts reviewScenario), the version the one served when it was tried, and its
+// "Something's wrong" a correction linked to the change (`of`). Looks right is a scoped review, never acceptance.
 //
 // The marks are evidence beside the business status, never an input of it (the business status has no
 // business-review input), so they change no verification. The seams (deps) are what index.ts wires to the
@@ -14,12 +19,15 @@ import path from 'node:path';
 import { parseStoreSync } from '../durable/read.js';
 import { writeTextDurableSync } from '../durable/write.js';
 import { cleanPage } from '../../shared/change-requests.js';
-import { correctionText, NOTE_MAX, WRONG_MIN, type FindingRecord, type Verdict } from '../../shared/guided-validation.js';
+import { changeCorrectionText, correctionText, NOTE_MAX, WRONG_MIN, type FindingRecord, type Verdict } from '../../shared/guided-validation.js';
+import { CHANGE_ID, reviewScenario, reviewedChange, type ChangeReview, type ElementRef } from '../../shared/dev-changes.js';
 import type { AuditInput } from '../../shared/audit.js';
 
 export interface MarkAsk {
   revision: unknown;
-  scenario: unknown;
+  scenario?: unknown;
+  /** A change tried from its "Please try this" card (DC-<n>), in place of a scenario. */
+  change?: unknown;
   verdict: unknown;
   note?: unknown;
   page?: unknown;
@@ -37,9 +45,24 @@ export interface ValidationDeps {
   served(floorId: string): string | undefined;
   /** The scenarios at a revision (id and title), as the Review section lists them. */
   scenarios(floorId: string, revision: string): Promise<{ id: string; title: string }[]>;
-  /** A change request through the change requests' path: the request (with its task id), or why not. */
-  correct(floorId: string, ask: { text: string; page?: string; pageMoved?: boolean; revision: string; by: string; owner?: string }): Promise<{ id: string; taskId: string } | string>;
+  /** A correction through the Developer change queue: the change (with its task id once handed over), or why not. */
+  correct(floorId: string, ask: CorrectAsk): Promise<{ id: string; taskId?: string } | string>;
+  /** A change of the project, for its "Please try this" card: its title (first line) and what it pointed at. */
+  change?(floorId: string, id: string): Promise<{ title: string; page?: string; ref?: ElementRef } | undefined>;
   record(e: AuditInput): void;
+}
+
+export interface CorrectAsk {
+  text: string;
+  page?: string;
+  pageMoved?: boolean;
+  revision: string;
+  by: string;
+  owner?: string;
+  /** The change it corrects, for a "Please try this" card's Something's wrong. */
+  of?: string;
+  ref?: ElementRef;
+  via: 'validation' | 'try';
 }
 
 interface Book {
@@ -92,6 +115,18 @@ export class ValidationBook {
       .sort((a, b) => b.at - a.at);
   }
 
+  /** Each change's reviews from its "Please try this" card, oldest first, by change id. */
+  reviews(floorId: string): Map<string, ChangeReview[]> {
+    const out = new Map<string, ChangeReview[]>();
+    for (const m of this.book(floorId).items) {
+      const id = reviewedChange(m.scenario);
+      if (!id) continue;
+      const r: ChangeReview = { id: m.id, verdict: m.verdict, revision: m.revision, by: m.by, at: m.at, ...(m.note ? { note: m.note } : {}), ...(m.correction ? { correction: m.correction.id } : {}) };
+      out.set(id, [...(out.get(id) ?? []), r]);
+    }
+    return out;
+  }
+
   /** Marks a scenario of the version on screen. "Something's wrong" makes its correction first. */
   async mark(floorId: string, ask: MarkAsk): Promise<MarkResult> {
     const revision = typeof ask.revision === 'string' && SHA.test(ask.revision) ? ask.revision.toLowerCase() : undefined;
@@ -102,17 +137,21 @@ export class ValidationBook {
     if (verdict === 'wrong' && note.length < WRONG_MIN) return { ok: false, status: 400, error: 'Say what went wrong, so the team can put it right' };
     const served = this.deps.served(floorId);
     if (!served || !same(served, revision)) return { ok: false, status: 409, error: served ? 'The app moved on to another version since you opened this check. Nothing was kept: look at the new version and mark it there.' : 'The app isn’t running now, so there’s no version to mark. Nothing was kept.', ...(served ? { served } : {}) };
+    // A change tried from its card, or one of this version's guided checks.
+    const changeId = typeof ask.change === 'string' && CHANGE_ID.test(ask.change) ? ask.change : undefined;
+    const tried = changeId ? await this.deps.change?.(floorId, changeId) : undefined;
+    if (changeId && !tried) return { ok: false, status: 400, error: 'No such change on this project' };
     const scenarioId = typeof ask.scenario === 'string' ? ask.scenario : '';
-    const sc = (await this.deps.scenarios(floorId, revision)).find((s) => s.id === scenarioId);
+    const sc = changeId && tried ? { id: reviewScenario(changeId), title: `${changeId}: ${tried.title}` } : (await this.deps.scenarios(floorId, revision)).find((s) => s.id === scenarioId);
     if (!sc) return { ok: false, status: 400, error: 'That guided check isn’t part of this version' };
-    const page = cleanPage(ask.page);
+    const page = cleanPage(ask.page) ?? (tried?.page ? cleanPage(tried.page) : undefined);
     const pageMoved = !!page && ask.pageMoved === true;
     let correction: FindingRecord['correction'];
     if (verdict === 'wrong') {
-      const r = await this.deps.correct(floorId, { text: correctionText(sc.title, sc.id, revision, note), ...(page ? { page } : {}), ...(pageMoved ? { pageMoved } : {}), revision, by: ask.by, ...(ask.owner ? { owner: ask.owner } : {}) });
+      const text = changeId && tried ? changeCorrectionText(changeId, tried.title, revision, note) : correctionText(sc.title, sc.id, revision, note);
+      const r = await this.deps.correct(floorId, { text, ...(page ? { page } : {}), ...(pageMoved ? { pageMoved } : {}), revision, by: ask.by, ...(ask.owner ? { owner: ask.owner } : {}), ...(changeId ? { of: changeId, via: 'try' as const } : { via: 'validation' as const }), ...(tried?.ref ? { ref: tried.ref } : {}) });
       if (typeof r === 'string') return { ok: false, status: 400, error: r };
-      if (!r.taskId) return { ok: false, status: 400, error: 'The office couldn’t make a task for this correction, so nothing was kept. Try again.' };
-      correction = { id: r.id, taskId: r.taskId };
+      correction = { id: r.id, ...(r.taskId ? { taskId: r.taskId } : {}) };
     }
     const b = this.book(floorId);
     const id = `GV-${b.next++}`;
@@ -129,9 +168,9 @@ export class ValidationBook {
       actor: { kind: 'human', name: ask.by, ...(ask.owner ? { id: ask.owner } : {}) },
       action: 'validation.mark',
       target: { kind: 'scenario', id: sc.id, label: sc.title },
-      summary: `Marked the guided check “${sc.title}” on version ${revision.slice(0, 7)}: ${verdict === 'works' ? 'works as expected' : `something’s wrong, sent to the team as ${correction!.id}`}`,
+      summary: `${changeId ? `Tried ${changeId}` : `Marked the guided check “${sc.title}”`} on version ${revision.slice(0, 7)}: ${verdict === 'works' ? (changeId ? 'looks right' : 'works as expected') : `something’s wrong, sent to the team as ${correction!.id}`}`,
       details: { id, revision, scenario: sc.id, verdict, page, length: note.length, ...(correction ? { correction: correction.id } : {}) },
-      ...(correction ? { ids: { taskId: correction.taskId } } : {}),
+      ...(correction?.taskId ? { ids: { taskId: correction.taskId } } : {}),
     });
     return { ok: true, finding };
   }
