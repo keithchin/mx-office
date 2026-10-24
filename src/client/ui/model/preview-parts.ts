@@ -128,6 +128,8 @@ export function elementLabel(it: MdlItem, text?: string): string {
   const kind = KIND_WORDS[it.kind] ?? '';
   const n = nameWords(it.name);
   const caption = it.props.Caption ?? it.props.Label ?? '';
+  // A snippet call: the snippet's own name says more than the call's (snippetCall2).
+  if (it.kind === 'snippetcall' && it.props.Snippet) return `${words(it.props.Snippet.slice(it.props.Snippet.lastIndexOf('.') + 1).replace(/^SNIP_/i, ''))} snippet`;
   if (/^(actionbutton|button|linkbutton)$/.test(it.kind)) return `${clip((caption || n || 'Unnamed').replace(/^[+\s]+/, ''), 40)} ${kind}`;
   if (TEXTS.test(it.kind)) {
     const t = (text ?? '').trim();

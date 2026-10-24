@@ -273,3 +273,7 @@ test('a request from an element makes a DC-n with that reference and the revisio
     removeDir(dir);
   }
 });
+
+test('a snippet call is labelled by its snippet', () => {
+  assert.equal(elementLabel({ kind: 'snippetcall', name: 'snippetCall2', props: { Snippet: 'Desk.SNIP_VisitHeader' }, children: [], lines: [0, 0] }), 'Visit header snippet');
+});
