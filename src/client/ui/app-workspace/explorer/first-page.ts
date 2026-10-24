@@ -8,19 +8,19 @@ import { MARKETPLACE, type ExplorerNode } from '../../../../shared/app-explorer'
 
 const skip = (n: ExplorerNode) => n.addon || n.id.endsWith(MARKETPLACE);
 
-/** The first page under Pages (one with an address first), or undefined when the app has none. */
-export function firstPage(levels: Readonly<Record<string, readonly ExplorerNode[]>>): ExplorerNode | undefined {
+/** The first page under Pages (one with an address first) and the rows above it, or undefined when the app has none. */
+export function firstPage(levels: Readonly<Record<string, readonly ExplorerNode[]>>): { page: ExplorerNode; above: string[] } | undefined {
   const kids = (n: ExplorerNode) => levels[n.id] ?? (n.path !== undefined ? levels[n.path] : undefined) ?? [];
-  const pages: ExplorerNode[] = [];
-  const walk = (list: readonly ExplorerNode[], depth: number) => {
+  const pages: { page: ExplorerNode; above: string[] }[] = [];
+  const walk = (list: readonly ExplorerNode[], above: string[]) => {
     for (const n of list) {
       if (skip(n)) continue;
-      if (n.type === 'page' && n.qn) pages.push(n);
-      else if (depth < 12) walk(kids(n), depth + 1);
+      if (n.type === 'page' && n.qn) pages.push({ page: n, above });
+      else if (above.length < 12) walk(kids(n), [...above, n.id]);
     }
   };
   const root = (levels[''] ?? []).find((n) => n.id === 'pages');
   if (!root) return undefined;
-  walk(kids(root), 0);
-  return pages.find((p) => p.url) ?? pages[0];
+  walk(kids(root), [root.id]);
+  return pages.find((p) => p.page.url) ?? pages[0];
 }

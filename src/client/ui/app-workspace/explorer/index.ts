@@ -553,12 +553,14 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     firstFor = r;
     const all = await loadIndex();
     if (!all || f !== floor || r !== rev || pane.node) return;
-    const n = firstPage(all);
-    if (!n) return;
+    const first = firstPage(all);
+    if (!first) return;
+    const n = first.page;
     selected = n;
     tree.selectedId = n.id;
     drawBar();
     openNode(n);
+    draw();
   }
 
   paintLayout();

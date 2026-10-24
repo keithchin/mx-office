@@ -200,8 +200,9 @@ test('the first page the canvas shows: the app’s own first page with an addres
     'pages/@marketplace': [P('Atlas.Login', '/login')],
     'pages/Desk': [P('Desk.Visit_Edit'), P('Desk.Visitors', '/p/visitors')],
   };
-  assert.equal(firstPage(levels)?.qn, 'Desk.Visitors');
-  assert.equal(firstPage({ ...levels, 'pages/Desk': [P('Desk.Visit_Edit')] })?.qn, 'Desk.Visit_Edit');
+  assert.equal(firstPage(levels)?.page.qn, 'Desk.Visitors');
+  assert.deepEqual(firstPage(levels)?.above, ['pages', 'pages/Desk'], 'the rows above it, to open');
+  assert.equal(firstPage({ ...levels, 'pages/Desk': [P('Desk.Visit_Edit')] })?.page.qn, 'Desk.Visit_Edit');
   assert.equal(firstPage({ '': [] }), undefined);
 });
 
