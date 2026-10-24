@@ -20,7 +20,6 @@ import { ValidationBook, type ValidationDeps } from '../src/server/guided-valida
 import { guidedValidationRoutes } from '../src/server/http/routes/guided-validation.js';
 import { requestHandler } from '../src/server/http/router.js';
 import { plainRefusal } from '../src/shared/app-workspace/acceptance-words.js';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 import { gateRefusal } from '../src/shared/security.js';
 import { CYCLE_MOVED, NO_REVIEW, STALE_REVIEW } from '../src/server/acceptance/index.js';
 import { AUDIT_GROUPS } from '../src/shared/audit.js';
@@ -227,13 +226,13 @@ test('who may mark is who may ask for a change: signed in, from the office’s o
   }
 });
 
-// ---- Acceptance refusals in business words ------------------------------------------------------------------
+// ---- Acceptance refusals, said plainly ----------------------------------------------------------------------
 
-test('a refusal from the existing acceptance path is said in business words', () => {
+test('a refusal from the existing acceptance path is said plainly', () => {
   const sec = gateRefusal({ commit: A, missing: ['No mx check at 7d3f0b1', 'Anonymous users are on'], meets: false, enforced: true } as never, 'Accepting this delivery') + ' The office has started an mx check at 7d3f0b1 (it takes a few minutes): try again when it has finished.';
   const p = plainRefusal(409, sec);
   assert.match(p.lead, /security checks haven’t passed/);
-  assert.deepEqual(p.reasons, ['A security check on this version hasn’t passed or hasn’t run yet', 'Anonymous users are on', 'The office has started the security check. It takes a few minutes: try again when it has finished.']);
+  assert.deepEqual(p.reasons, ['No mx check at 7d3f0b1', 'Anonymous users are on', 'The office has started the security check. It takes a few minutes: try again when it has finished.']);
   assert.equal(p.again, true);
   assert.match(plainRefusal(409, STALE_REVIEW).lead, /Something changed while you were looking/);
   assert.match(plainRefusal(409, NO_REVIEW).lead, /Something changed/);
@@ -241,11 +240,8 @@ test('a refusal from the existing acceptance path is said in business words', ()
   assert.match(plainRefusal(403, 'Only the Project Manager (an admin) can accept or reopen a delivery').lead, /Only the Project Manager/);
   assert.match(plainRefusal(409, 'v1 is already accepted: reopen it to start the next version').lead, /already accepted/);
   assert.match(plainRefusal(409, 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog').lead, /couldn’t read the version/);
-  assert.match(plainRefusal(409, 'Something about a merge on the branch').lead, /Engineering view’s acceptance record says why/, 'unknown engineering words are never shown');
-  for (const e of [sec, STALE_REVIEW, NO_REVIEW, CYCLE_MOVED, 'Something about a merge on the branch', 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog']) {
-    const r = plainRefusal(409, e);
-    assert.deepEqual(bannedIn([r.lead, ...r.reasons].join(' ')), [], e);
-  }
+  assert.equal(plainRefusal(409, 'Something about a merge on the branch').lead, 'Something about a merge on the branch.', 'the server’s own words, as they are');
+  assert.match(plainRefusal(409, '').lead, /Project Management’s acceptance record says why/);
 });
 
 // ---- The scenarios of one version, read from the project's folder ---------------------------------------------

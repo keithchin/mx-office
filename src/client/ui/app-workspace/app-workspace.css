@@ -1,38 +1,28 @@
-/* The App Workspace (ui/app-workspace/): the running app as the canvas, the side panel on the right (below
-   it on a phone), the section bar and the workspace switch above. In the color tokens, so Portal Light and
-   Dark (and the other themes) only change their values. While it shows (body.aw-on) the Engineering view's
+/* The Developer view (ui/app-workspace/): the running app as the canvas, the side panel on the right (below
+   it on a phone), the section bar and the business status chip above. In the color tokens, so Portal Light and
+   Dark (and the other themes) only change their values. While it shows (body.aw-on) Project Management's
    navigation, page header, team-lead panel, progress line and tab rows step aside and the page is its. */
 
-body.lite.aw-on :is(#pt-nav, #pt-head, .pt-navbtn, #lead-panel, .lp-rail, .lp-fab, .lp-backdrop, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch) { display: none !important; }
+body.lite.aw-on :is(#pt-nav, #pt-head, #lead-panel, .lp-rail, .lp-fab, .lp-backdrop, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch) { display: none !important; }
+/* The phone's navigation button keeps its place (hidden, not gone), so the top bar's view switch doesn't move. */
+body.lite.aw-on .pt-navbtn { visibility: hidden !important; pointer-events: none; }
 html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
 
 .aw { display: flex; flex-direction: column; min-height: calc(100vh - var(--pt-top, 56px)); background: var(--paper-2, var(--paper)); color: var(--ink); font-size: 14px; line-height: 1.45; }
 .aw[hidden] { display: none; }
 .aw .aw-grow { flex: 1; }
 
-/* The bar: project, sections, switch. */
+/* The bar: project, its status chip, sections (the view switch is the top bar's, ./view-switch.css). */
 .aw .aw-bar { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 24px; }
 .aw .aw-bar-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0 2px; }
 .aw .aw-crumb { font-weight: 600; color: var(--ink); }
-.aw .aw-switch { display: inline-flex; border: 1px solid var(--rule-strong, var(--line)); border-radius: 4px; overflow: hidden; }
-.aw .aw-seg { border: 0; background: var(--card); color: var(--ink); padding: 6px 12px; font: inherit; cursor: pointer; }
-.aw .aw-seg + .aw-seg { border-left: 1px solid var(--rule-strong, var(--line)); }
-.aw .aw-seg[aria-pressed='true'] { background: var(--ink); color: var(--paper); cursor: default; }
-.aw .aw-seg:not([aria-pressed='true']):hover { background: var(--hover, var(--sunken)); }
+.aw .aw-statuschip { font-size: 12px; }
+.aw .aw-statuschip[hidden] { display: none; }
 .aw .aw-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .aw .aw-tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-2, var(--muted)); padding: 10px 10px 9px; font: inherit; cursor: pointer; white-space: nowrap; }
 .aw .aw-tab:hover { color: var(--ink); }
 .aw .aw-tab.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
 
-/* The stage switch. */
-.aw .aw-stages { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 24px; border-bottom: 1px solid var(--line); background: var(--card); }
-.aw .aw-stages-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-right: 4px; }
-.aw .aw-stage { border: 1px solid var(--line); background: var(--card); color: var(--ink-2, var(--muted)); border-radius: 12px; padding: 3px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-.aw .aw-stage.now { color: var(--ink); border-color: var(--accent); }
-.aw .aw-stage[aria-pressed='true'] { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); font-weight: 600; }
-.aw .aw-now { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--link, var(--accent)); }
-.aw .aw-stagenote { margin: 12px 24px 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--info-soft, var(--accent-soft)); border-radius: 4px; }
-.aw .aw-stagenote[hidden] { display: none; }
 
 /* Canvas and panel. */
 .aw .aw-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
@@ -132,12 +122,7 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
   .aw .aw-frame { min-height: 420px; }
 }
 @media (max-width: 760px) {
-  .aw .aw-bar, .aw .aw-stages { padding-left: 16px; padding-right: 16px; }
+  .aw .aw-bar { padding-left: 16px; padding-right: 16px; }
   .aw .aw-main { padding: 12px 16px 16px; }
-  .aw .aw-stagenote { margin: 12px 16px 0; }
-  .aw .aw-switch { width: 100%; }
-  .aw .aw-seg { flex: 1; }
-  .aw .aw-stages { flex-wrap: nowrap; overflow-x: auto; }
-  .aw .aw-stage { white-space: nowrap; }
   .aw .aw-frame { min-height: 360px; }
 }

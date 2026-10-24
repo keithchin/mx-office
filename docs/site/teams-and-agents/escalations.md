@@ -57,7 +57,7 @@ Sometimes Claude Code's permission layer (its permission mode or rules) **denied
 | **Details** | Up to 6000 characters |
 | **Options** | Up to 6 |
 | **Recommendation** | Up to 400 characters |
-| **Artifact** | Optional: what to look at to answer it, as `<kind>:<ref>`: `screenshot:<path>`, `process-map:<path>`, `document:<path>` (paths from the project root, committed), `walkthrough:<id>` or `journey:<J-nn>`. Given with `--artifact`, the MCP tool's `artifact`, or a line of its own in the details, `Artifact: <kind>:<ref>`. The [App workspace](../using-the-office/app-workspace.md#decisions) shows it beside the question. Only a ref that reads exactly as one of these counts; the office never picks an artifact from the words of a question |
+| **Artifact** | Optional: what to look at to answer it, as `<kind>:<ref>`: `screenshot:<path>`, `process-map:<path>`, `document:<path>` (paths from the project root, committed), `walkthrough:<id>` or `journey:<J-nn>`. Given with `--artifact`, the MCP tool's `artifact`, or a line of its own in the details, `Artifact: <kind>:<ref>`. The [Developer view](../using-the-office/developer-view.md#decisions) shows it beside the question. Only a ref that reads exactly as one of these counts; the office never picks an artifact from the words of a question |
 
 The office stamps who raised it (name, role, team) and the autonomy level at the time, and works out whether it's an **FYI** for that level. See [Autonomy levels](autonomy.md#fyi-escalations).
 
@@ -155,11 +155,11 @@ And with its **evidence**, always for that revision:
 
 For example: *Task tsk_… "Visitor checkout" (Linus): candidate · acknowledged · associated change PR #98 · checks passed on the associated change @e77a0d3*. *No links found* (nothing located) and *No implementation work required* (your stated choice, kept as an answer revision) are never shown one for the other.
 
-## Business decisions in the App workspace
+## Business decisions in the Developer view
 
-The [App workspace](../using-the-office/app-workspace.md#decisions) shows the business owner only their decisions, by the escalation's trigger: `plan`, `scope`, `design`, `milestone`, `client-milestone` and `question` are theirs; the others (`architecture`, review rounds, `blocked`, repeated failures, budget, `security`, `data-loss`, `blocked-no-path`, `needs-human`) and permission cards are the team's. An escalation with no trigger stays on the Engineering view, so give one when it's for the business owner. Client questions, stage sign-offs and a design system to adopt are theirs too. The Engineering view keeps showing everything.
+The [Developer view](../using-the-office/developer-view.md#decisions) shows the business owner only their decisions, by the escalation's trigger: `plan`, `scope`, `design`, `milestone`, `client-milestone` and `question` are theirs; the others (`architecture`, review rounds, `blocked`, repeated failures, budget, `security`, `data-loss`, `blocked-no-path`, `needs-human`) and permission cards are the team's. An escalation with no trigger stays on Project Management, so give one when it's for the business owner. Client questions, stage sign-offs and a design system to adopt are theirs too. The Engineering view keeps showing everything.
 
-A **change request** from the App workspace reaches the team lead as a task, `Change request CR-<n> from <name>: …`, with the page and version the person was looking at. Keep its `Task:` line and `CR-<n>` on the work that delivers it (commit trailers, the PR description): that's how the person sees where their request is.
+A **change request** from the Developer view reaches the team lead as a task, `Change request CR-<n> from <name>: …`, with the page and version the person was looking at. Keep its `Task:` line and `CR-<n>` on the work that delivers it (commit trailers, the PR description): that's how the person sees where their request is.
 
 ## Asks that need a person: `needs-human` and `question`
 

@@ -11,7 +11,6 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type Page } from 'playwright-core';
 import { findChrome } from '../scripts/perf/pages.mjs';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 
 const root = path.join(import.meta.dirname, '..');
 const shots = process.env.AW_SHOTS;
@@ -66,7 +65,6 @@ async function harness(): Promise<{ js: string; css: string }> {
             answer: async (x, a) => (window.__answers.push({ id: x.id, escalation: x.escalation, ...a }), window.__answerWith),
           },
           open: (t) => window.__opened.push(t),
-          cameFrom: () => undefined,
         });
         document.querySelector('.lite-main').append(ws.el);
         window.__set = (d) => { data = { ...d, decisions: d.decisions && d.decisions.map((x) => ({ ...x, answer: () => window.__opened.push('answer:' + x.id) })) }; fns.forEach((fn) => fn()); };
@@ -104,13 +102,6 @@ const set = (page: Page, d: object) => W(page).evaluate((x) => (window as unknow
 const show = (page: Page, s: string) => W(page).evaluate((x) => (window as unknown as { __show(s: string): void }).__show(x), s);
 const text = (page: Page, sel: string) => page.evaluate((s) => document.querySelector(s)?.textContent ?? null, sel);
 const get = <T>(page: Page, k: string) => page.evaluate((x) => (window as unknown as Record<string, unknown>)[x], k) as Promise<T>;
-/** Everything drawn: the workspace and any dialog, their text, titles, labels and placeholders. */
-const words = (page: Page) =>
-  page.evaluate(() => {
-    const els = [document.querySelector('.aw'), document.querySelector('#modal-root')].filter(Boolean) as HTMLElement[];
-    return els.map((el) => [el.innerText, ...[...el.querySelectorAll('[title],[aria-label],[placeholder],[alt]')].flatMap((e) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => e.getAttribute(a) ?? ''))].join('\n')).join('\n');
-  });
-
 test('in a browser: the current request, Request a change, the Requests list, decisions with artifacts, a stale answer and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 150_000 }, async () => {
   const h = await harness();
   const browser = await chromium.launch({ headless: true, executablePath: chrome! });
@@ -155,20 +146,15 @@ test('in a browser: the current request, Request a change, the Requests list, de
     await page.keyboard.press('Enter');
     await page.click('.aw-reqsend');
     assert.match((await text(page, '.aw-reqdlg [role="alert"]')) ?? '', /Say what should change first/);
-    await page.evaluate(() => ((window as unknown as { __requestWith: unknown }).__requestWith = { ok: false, error: 'No team lead is at work on this project yet, so nobody can take the request. Start the team on the Engineering view, then ask again.' }));
+    await page.evaluate(() => ((window as unknown as { __requestWith: unknown }).__requestWith = { ok: false, error: 'No team lead is at work on this project yet, so nobody can take the request. Start the team in Project Management, then ask again.' }));
     await page.fill('.aw-reqtext', 'Print the visitor’s photo on the badge.');
     await page.click('.aw-reqsend');
     await page.waitForFunction(() => /No team lead/.test(document.querySelector('.aw-reqdlg [role="alert"]')?.textContent ?? ''));
-    let w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `dialog: ${bannedIn(w)}`);
     await page.evaluate(() => ((window as unknown as { __requestWith: unknown }).__requestWith = undefined));
     await page.click('.aw-reqsend');
     await page.waitForFunction(() => !document.querySelector('.aw-reqdlg'));
     assert.match((await text(page, '#toasts')) ?? '', /Request CR-4 sent to Ada: it shows in the panel with its state/);
-    assert.deepEqual(bannedIn((await text(page, '#toasts')) ?? ''), []);
     assert.deepEqual(await get(page, '__asked'), [{ text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }, { text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }], 'the page on screen and the running version go with it');
-    w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `App: ${bannedIn(w)}`);
 
     // Decisions: business decisions only (the source filtered them), the artifact only beside those that name one.
     await page.evaluate(() => document.getElementById('toasts')!.replaceChildren());
@@ -207,8 +193,6 @@ test('in a browser: the current request, Request a change, the Requests list, de
     await page.click('.aw-decision[data-id="esc:e2"] .aw-send');
     await page.waitForSelector('.aw-decision[data-id="esc:e2"] .aw-note-msg.sent');
     assert.deepEqual((await get<object[]>(page, '__answers'))[1], { id: 'esc:e2', escalation: 'e2', verdict: 'reply', text: 'Go with: 90 days\n\nNinety, for the audit.' });
-    w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `Decisions: ${bannedIn(w)}`);
 
     // Not the Project Manager: no answer form, the decision's own page instead.
     await set(page, { ...DATA, admin: false });
@@ -233,8 +217,6 @@ test('in a browser: the current request, Request a change, the Requests list, de
     assert.match((await text(page, '[data-part="request"]')) ?? '', /Describe what should behave differently/);
     await show(page, 'decisions');
     assert.match((await text(page, '.aw-page')) ?? '', /No requests yet/);
-    w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `empty: ${bannedIn(w)}`);
 
     // A phone: no sideways scrolling, the artifact above its card, the dialog fits.
     await page.setViewportSize({ width: 400, height: 860 });

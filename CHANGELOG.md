@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **The App workspace is now the Developer view, with one Developer | Project Management switch.** The switch sits at the top right of every project page, in the top bar right after Go to Office, in the same place and at the same size on every Project Management page and in the Developer view, in Portal Light/Dark, the classic themes and on a phone (**Dev | PM**). It keeps the project and the running version, and ← / → move it from the keyboard. *Project Management* is what the workspace called the Engineering view: every other page, with the navigation. The navigation item is **Developer**, and the docs page is [Developer view](/docs/using-the-office/developer-view) (the old address still opens it). The stage bar is gone: a small chip beside the project's name shows its business status. The view no longer holds itself to business-only words, so names like *commit* and *model* show as they are. Old links (`&ws=app`, `&ws=eng`, `?tab=app`) open as before, and `&ws=dev` / `&ws=pm` work too.
 
 ## 2026-10-23 · release 73 (`dc56eab`)
 

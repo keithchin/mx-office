@@ -1,12 +1,11 @@
-// The App Workspace's shell (C3 of the App Workspace proposal, section 5): one workspace the five section
-// tabs share (./tab.ts), drawn once beside their containers. While a section shows, the page is the
-// workspace's: the Engineering view's navigation, page header, team-lead panel and progress line step
-// aside (body.aw-on, ./app-workspace.css), and the address carries &ws=app. Its parts:
+// The Developer view's shell (the code's App Workspace, C3 of the App Workspace proposal, section 5): one
+// workspace the five section tabs share (./tab.ts), drawn once beside their containers. While a section
+// shows, the page is the workspace's: Project Management's navigation, page header, team-lead panel and
+// progress line step aside (body.aw-on, ./app-workspace.css), and the address carries &ws=app. The
+// Developer | Project Management switch is the top bar's (./view-switch.ts), the same on every page. Its parts:
 //
-//   bar        the project's name, the section bar (App · Requirements · Decisions · Review · Release)
-//              and the workspace switch (App view | Engineering view)
-//   stages     the stage switch: where the project is (shared/app-workspace/words.ts workspaceStage, read
-//              from the business status and the progress bar), and what each stage shows
+//   bar        the project's name, a small chip with its business status (C2, shared/business-status.ts),
+//              and the section bar (App · Requirements · Decisions · Review · Release)
 //   explorer   the App section's left sidebar (./explorer/: the app's pages, data, logic and documents, or all
 //              the project's files), loaded with the App section's first show
 //   main       the canvas (./canvas.ts: the running app) on App, a section's page (./sections.ts) on the rest;
@@ -14,9 +13,8 @@
 //   side       the side panel (./panel.ts): status bound to a version, the current request (./requests.ts),
 //              the decision needed, progress, finished changes, the next action
 //
-// The switch keeps the project (the page and its connection stay; nothing reloads) and goes to the
-// Engineering page you came from, or the one closest to this section. Every action is a link to what the
-// office already does, with that page's own checks: the workspace adds no permission and no state.
+// Every action is a link to what the office already does, with that page's own checks: the workspace adds
+// no permission and no state.
 
 import { store } from '../../state';
 import { h, toast } from '../dom';
@@ -24,8 +22,8 @@ import { openRequestDialog } from './requests';
 import { setAddress } from '../../shared/address';
 import { currentProjectTab, openProjectTab } from '../../tabs/host';
 import type { TabHooks } from '../../tabs/registry';
-import { APP_SECTIONS, ENGINEERING_FOR, isAppSection, type AppSection } from '../../../shared/app-workspace/route';
-import { shownStages, stageDef, workspaceStage, type WorkspaceStage } from '../../../shared/app-workspace/words';
+import { APP_SECTIONS, DEVELOPER_VIEW, isAppSection, type AppSection } from '../../../shared/app-workspace/route';
+import { workspaceStage, type WorkspaceStage } from '../../../shared/app-workspace/words';
 import { pageSource, type WorkspaceData, type WorkspaceSource } from './data';
 import { workspaceCanvas } from './canvas';
 import { sidePanel } from './panel';
@@ -38,8 +36,6 @@ export interface WorkspaceDeps {
   source: WorkspaceSource;
   /** Shows a tab of the page (an App section or an Engineering page) the way the page does. */
   open(tab: string): void;
-  /** The Engineering tab showing before the workspace opened, if any. */
-  cameFrom(): string | undefined;
   /** Tests: the explorer's requests and openers. */
   explorer?: Partial<ExplorerDeps>;
 }
@@ -54,28 +50,19 @@ export interface Workspace {
   shown(): boolean;
 }
 
-/** The stage of the data, as the stage switch and the panel read it. */
+/** The stage of the data, as the canvas and the panel read it. */
 export const stageOf = (d: WorkspaceData): WorkspaceStage => workspaceStage({ business: d.business?.state, toolkit: d.progress?.toolkit, phase: d.progress?.phase });
 
 /** Builds the workspace (the page's own, or a test's with its own source and opener). */
 export function createWorkspace(deps: WorkspaceDeps): Workspace {
   let section: AppSection = 'app';
   let visible = false;
-  let peek: WorkspaceStage | undefined;
   const crumb = h('span.aw-crumb');
+  const chip = h('span.aw-pill.aw-statuschip', { hidden: true });
   const tabs = APP_SECTIONS.map((s) =>
     h('button.aw-tab', { type: 'button', 'data-section': s.id, title: s.hint, onclick: () => deps.open(s.id) }, s.label),
   );
-  const appBtn = h('button.aw-seg', { type: 'button', 'aria-pressed': 'true', 'data-ws': 'app' }, 'App view');
-  const engBtn = h('button.aw-seg', { type: 'button', 'aria-pressed': 'false', 'data-ws': 'eng', title: 'The same project with the team’s working pages: same records, same permissions', onclick: () => toEngineering() }, 'Engineering view');
-  const bar = h(
-    'div.aw-bar',
-    {},
-    h('div.aw-bar-top', {}, crumb, h('span.aw-grow'), h('div.aw-switch', { role: 'group', 'aria-label': 'Open this project in' }, appBtn, engBtn)),
-    h('nav.aw-tabs', { 'aria-label': 'App workspace sections' }, ...tabs),
-  );
-  const stages = h('div.aw-stages', { role: 'group', 'aria-label': 'Stage' });
-  const stageNote = h('div.aw-stagenote', { role: 'status', hidden: true });
+  const bar = h('div.aw-bar', {}, h('div.aw-bar-top', {}, crumb, chip), h('nav.aw-tabs', { 'aria-label': `${DEVELOPER_VIEW} sections` }, ...tabs));
   const canvas = workspaceCanvas({ open: deps.open });
   /** Request a change, about what's on screen: the project, the canvas's page and the running version. */
   const request = () => {
@@ -103,7 +90,7 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   const panel = sidePanel({ open: deps.open, request });
   const xslot = h('div.aw-xslot', { hidden: true });
   const body = h('div.aw-body', {}, xslot, main, panel.el);
-  const el = h('section.aw', { 'aria-label': 'App workspace', hidden: true }, bar, stages, stageNote, body);
+  const el = h('section.aw', { 'aria-label': DEVELOPER_VIEW, hidden: true }, bar, body);
   let explorer: Explorer | undefined;
   let explorerAsked = false;
   /** The explorer's pane or the running app, in the canvas's place. */
@@ -132,50 +119,23 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
     });
   };
 
-  function toEngineering() {
-    const back = deps.cameFrom();
-    deps.open(back && !isAppSection(back) ? back : ENGINEERING_FOR[section]);
-  }
-
-  function drawStages(d: WorkspaceData) {
-    const now = stageOf(d);
-    if (peek === now) peek = undefined;
-    stages.replaceChildren(
-      h('span.aw-stages-k', {}, 'Stage'),
-      ...shownStages(now).map((s) =>
-        h(
-          'button.aw-stage',
-          { type: 'button', 'data-stage': s.id, 'aria-pressed': String((peek ?? now) === s.id), class: s.id === now ? 'now' : '', title: s.id === now ? 'Where the project is now' : `What this page shows at ${s.label}`, onclick: () => ((peek = s.id === now ? undefined : s.id), draw()) },
-          s.label,
-          ...(s.id === now ? [h('span.aw-now', {}, 'Now')] : []),
-        ),
-      ),
-    );
-    if (!peek) {
-      stageNote.hidden = true;
-      return;
-    }
-    const p = stageDef(peek);
-    const back = h('button.aw-link', { type: 'button', onclick: () => ((peek = undefined), draw()) }, `Back to ${stageDef(now).label}`);
-    stageNote.hidden = false;
-    stageNote.replaceChildren(
-      h('b', {}, `${p.label}: `),
-      `the page shows ${lower(p.canvas)}; the panel puts ${lower(p.panel)} first, and the next step is “${p.primary}”. This project is at ${stageDef(now).label}, so what you see below is its state now. `,
-      back,
-    );
-  }
-
   function draw() {
     if (!visible) return;
     const d = deps.source.get();
-    crumb.textContent = d.project ? `${d.project} · App workspace` : 'App workspace';
+    crumb.textContent = d.project ? `${d.project} · ${DEVELOPER_VIEW}` : DEVELOPER_VIEW;
+    const b = d.business;
+    chip.hidden = !b;
+    if (b) {
+      chip.textContent = b.label;
+      chip.className = `aw-pill aw-statuschip ${b.tone}`;
+      chip.title = `Business status: ${b.line || b.label}`;
+    }
     for (const t of tabs) {
       const on = t.dataset.section === section;
       t.classList.toggle('on', on);
       if (on) t.setAttribute('aria-current', 'page');
       else t.removeAttribute('aria-current');
     }
-    drawStages(d);
     xslot.hidden = section !== 'app' || !explorer;
     body.classList.toggle('ax-has', !xslot.hidden);
     if (section === 'app') {
@@ -217,14 +177,12 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   };
 }
 
-const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
-
 let ws: Workspace | undefined;
 
 /** The page's workspace for one section's tab container (./tab.ts): the one workspace, put beside the containers. */
-export function appWorkspace(container: HTMLElement, id: AppSection, cameFrom: () => string | undefined): TabHooks {
+export function appWorkspace(container: HTMLElement, id: AppSection): TabHooks {
   if (!ws) {
-    const made = createWorkspace({ source: pageSource(), open: (t) => void openProjectTab(t), cameFrom });
+    const made = createWorkspace({ source: pageSource(), open: (t) => void openProjectTab(t) });
     ws = made;
     container.before(made.el);
     // Changing project while the workspace shows: the page goes to the new project's Overview first (its rule

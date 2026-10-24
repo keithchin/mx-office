@@ -20,7 +20,6 @@ import { ESCALATION_TRIGGERS, type EscalationTrigger } from '../src/shared/roste
 import { artifactInText, readArtifact, withoutArtifactLine } from '../src/shared/decisions/artifact.js';
 import { makeEscalation, readEscalationAsk, type Escalation } from '../src/shared/roster/escalation.js';
 import { escalationCandidates } from '../src/shared/decisions/candidates.js';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 import type { AuditInput } from '../src/shared/audit.js';
 import type { RosterView } from '../src/shared/roster/types.js';
 import type { DecisionCard } from '../src/shared/decisions/types.js';
@@ -168,7 +167,6 @@ test('the state table: from the task, its change, the running version and the bu
     assert.equal(s.state, want, what);
     assert.equal(s.words, REQUEST_WORDS[want], what);
     assert.equal(s.version, version, `${what}: the version that has it`);
-    assert.deepEqual(bannedIn(`${s.words} ${s.detail}`), [], `${what}: business words`);
   }
   assert.deepEqual(Object.values(REQUEST_WORDS), ['Received', 'Being worked on', 'Ready to try', 'Done', 'Needs your answer', 'Stopped']);
 });

@@ -57,7 +57,7 @@ export function sidePanel(deps: { open(tab: string): void; request(): void }): S
         return { label: 'See the release', why: 'Acceptance and deployment for this version.', go: () => deps.open('release') };
       default:
         if (d.appUrl) return { label: 'Request a change', why: 'Describe what should behave differently. It becomes a request the team works on.', go: () => deps.request() };
-        return { label: 'Start the app', why: 'Nothing runs yet: start it on the Engineering view’s Live app page.', go: () => deps.open('live') };
+        return { label: 'Start the app', why: 'Nothing runs yet: start it on Project Management’s Live app page.', go: () => deps.open('live') };
     }
   }
 

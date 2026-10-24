@@ -87,7 +87,7 @@ export function acceptCard(d: WorkspaceData, deps: ReleaseDeps): HTMLElement[] {
       differs && !accepted ? h('p.aw-warn', {}, `The app on screen runs ${short(d.onScreen)}, not the version being accepted (${short(d.delivery!.commit)}). Try the version being accepted first: it reaches the app shortly after it’s finished.`) : '',
       h('div.aw-row', {}, btn, d.admin ? '' : h('span.aw-small', {}, accepted ? 'Only the Project Manager reopens a version.' : 'Only the Project Manager accepts a version.')),
       ...(a?.earlier.length ? [h('p.aw-small', {}, `Accepted before: ${a.earlier.map((e) => `${e.version} on ${day(e.at)}`).join(', ')}`)] : []),
-      h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See the full acceptance record on the Engineering view'),
+      h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See the full acceptance record in Project Management'),
     ),
   ];
 }
@@ -132,7 +132,7 @@ export async function openAcceptDialog(d: WorkspaceData, port: AcceptancePort, d
     ticks.length ? h('div', {}, h('p.aw-small', {}, 'Still open, noted with the acceptance (each with who owns it):'), h('ul.aw-ticks', {}, ...ticks.map((t) => h('li', {}, h('label', {}, t.box, ` ${t.c.id}: ${t.c.title} (owner: ${t.c.request?.member ?? 'the team lead'})`))))) : '',
     extra,
     h('label.aw-confirmrow', {}, confirm, ` I accept ${draft.version} as recorded above.`),
-    h('p.aw-small', {}, 'The full evidence the office records is on the Engineering view’s acceptance record.'),
+    h('p.aw-small', {}, 'The full evidence the office records is in Project Management’s acceptance record.'),
     problem,
   );
   go.disabled = false;

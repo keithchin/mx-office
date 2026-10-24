@@ -17,6 +17,7 @@ Every project has two views. Both show the same project, live.
 
 - **Go to Office** in the 1D view's top bar opens the 2D Office view of the same project. It's the only way in: Home, the project switcher, the launcher, notifications and links all open the 1D view.
 - **Return to Project** in the 2D Office view's top bar goes back to the 1D view of the same project, on its Command Center.
+- **Developer | Project Management**, at the top right of every project page in the 1D view, switches the same project between its [Developer view](../using-the-office/developer-view.md) (the running app with its explorer and panel) and Project Management (every other page, with the navigation), without a reload.
 
 ## The 3D and Retro views are gone
 

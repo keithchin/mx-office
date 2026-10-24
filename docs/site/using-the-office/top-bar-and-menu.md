@@ -14,6 +14,7 @@ On the 1D view, from left to right (the 2D Office view's bar is [below](#the-2d-
 | 🏠 | Goes to [Home](home.md#home-start) (`/start`: what needs you across every project). The Projects page is `/home`, from ☰ › 🏢 Projects or the launcher. |
 | **Project** picker | Switches project. Each option shows `· 🙋 N` when agents there wait on you, or clone progress while a project is cloning. Under the bar: `⎇ branch · repo/dir · 👥 N here`. |
 | **Go to Office** | Opens the project's office from above, the [2D Office view](2d-view.md): the only way there. On the 2D Office view the same place has **Return to Project**, back to the 1D view's Command Center. |
+| **Developer | Project Management** | The same project in the [Developer view](developer-view.md) (the running app, its explorer and panel) or in Project Management (every other page, with the navigation). Right after Go to Office, in the same place and size on every project page and in every theme (**Dev | PM** on a phone); the page doesn't reload. |
 | 🎨 | Lists the color themes. |
 | ☰ | The menu. |
 

@@ -76,8 +76,6 @@ export const SHA_RE = /^[0-9a-f]{40}$/;
 
 /** The naming conventions' prefixes (ACT_, SUB_, DS_, …): the plain label leaves them out. */
 const PREFIX = /^(ACT|SUB|DS|VAL|NAV|BCO|ACO|BDE|ADE|BDL|ADL|OCH|IVK|SE|WS|REST|CALC|RUL|NF|MF|ASU|SCE|TST|JA|JSA|PG|POP|SNIP|SN|CRT|GET|SET|EVT|QUE|TSK|WF|API)_/i;
-/** Engineering verbs in names, said as people say them. */
-const PLAIN_WORDS: Record<string, string> = { commit: 'save', commits: 'saves', committed: 'saved', merge: 'combine', merged: 'combined', repo: 'store', model: 'design', models: 'designs' };
 
 /** A name as people say it: `ACT_Visitor_NewEdit` → `Visitor new edit`, `VisitorList` → `Visitor list`. */
 export function plainName(raw: string): string {
@@ -92,7 +90,7 @@ export function plainName(raw: string): string {
     .filter(Boolean)
     .map((w, i) => {
       const lower = w.toLowerCase();
-      const plain = PLAIN_WORDS[lower] ?? (/^[A-Z0-9]{2,}$/.test(w) ? w : lower);
+      const plain = /^[A-Z0-9]{2,}$/.test(w) ? w : lower;
       return i === 0 ? plain.charAt(0).toUpperCase() + plain.slice(1) : plain;
     });
   return words.join(' ') || name;
