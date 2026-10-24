@@ -55,7 +55,6 @@ async function harness(): Promise<{ js: string; css: string }> {
         import '../../styles/theme-clean.css';
         import '../../styles/theme-portal.css';
         import { createWorkspace } from './shell';
-        import { pageAcceptance } from './validation-api';
         let data = {};
         const fns = new Set();
         window.__opened = []; window.__marks = []; window.__wants = []; window.__acted = 0; window.__markWith = undefined;
@@ -66,8 +65,6 @@ async function harness(): Promise<{ js: string; css: string }> {
             answer: async () => ({ ok: true }),
             want: (w) => window.__wants.push(w),
             mark: async (m) => (window.__marks.push(m), window.__markWith ?? { ok: true, finding: m.verdict === 'wrong' ? { correction: { id: 'DC-6', taskId: 't' } } : {} }),
-            acceptance: pageAcceptance,
-            acted: () => window.__acted++,
           },
           open: (t) => window.__opened.push(t),
         });

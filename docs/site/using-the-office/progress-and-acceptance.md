@@ -143,7 +143,7 @@ Documents, the decision register and gate files are read at one immutable commit
 
 If the delivery revision, the reviewed evidence (documents, gates, CI), the budget or plan, or the delivery cycle changes before you confirm, nothing is recorded: the dialog shows the evidence as it is now, keeps your version, notes and exceptions, and asks you to tick the confirmation again. Spend that agents add while you read, and the day's exchange rate, don't count as a change; going over the budget does. A project needs a readable commit to be accepted. Existing records remain unchanged; this safeguard does not repair historical records.
 
-The Developer view's **Release** section accepts and reopens through this same path: it reads the draft for its review token, posts the same body to `POST /api/acceptance` and says the office's refusal in plain words ([Accepting from here](developer-view.md#accepting-from-here)). Nothing about acceptance differs there: same permissions, same checks, same record.
+Accepting and reopening happen here only. The Developer view's **Looks right** on a change it asked for is a review of one version, kept with that version, not an acceptance ([Accepting a version](developer-view.md#accepting-a-version)).
 
 API clients must GET `/api/acceptance/draft?floor=<id>` and send its `reviewToken` with `action: "accept"` and `confirm: true` to POST `/api/acceptance`. Missing or stale tokens return HTTP 409 with `stale: true`. Tokens bind the reviewed draft and cycle; they do not replace sign-in, admin permission or same-origin checks.
 
