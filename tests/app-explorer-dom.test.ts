@@ -110,13 +110,14 @@ const FAKES = `
       return { rev, q, total: hits.length, nodes: hits.map((p) => ({ id: 'f:' + p, label: p.split('/').pop(), kind: 'file', path: p, key: p, detail: p, hint: p })) };
     },
     documents: async (f, rev) => (window.__calls.push('documents ' + rev.slice(0, 2)), DOCS(rev)),
+    facts: async (f, rev, qn) => (window.__calls.push('facts ' + rev.slice(0, 2) + ' ' + qn), { rev, qn, widgets: { [qn]: { btnSave: ['Forms$ActionButton', 'id-save'] } }, usedOn: {}, theme: { css: '.mx-dataview{outline:0}', from: [] } }),
   };
   const PAGE_MDL = "create or modify page VisitorDesk.Visitor_NewEdit (\\n  Title: 'Visitor',\\n  Layout: Atlas_Core.Atlas_Default\\n) {\\n  dataview dv (DataSource: $Visitor) {\\n    textbox tbName (Label: 'Name', Attribute: Name)\\n    actionbutton btnSave (Caption: 'Save', ButtonStyle: Primary)\\n  }\\n}";
   const model = { doc: async (f, rev, type, qn) => {
     window.__calls.push('doc ' + rev.slice(0, 2) + ' ' + type + ' ' + qn);
     if (type === 'domainmodel') return { sha: rev, doc: { kind: 'domainmodel', module: qn, source: 'units', associations: [], annotations: [], entities: [{ id: 'e1', name: 'Visitor', kind: 'persistent', x: 20, y: 20, attrs: [{ name: 'Name', type: 'String' }] }, { id: 'e2', name: 'HostApproval', kind: 'persistent', x: 260, y: 20, attrs: [{ name: 'ApprovedAt', type: 'Date and time' }] }] } };
     if (type === 'microflow') return { sha: rev, doc: { kind: 'microflow', name: qn, nodes: [], edges: [], mdl: '', source: 'units' } };
-    if (type === 'page') return { sha: rev, doc: { kind: 'text', type: 'page', name: qn, mdl: PAGE_MDL } };
+    if (type === 'page') return { sha: rev, doc: { kind: 'text', type: 'page', name: qn, mdl: PAGE_MDL.replace('VisitorDesk.Visitor_NewEdit', qn) } };
     return { sha: rev, doc: { kind: 'text', type, name: qn, mdl: '' } };
   } };
   window.__explorer = { api, changeThis: (o) => window.__changeThis.push(o.kind + ' ' + o.qn + ' ' + o.ref + ' ' + o.sha.slice(0, 2)), model };
@@ -281,6 +282,41 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     await page.evaluate(() => document.getElementById('toasts')!.replaceChildren());
     await page.click('.ax-change');
     assert.deepEqual(await get<string[]>(page, '__changeThis'), ['page VisitorDesk.Visitor_Overview main 7d']);
+
+    // Select element on the Model preview with the app stopped, then Request a change to it: the chip, the
+    // widget's reference (name, with $Type and $ID from the page's facts), the revision viewed; nothing reaches the app.
+    await set(page, DATA(A, false));
+    const hitsBefore = hits.length;
+    await row(page, 'Today’s visitors').click();
+    await page.waitForSelector('.ax-pane:not([hidden]) .pgp-frame');
+    assert.match((await page.textContent('.ax-pick')) ?? '', /Use ⌖ Select element to point at a widget/);
+    await page.click('.ax-pane .pgp-pick');
+    let pf = null as Awaited<ReturnType<Page['frames']>>[number] | null;
+    for (let i = 0; i < 40 && !pf; i++) {
+      const fh = await page.$('.ax-pane .pgp-frame');
+      const fr = fh ? await fh.contentFrame() : null;
+      if (fr && (await fr.$('[data-mx-w="btnSave"]'))) pf = fr;
+      else await page.waitForTimeout(50);
+    }
+    await pf!.click('[data-mx-w="btnSave"]');
+    await page.waitForSelector('.ax-chip');
+    assert.equal(await page.textContent('.ax-chip-text'), 'Today’s visitors › Save button');
+    await page.click('.ax-pick-ask');
+    await page.waitForSelector('.aw-reqdlg .aw-chip');
+    assert.equal(await page.textContent('.aw-reqdlg .aw-chip'), 'Today’s visitors › Save button');
+    assert.match((await page.textContent('.aw-reqdlg .aw-about')) ?? '', /In the modelwidget btnSave on page VisitorDesk\.Visitor_Overview[\s\S]*Viewingmain @7d3f0b1[\s\S]*VersionNot running: not needed/);
+    await page.fill('.aw-reqtext', 'Make the save button say Register');
+    await page.click('.aw-reqsend');
+    await page.waitForFunction(() => (window as unknown as { __asked: unknown[] }).__asked.length === 2);
+    const fromEl = (await get<{ text: string; ref?: Record<string, string>; source?: string; revision?: string }[]>(page, '__asked'))[1];
+    assert.deepEqual(fromEl.ref, { docType: 'page', docQn: 'VisitorDesk.Visitor_Overview', widgetName: 'btnSave', widgetType: 'Forms$ActionButton', label: 'Save button', id: 'id-save' });
+    assert.equal(fromEl.source, A, 'the revision viewed');
+    assert.equal(fromEl.revision, undefined, 'no running version');
+    assert.match(fromEl.text, /About: Today’s visitors › Save button \(widget btnSave on page VisitorDesk\.Visitor_Overview\)/);
+    assert.equal(hits.length, hitsBefore, 'nothing reached the live app');
+    await page.evaluate(() => document.getElementById('toasts')!.replaceChildren());
+    await set(page, DATA(A));
+
 
     // Data and Logic open their diagrams.
     await row(page, 'Data').click();

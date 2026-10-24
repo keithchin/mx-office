@@ -28,9 +28,9 @@ export const SKIP_MODULE = /^(atlas_|datawidgets$|feedbackmodule$|administration
 
 /** Custom properties (`--name: value`) declared anywhere in the text, for var() (simple values only). */
 export function customProps(text: string, into = new Map<string, string>()): Map<string, string> {
-  for (const m of stripComments(text).matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
+  for (const m of stripComments(text).matchAll(/(--[\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g)) {
     const v = m[2].trim();
-    if (VALUE_OK.test(v) && !/var\(/.test(v) && v.length < 80) into.set(m[1], v);
+    if (VALUE_OK.test(v) && !/var\(/.test(v) && v.length < 80 && !into.has(m[1])) into.set(m[1], v);
   }
   return into;
 }

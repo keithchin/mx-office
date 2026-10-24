@@ -48,7 +48,7 @@ tr.mx-more td{border:0;padding:6px 12px;text-align:center}
 .mx-cut{margin:8px 0;padding:12px;border:1px dashed #e0a43a;border-radius:4px;color:#7a5200;background:#fff8ea;font-size:13px}
 .mx-unsupported{margin-bottom:12px;padding:6px;border:1px dashed #b4b8c0;border-radius:4px}
 .mx-unknown-tag{display:inline-block;margin:0 6px 4px 0;font:600 11px/16px "Segoe UI",Arial,sans-serif;color:#6c717c;text-transform:none}
-.mx-popup-backdrop{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;background:rgba(10,19,37,.45)}
+.mx-popup-backdrop{min-height:100vh;display:flex;flex-direction:row;align-items:flex-start;justify-content:center;padding:48px 16px;background:rgba(10,19,37,.45)}
 .mx-dialog{width:min(620px,100%);background:#fff;border-radius:8px;box-shadow:0 12px 40px rgba(10,19,37,.3);overflow:hidden}
 .mx-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid #e7e7e9}
 .mx-dialog-title{font-weight:600;font-size:17px}.mx-dialog-close{color:#6c717c}

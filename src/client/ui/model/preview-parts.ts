@@ -12,6 +12,8 @@
 
 import type { MdlItem } from './mdl-tree';
 
+/** Kinds that show text (a heading, a paragraph, a label). */
+export const TEXTS = /^(dynamictext|statictext|text|title|pagetitle|label)$/;
 /** Sample rows drawn for a list at this nesting depth (0: not inside another list). */
 export const sampleRows = (depth: number): number => (depth <= 0 ? 3 : depth === 1 ? 2 : 1);
 /** What every list nominally holds in the sample: the rows not drawn are said. */
@@ -70,8 +72,8 @@ export function conditionSubject(expr: string): string | undefined {
 export function isEmptyState(it: MdlItem): boolean {
   const v = it.props.Visible ?? '';
   if (!/(=\s*0\b|=\s*empty\b)/.test(v) || /!=\s*empty/.test(v)) return false;
-  const texts = (xs: MdlItem[]): boolean => xs.every((x) => /text|title|label|image/.test(x.kind) || (x.kind === 'container' && texts(x.children)) || x.kind === 'actionbutton' || x.kind === 'linkbutton');
-  return it.children.length > 0 ? texts(it.children) : /text/.test(it.kind);
+  const texts = (xs: MdlItem[]): boolean => xs.every((x) => TEXTS.test(x.kind) || /image/.test(x.kind) || (x.kind === 'container' && texts(x.children)) || x.kind === 'actionbutton' || x.kind === 'linkbutton');
+  return it.children.length > 0 ? texts(it.children) : TEXTS.test(it.kind);
 }
 
 /** One item, or a run of siblings that choose between cases of the same value (drawn once, the others named). */
@@ -127,7 +129,7 @@ export function elementLabel(it: MdlItem, text?: string): string {
   const n = nameWords(it.name);
   const caption = it.props.Caption ?? it.props.Label ?? '';
   if (/^(actionbutton|button|linkbutton)$/.test(it.kind)) return `${clip((caption || n || 'Unnamed').replace(/^[+\s]+/, ''), 40)} ${kind}`;
-  if (/text|title|label/.test(it.kind)) {
+  if (TEXTS.test(it.kind)) {
     const t = (text ?? '').trim();
     const heading = /^h[1-6]$/i.test(it.props.RenderMode ?? '');
     if (t && !/^\{\d+\}$/.test(it.props.Content ?? '')) return `“${clip(t, 32)}” ${heading ? 'heading' : 'text'}`;

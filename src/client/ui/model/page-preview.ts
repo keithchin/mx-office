@@ -16,7 +16,7 @@ import type { MdlItem } from './mdl-tree';
 import type { PageModel } from './page-model';
 import { textOf } from './page-model';
 import { PREVIEW_CSS } from './preview-css';
-import { conditionWords, countWidgets, elementLabel, groupCases, isEmptyState, moreRows, SAMPLE_ROWS, sampleRows, WIDGET_BUDGET } from './preview-parts';
+import { conditionWords, countWidgets, elementLabel, TEXTS, groupCases, isEmptyState, moreRows, SAMPLE_ROWS, sampleRows, WIDGET_BUDGET } from './preview-parts';
 
 export interface PreviewContext {
   /** Snippets and layouts already read, by qualified name (null: asked for, not there). */
@@ -130,7 +130,8 @@ interface Shared {
   budget: number;
   report: PreviewReport;
   byKey: Map<string, number>;
-  placeholders: Map<string, number>;
+  /** Widget types not drawn → the widgets (by document and name, so sample rows count once). */
+  placeholders: Map<string, Set<string>>;
 }
 
 class Writer {
@@ -138,6 +139,8 @@ class Writer {
   private open: string[] = [];
   /** Lists we're inside of. */
   private depth = 0;
+  /** The widget being written follows a text (its label, as the app draws it). */
+  protected afterText = false;
   /** The document whose widgets are being written (null: the layout's own, not marked). */
   protected owner: { type: 'page' | 'snippet'; qn: string; via?: string } | null;
   constructor(
@@ -160,6 +163,9 @@ class Writer {
         break;
       }
       const p = parts[i];
+      // An input right after a text has that text as its label (the app draws its own): no second label then.
+      const prev = i > 0 ? parts[i - 1] : undefined;
+      this.afterText = !!prev && 'item' in prev && /^(dynamictext|statictext|text|label)$/.test(prev.item.kind);
       out += 'item' in p ? this.cond(p.item, row, inForm, []) : this.cond(p.cases[0], row, inForm, p.cases.slice(1));
     }
     return out;
@@ -176,7 +182,7 @@ class Writer {
     const words = `${empty ? 'Empty state · shown when' : 'Shown when'} ${conditionWords(v)}`;
     const rest = others.length ? ` · +${others.length} other case${others.length === 1 ? '' : 's'}` : '';
     const title = others.length ? `${words}. Not drawn: ${others.map((o) => `${o.name ?? o.kind} (when ${conditionWords(o.props.Visible ?? '')})`).join('; ')}` : `${words}. Not worked out: the preview has no data.`;
-    const inline = /text|button|link|label|title/.test(it.kind);
+    const inline = TEXTS.test(it.kind) || /^(actionbutton|button|linkbutton)$/.test(it.kind);
     const tag = inline ? 'span' : 'div';
     return `<${tag} class="mx-cond${empty ? ' mx-cond-empty' : ''}${inline ? ' mx-cond-inline' : ''}" title="${esc(title)}"><span class="mx-cond-tag">${esc(words + rest)}</span>${html}</${tag}>`;
   }
@@ -191,7 +197,7 @@ class Writer {
     if (el === undefined) {
       el = this.s.report.elements.length;
       this.s.byKey.set(key, el);
-      const label = elementLabel(it, /text|title|label/.test(it.kind) ? filledText(it, row, this.now) : undefined);
+      const label = elementLabel(it, TEXTS.test(it.kind) ? filledText(it, row, this.now) : undefined);
       this.s.report.elements.push({ el, docType: o.type, docQn: o.qn, name: it.name, kind: it.kind, label, ...(o.via ? { via: o.via } : {}) });
     }
     const e = this.s.report.elements[el];
@@ -201,7 +207,8 @@ class Writer {
 
   /** A widget the preview can't draw: a labelled box with its type (its contents inside, when it has any). */
   unsupported(it: MdlItem, row: number, inForm: boolean): string {
-    this.s.placeholders.set(it.kind, (this.s.placeholders.get(it.kind) ?? 0) + 1);
+    const seen = this.s.placeholders.get(it.kind) ?? this.s.placeholders.set(it.kind, new Set()).get(it.kind)!;
+    seen.add(`${this.owner?.qn ?? ''}/${it.name ?? seen.size}`);
     const label = `${esc(it.kind)}${it.name ? ` · ${esc(it.name)}` : ''}`;
     if (!it.children.length) return `<div class="mx-unknown"><span class="mx-unknown-tag">Not drawn</span> ${label}</div>`;
     return `<div class="mx-unsupported${classes(it) ? ` ${esc(classes(it))}` : ''}"><span class="mx-unknown-tag">Not drawn: ${label}, its contents:</span>${this.all(it.children, row, inForm)}</div>`;
@@ -324,7 +331,7 @@ class Writer {
     const value = esc(sampleValue(attr || label, row, this.now));
     const readOnly = /never/i.test(it.props.Editable ?? '');
     const required = /\breq\b|-req\b|required/.test(c);
-    const lab = `<label class="control-label">${esc(label)}${required ? ' <span class="mx-required">*</span>' : ''}</label>`;
+    const lab = it.props.Label === undefined && this.afterText ? '' : `<label class="control-label">${esc(label)}${required ? ' <span class="mx-required">*</span>' : ''}</label>`;
     let control: string;
     if (readOnly) control = `<div class="form-control-static">${value}</div>`;
     else if (it.kind === 'checkbox' || it.kind === 'switch')
@@ -407,7 +414,7 @@ export function previewRender(m: PageModel, ctx: PreviewContext): { html: string
   const report: PreviewReport = { elements: [], placeholders: [], conditions: 0, casesNotDrawn: 0, rowsNotDrawn: 0, cut: 0 };
   const s: Shared = { used: 0, budget: ctx.budget ?? WIDGET_BUDGET, report, byKey: new Map(), placeholders: new Map() };
   const html = render(m, ctx, now, s);
-  report.placeholders = [...s.placeholders].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind));
+  report.placeholders = [...s.placeholders].map(([kind, set]) => ({ kind, count: set.size })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind));
   return { html, report };
 }
 
