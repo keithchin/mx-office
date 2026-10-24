@@ -273,3 +273,23 @@ test('a gateway address is http(s) with no credentials in it', () => {
   assert.equal(cleanBaseUrl('javascript:alert(1)'), undefined);
   assert.equal(cleanBaseUrl(''), undefined);
 });
+
+test('a test office passes its own Claude set to agents only with AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY, and nothing else with it', async () => {
+  const { claudeGatewayAllowed, ALLOW_CLAUDE_GATEWAY_ENV, ALLOW_TOKEN_ENV } = await import('../src/server/testcreds.js');
+  const started = { ANTHROPIC_API_KEY: FAKE_KEY, ANTHROPIC_BASE_URL: 'https://gw.example' };
+  const worker = () => ({ PATH: 'x', GH_TOKEN: '', ANTHROPIC_API_KEY: 'inherited' }) as Record<string, string>;
+  // Test office, no switch: none of the set reaches an agent (as before).
+  const off = withClaudeAuth(worker(), { ...deps(started, {}, true), claudeAllowed: () => false });
+  assert.equal(off.ANTHROPIC_API_KEY, undefined);
+  assert.equal(off.ANTHROPIC_BASE_URL, undefined);
+  // With the switch: the office's started set, and only that, is passed on.
+  const on = withClaudeAuth(worker(), { ...deps(started, {}, true), claudeAllowed: () => true });
+  assert.equal(on.ANTHROPIC_API_KEY, FAKE_KEY);
+  assert.equal(on.ANTHROPIC_BASE_URL, 'https://gw.example');
+  assert.equal(on.GH_TOKEN, '', 'it adds no GitHub token (the worker env keeps whatever test mode left: nothing)');
+  // The switch is its own variable, never the GitHub one.
+  assert.notEqual(ALLOW_CLAUDE_GATEWAY_ENV, ALLOW_TOKEN_ENV);
+  assert.equal(claudeGatewayAllowed({ [ALLOW_CLAUDE_GATEWAY_ENV]: '1' } as NodeJS.ProcessEnv), true);
+  assert.equal(claudeGatewayAllowed({ [ALLOW_TOKEN_ENV]: '1' } as NodeJS.ProcessEnv), false, 'the GitHub override does not open Claude');
+  assert.equal(claudeGatewayAllowed({} as NodeJS.ProcessEnv), false);
+});

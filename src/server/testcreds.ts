@@ -26,6 +26,18 @@ let dropped = false;
 
 const on = (v: string | undefined) => !!v && v !== '0';
 
+/**
+ * The one test-only way to run real agents in a test office: AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY=1 lets the
+ * Claude set the office was started with (ANTHROPIC_BASE_URL, ANTHROPIC_API_KEY, … : shared/claude-auth.ts
+ * CLAUDE_SET_VARS, nothing else) through to agents and the wizard's planner. Every GitHub, Mendix and other
+ * token stays withheld exactly as without it (dropTestCredentials and Connections are unchanged): it is not
+ * AGENT_OFFICE_TEST_ALLOW_GH_TOKEN, which must never be used for real runs.
+ */
+export const ALLOW_CLAUDE_GATEWAY_ENV = 'AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY';
+
+/** A test office may hand its own Claude set (and only that) to agents and the planner. */
+export const claudeGatewayAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => on(env[ALLOW_CLAUDE_GATEWAY_ENV]);
+
 /** Tokens were let through on purpose (tests with a fake gh only). */
 export const tokensAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => on(env[ALLOW_TOKEN_ENV]);
 

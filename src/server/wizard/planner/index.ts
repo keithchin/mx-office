@@ -15,6 +15,7 @@ import { fileIndexText, takesSource, type SourceFolder } from '../../../shared/s
 import { priceOf, resolvedModel } from '../../usage.js';
 import { resolveCommand } from '../../workers/process.js';
 import { testModeOf } from '../../testmode.js';
+import { claudeGatewayAllowed } from '../../testcreds.js';
 import type { Ctx } from '../../office/context.js';
 import { docxText } from './docx.js';
 import { DraftStore, type DraftState } from './drafts.js';
@@ -434,8 +435,9 @@ function defaultEngine(c: PlannerConfig): PlannerEngine {
     env: officeCallEnv(),
     model: c.model,
     timeoutMs: c.timeoutMs,
-    // A test office never calls the real Claude: only the test planner (AGENT_OFFICE_PLANNER=fake) drafts there.
-    refused: () => (testModeOf().on ? 'Test mode: this office only drafts with the test planner (AGENT_OFFICE_PLANNER=fake)' : undefined),
+    // A test office never calls the real Claude: only the test planner (AGENT_OFFICE_PLANNER=fake) drafts there,
+    // unless it was started with AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY=1 (testcreds.ts: its Claude set only).
+    refused: () => (testModeOf().on && !claudeGatewayAllowed() ? 'Test mode: this office only drafts with the test planner (AGENT_OFFICE_PLANNER=fake)' : undefined),
   });
 }
 
