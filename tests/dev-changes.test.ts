@@ -53,7 +53,12 @@ function harness(dir = mkdtempSync(path.join(tmpdir(), 'ao-dc-'))) {
       handed.push({ id: c.id, text: requestTaskText({ id: `CR-${handed.length + 1}`, text: c.text, by: c.by, change: c }) });
       return { requestId: `CR-${handed.length}`, taskId: TASK, member: 'Ada', role: 'pm', workerId: 'w-ada', delivery: 'held' };
     },
-    facts: async (_f, c) => ({ queue: c.queue, ...(state.facts.get(c.id) ?? {}) }),
+    facts: async (_f, c) => {
+      const f: ChangeFacts = { queue: c.queue, ...(state.facts.get(c.id) ?? {}) };
+      // The real view takes "merged" from the PR's merge commit (or git): the fakes say it the same way.
+      if (f.pr?.state === 'MERGED' && f.pr.mergeCommit && !f.merged) f.merged = { sha: f.pr.mergeCommit, via: 'pr' };
+      return f;
+    },
     record: (e) => audits.push(e),
   };
   return { dir, store, svc: new DevChanges(deps), deps, state, handed, audits, done: () => removeDir(dir) };
@@ -245,13 +250,12 @@ test('restart: the queue is read back from disk and moves on; a retry with the s
   }
 });
 
-test('cancel: before it starts only, by whoever asked or an admin; audited; the next one goes', async () => {
+test('cancel before it starts: by whoever asked or an admin; audited; the next one goes', async () => {
   const x = harness();
   try {
     ok(await x.svc.intake('shop', ask('First change to the badge')));
     ok(await x.svc.intake('shop', ask('Second change to the list')));
     ok(await x.svc.intake('shop', ask('Third change to the list', { owner: undefined })));
-    assert.match(String(await x.svc.cancel('shop', 'DC-1', { name: 'Alex Lee', id: 'acc_1', admin: false })), /has started/);
     assert.match(String(await x.svc.cancel('shop', 'DC-2', { name: 'Sam', id: 'acc_2', admin: false })), /Only whoever asked/);
     assert.match(String(await x.svc.cancel('shop', 'DC-3', { name: 'Sam', id: 'acc_2', admin: false })), /Only whoever asked/, 'no owner: admins only');
     assert.match(String(await x.svc.cancel('shop', 'DC-9', { name: 'Sam', admin: true })), /No such change/);
@@ -261,10 +265,10 @@ test('cancel: before it starts only, by whoever asked or an admin; audited; the 
     ok(await x.svc.cancel('shop', 'DC-3', { name: 'Admin', id: 'acc_9', admin: true }));
     const audit = x.audits.filter((a) => a.action === 'dev-change.cancelled');
     assert.deepEqual(audit.map((a) => [a.target?.label, a.actor.name]), [['DC-2', 'Alex Lee'], ['DC-3', 'Admin']]);
-    assert.equal(changeState({ queue: 'cancelled', cancelledBy: 'Alex Lee' }).words, 'Cancelled');
+    assert.equal(changeState({ queue: 'cancelled', cancelled: { by: 'Alex Lee' } }).words, 'Cancelled');
     // Who may cancel, as the view says per viewer.
     const views = await changeViews(await x.store.all('shop'), { task: () => undefined, assignments: [], pulls: [], preview: { running: false }, contains: async () => undefined, mayCancel: (ch) => ch.owner === 'acc_1' });
-    assert.deepEqual(views.map((v) => [v.id, v.mayCancel]), [['DC-3', false], ['DC-2', false], ['DC-1', false]], 'started and cancelled ones can’t be');
+    assert.deepEqual(views.map((v) => [v.id, v.mayCancel]), [['DC-3', false], ['DC-2', false], ['DC-1', true]], 'cancelled ones can’t be; the active one is (its worker is stopped first: lifecycle-b.test.ts)');
     // A cancelled queued change ahead lets the one behind go once the active one is done.
     ok(await x.svc.intake('shop', ask('Fourth change to the footer')));
     x.state.facts.set('DC-1', { pr: { number: 3, state: 'MERGED', mergeCommit: M } });
@@ -280,18 +284,20 @@ test('the state table: each state from its facts, in plain words', () => {
   const rows: [ChangeFacts, ChangeState, RegExp][] = [
     [{ queue: 'queued', why: 'behind', ahead: 'DC-4', position: 1 }, 'queued', /DC-4 is with the team/],
     [{ queue: 'queued', why: 'paused' }, 'queued', /paused/],
-    [{ queue: 'active' }, 'with-team', /Nothing saved on its branch yet/],
-    [{ queue: 'active', outcome: 'decision' }, 'with-team', /decision of yours/],
+    [{ queue: 'active' }, 'working', /Nothing saved on its branch yet/],
+    [{ queue: 'active', outcome: 'decision' }, 'working', /decision of yours/],
     [{ queue: 'active', candidate: cand, pr: { number: 9, state: 'OPEN' } }, 'candidate', /Candidate @c222222 on dev\/DC-5 · PR #9\. Not merged/],
-    [{ queue: 'active', candidate: cand, pr: { number: 9, state: 'MERGED', mergeCommit: M } }, 'merged', /Merged into main @f000000\. Whether the preview has it couldn’t be told/],
-    [{ queue: 'settled', candidate: cand, pr: { number: 9, state: 'MERGED', mergeCommit: M }, preview: { running: true, served: S }, inServed: true }, 'in-preview', /runs @e0eeeee, which contains it/],
-    [{ queue: 'settled', pr: { number: 9, state: 'MERGED', mergeCommit: M }, preview: { running: true, served: S }, inServed: false }, 'preview-behind', /still runs @e0eeeee/],
-    [{ queue: 'settled', pr: { number: 9, state: 'MERGED', mergeCommit: M }, preview: { running: false } }, 'preview-off', /isn’t running/],
+    [{ queue: 'active', candidate: cand, pr: { number: 9, state: 'MERGED', mergeCommit: M }, merged: { sha: M, via: 'pr' } }, 'implemented', /Merged into main @f000000\. Merged isn’t tried or reviewed/],
+    [{ queue: 'settled', candidate: cand, merged: { sha: M, via: 'git' } }, 'implemented', /found on main by git, no PR/],
     [{ queue: 'clarify', clarify: 'The page is gone' }, 'clarify', /The page is gone/],
-    [{ queue: 'cancelled', cancelledBy: 'Alex' }, 'cancelled', /Cancelled by Alex before it started/],
+    [{ queue: 'cancelled', cancelled: { by: 'Alex' } }, 'cancelled', /Cancelled by Alex before it started/],
+    [{ queue: 'cancelled', cancelled: { by: 'Alex', active: true, stop: { how: 'slept' } } }, 'cancelled', /while the team had it: its worker was stopped mid-turn/],
+    [{ queue: 'superseded', superseded: { by: 'Alex', follow: 'DC-7' } }, 'superseded', /Superseded by DC-7/],
     [{ queue: 'active', ended: 'cancelled' }, 'cancelled', /team cancelled its task/],
     [{ queue: 'settled', ended: 'completed' }, 'not-found', /nothing was found on its branch/],
     [{ queue: 'active', outcome: 'delivered' }, 'not-found', /Ask the team lead where the work is/],
+    [{ queue: 'active', ended: 'completed', candidate: cand, pr: { number: 9, state: 'CLOSED' } }, 'abandoned', /closed without merging .*abandoned/],
+    [{ queue: 'active', workerGone: true }, 'attention', /left the project and there’s no PR/],
   ];
   for (const [f, state, detail] of rows) {
     const s = changeState(f);
@@ -301,11 +307,16 @@ test('the state table: each state from its facts, in plain words', () => {
   }
   // Missing facts never move it forward: a merge without its commit is still on its candidate.
   assert.equal(changeState({ queue: 'active', candidate: cand, pr: { number: 9, state: 'MERGED' } }).state, 'candidate');
+  // A gone worker with a PR isn't "needs attention": the PR still settles it.
+  assert.equal(changeState({ queue: 'active', workerGone: true, pr: { number: 9, state: 'OPEN' }, candidate: cand }).state, 'candidate');
   assert.equal(changeState({ queue: 'active', candidate: cand }).revision, C2);
   // The queue's turn is over only on evidence.
   assert.equal(settledWhy({ queue: 'active', candidate: cand, pr: { number: 9, state: 'OPEN' } }), undefined);
   assert.equal(settledWhy({ queue: 'active', ended: 'completed', candidate: cand }), undefined, 'done with an open candidate: waits for the merge');
   assert.equal(settledWhy({ queue: 'active', ended: 'completed' }), 'not-found');
+  assert.equal(settledWhy({ queue: 'active', ended: 'completed', candidate: cand, pr: { number: 9, state: 'CLOSED' } }), 'abandoned');
+  assert.equal(settledWhy({ queue: 'active', candidate: cand, pr: { number: 9, state: 'CLOSED' } }), undefined, 'closed while the task is open: not yet abandoned');
+  assert.equal(settledWhy({ queue: 'active', candidate: cand, merged: { sha: M, via: 'git' } }), 'merged');
 });
 
 test('candidates: the branch head and PRs carrying the Task line are appended in order, never rewritten; the convention not followed is said', async () => {

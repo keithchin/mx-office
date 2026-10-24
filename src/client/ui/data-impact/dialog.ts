@@ -79,7 +79,7 @@ export function openApproveDialog(v: DataImpactView, done: () => void) {
   approve.onclick = async () => {
     if (!valid()) return;
     approve.disabled = true;
-    const r = await post({ floor: v.floor, action: 'approve', env: held.env, base: held.base, target: held.target, reason: reason.value, ...(mode === 'dump' ? { dump: pick } : { noData: true }) }).catch((err: Error): Answer => ({ ok: false, data: { error: err.message } }));
+    const r = await post({ floor: v.floor, action: 'approve', ...(live ? {} : { env: held.env }), base: held.base, target: held.target, reason: reason.value, ...(mode === 'dump' ? { dump: pick } : { noData: true }) }).catch((err: Error): Answer => ({ ok: false, data: { error: err.message } }));
     if (!r.ok) {
       msg.textContent = r.data.error ?? 'Not approved';
       approve.disabled = !valid();

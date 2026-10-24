@@ -141,7 +141,7 @@ export function changeState(f: ChangeFacts): ChangeStatus {
     const place = f.position && f.position > 1 ? `Number ${f.position} in the queue. ` : '';
     return at('queued', `${place}${queueWhyWords(f.why ?? 'behind', f.ahead)}`);
   }
-  if (f.merged) return at('implemented', `Merged into main @${short(f.merged.sha)}${f.merged.via === 'git' ? ' (found on main by git, no PR)' : ''}. Implemented isn’t accepted: the preview and your review say the rest.`, f.merged.sha);
+  if (f.merged) return at('implemented', `Merged into main @${short(f.merged.sha)}${f.merged.via === 'git' ? ' (found on main by git, no PR)' : ''}. Merged isn’t tried or reviewed: the preview and your review are facts of their own.`, f.merged.sha);
   if (f.ended === 'cancelled' || f.outcome === 'cancelled') return at('cancelled', 'The team cancelled its task. Ask the team lead why, or ask for it again.');
   const finished = finishedOf(f) || f.queue === 'settled';
   if (f.settled === 'abandoned' || (f.pr?.state === 'CLOSED' && finished)) return at('abandoned', `PR #${f.pr?.number ?? '?'} was closed without merging and the team says the task is done: abandoned. Nothing was merged; ask for it again if it’s still wanted.`);

@@ -17,7 +17,7 @@ import { ChangeStore } from '../src/server/dev-changes/store.js';
 import { DevChanges, type ChangeDeps } from '../src/server/dev-changes/service.js';
 import { ValidationBook, type ValidationDeps } from '../src/server/guided-validation/store.js';
 import { modelChangeRoutes } from '../src/server/http/routes/model-change.js';
-import { reviewedChange, reviewScenario, type DevChangeView, type QueueWhy } from '../src/shared/dev-changes.js';
+import { CHANGE_TONE, CHANGE_WORDS, changeFour, reviewedChange, reviewScenario, type DevChangeView, type QueueWhy } from '../src/shared/dev-changes.js';
 import { requestTitle } from '../src/shared/change-requests.js';
 import { aboutLine, askedWords, chipFor, pauseWords, queuedNote, receiptWords, reviewAt, sessionChanges, sessionSummary, tryAt, wantsTry } from '../src/client/ui/app-workspace/dock/logic.js';
 import { firstPage } from '../src/client/ui/app-workspace/explorer/first-page.js';
@@ -135,33 +135,47 @@ test('the Model tab’s Change this is the Project Manager’s, checked on the s
 // ---- The chat's words (pure) -------------------------------------------------------------------------------
 
 const NOW = Date.UTC(2026, 9, 24, 12);
-const view = (o: Partial<DevChangeView>): DevChangeView => ({ id: 'DC-1', text: 'Sort by arrival\n\nAbout: Today’s visitors (page Desk.Visitors)', by: 'Alex Lee', at: NOW - 3_600_000, source: { sha: MAIN, kind: 'viewed' }, queue: 'queued', candidates: [], branch: 'dev/DC-1', state: 'queued', words: 'Queued', detail: 'The project is paused: it starts when the project is resumed.', mayCancel: true, ...o }) as DevChangeView;
+type Extra = { preview?: { running: boolean; served?: string }; inServed?: boolean; held?: { env: string; reason: string; findings: number } };
+const view = (o: Partial<DevChangeView> & Extra): DevChangeView => {
+  const v = { id: 'DC-1', text: 'Sort by arrival\n\nAbout: Today’s visitors (page Desk.Visitors)', by: 'Alex Lee', at: NOW - 3_600_000, source: { sha: MAIN, kind: 'viewed' }, queue: 'queued', candidates: [], branch: 'dev/DC-1', state: 'queued', words: CHANGE_WORDS[o.state ?? 'queued'], detail: 'The project is paused: it starts when the project is resumed.', mayCancel: true, ...o } as DevChangeView;
+  v.facts = changeFour({ state: v.state, words: v.words, tone: CHANGE_TONE[v.state], ...(v.revision ? { revision: v.revision, ...(v.state === 'implemented' ? { merged: v.revision } : {}) } : {}), ...(v.checks ? { checks: v.checks } : {}), ...(o.preview ? { preview: o.preview } : {}), ...(o.inServed !== undefined ? { inServed: o.inServed } : {}), ...(o.held ? { held: o.held } : {}), ...(v.reviews ? { reviews: v.reviews } : {}) });
+  return v;
+};
 
-test('this session’s changes, the header’s summary and each receipt, only from the record', () => {
-  const old = view({ id: 'DC-1', at: NOW - 2 * 86_400_000, state: 'merged', words: 'Merged into main', revision: 'f'.repeat(40) });
-  const oldOpen = view({ id: 'DC-2', at: NOW - 2 * 86_400_000, state: 'with-team', words: 'With the team' });
+test('this session’s changes, the header’s summary and each receipt (four facts apart), only from the record', () => {
+  const M = 'f'.repeat(40);
+  const old = view({ id: 'DC-1', at: NOW - 2 * 86_400_000, state: 'implemented', revision: M });
+  const oldOpen = view({ id: 'DC-2', at: NOW - 2 * 86_400_000, state: 'working' });
   const fresh = view({ id: 'DC-3', at: NOW - 600_000 });
   const s = sessionChanges([fresh, old, oldOpen], NOW);
   assert.deepEqual(s.map((c) => c.id), ['DC-2', 'DC-3'], 'asked in the last 12 hours, or still on its way; oldest first');
-  assert.deepEqual(sessionSummary(s), { head: '2 changes this session', parts: ['1 with the team', '1 queued'] });
-  assert.deepEqual(sessionSummary([view({ state: 'in-preview', revision: 'f'.repeat(40) }), view({ id: 'DC-9', state: 'preview-off', revision: 'f'.repeat(40) })]).parts, ['2 merged', '1 in the preview']);
+  assert.deepEqual(sessionSummary(s), { head: '2 changes this session', parts: ['1 working', '1 queued'] });
+  assert.deepEqual(sessionSummary([view({ state: 'implemented', revision: M, preview: { running: true, served: S }, inServed: true }), view({ id: 'DC-9', state: 'implemented', revision: M, preview: { running: false } })]).parts, ['2 implemented', '1 in the preview']);
   assert.equal(sessionSummary([]).head, 'No changes this session');
-  // The receipt: the state with the revision it names; a pause said with who and when.
-  const cand = receiptWords(view({ state: 'candidate', words: 'On candidate', revision: 'c1'.padEnd(40, '1'), detail: 'x' }));
-  assert.deepEqual([cand.head, cand.line], ['→ DC-1 · On candidate @c111111', 'x']);
-  assert.deepEqual(cand.facts.map((f) => [f.key, f.text]), [['checks', 'None reported yet'], ['preview', 'Not in the preview: it runs main, not this candidate.']]);
-  // Merged is its own fact: never "in preview", "ready to try" or "accepted" by itself.
-  const M = 'f'.repeat(40);
-  const behind = receiptWords(view({ state: 'preview-behind', words: 'Preview behind', revision: M, detail: 'y' }));
-  assert.equal(behind.head, '→ DC-1 · Merged @fffffff');
-  assert.deepEqual(behind.facts.map((f) => f.key), ['checks', 'preview', 'review']);
-  assert.equal(behind.facts.find((f) => f.key === 'preview')?.text, 'Not in the preview yet: it runs an older version.');
-  assert.equal(behind.facts.find((f) => f.key === 'review')?.text, 'None yet');
-  const inPrev = receiptWords(view({ state: 'in-preview', words: 'In preview', revision: M, detail: 'The live preview runs @e0eeeee, which contains it: try it in the app.', reviews: [{ id: 'GV-2', verdict: 'works', revision: S, by: 'Alex', at: NOW }] }));
-  assert.equal(inPrev.head, '→ DC-1 · Merged @fffffff');
-  assert.equal(inPrev.facts.find((f) => f.key === 'preview')?.text, 'The live preview runs @e0eeeee, which contains it.');
-  assert.equal(inPrev.facts.find((f) => f.key === 'review')?.text, 'Looks right on @e0eeeee (Alex)');
-  for (const r of [cand, behind, inPrev]) assert.doesNotMatch(JSON.stringify(r), /accepted/i);
+  // The receipt: the execution with the revision it names, then the four facts, each from its own source.
+  const cand = receiptWords(view({ state: 'candidate', revision: 'c1'.padEnd(40, '1'), detail: 'x' }));
+  assert.deepEqual([cand.head, cand.line], ['→ DC-1 · Working · candidate @c111111', 'x']);
+  assert.deepEqual(cand.facts.map((f) => [f.key, f.status, f.text]), [
+    ['execution', 'candidate', 'Working · candidate @c111111'],
+    ['verification', 'incomplete', 'Incomplete @c111111: no CI'],
+    ['preview', 'main', 'Runs main, not this candidate'],
+    ['review', 'none', 'No review yet'],
+  ]);
+  // Implemented is its own fact: never "in preview", "ready to try" or "accepted" by itself.
+  const behind = receiptWords(view({ state: 'implemented', revision: M, detail: 'y', preview: { running: true, served: S }, inServed: false }));
+  assert.equal(behind.head, '→ DC-1 · Implemented @fffffff');
+  assert.equal(behind.facts.find((f) => f.key === 'preview')?.text, 'Preview behind: runs @e0eeeee');
+  assert.equal(behind.facts.find((f) => f.key === 'review')?.text, 'No review yet');
+  const unknown = receiptWords(view({ state: 'implemented', revision: M, detail: 'y' }));
+  assert.equal(unknown.facts.find((f) => f.key === 'preview')?.status, 'unknown', 'merged with nothing known of the preview: unknown, never "available"');
+  assert.equal(unknown.facts.find((f) => f.key === 'verification')?.status, 'incomplete', 'no checks at M: incomplete, never passed');
+  // Held by the data-impact guard: a fact of its own, beside Implemented.
+  const held = receiptWords(view({ state: 'implemented', revision: M, detail: 'y', preview: { running: true, served: S }, inServed: true, held: { env: 'candidate:DC-1', reason: 'Possible data impact', findings: 2 } }));
+  assert.deepEqual([held.facts[0].status, held.facts[2].status, held.facts[2].text], ['implemented', 'held', 'Held: possible data impact']);
+  const inPrev = receiptWords(view({ state: 'implemented', revision: M, detail: 'z', preview: { running: true, served: S }, inServed: true, reviews: [{ id: 'GV-2', verdict: 'works', revision: S, by: 'Alex', at: NOW }] }));
+  assert.equal(inPrev.facts.find((f) => f.key === 'preview')?.text, 'In the preview @e0eeeee');
+  assert.equal(inPrev.facts.find((f) => f.key === 'review')?.text, 'Looks right for @e0eeeee (Alex)');
+  for (const r of [cand, behind, inPrev, held]) assert.doesNotMatch(JSON.stringify(r), /accepted/i);
   const paused = receiptWords(fresh, { by: 'Keith', at: NOW - 1_000, why: 'person' });
   assert.equal(paused.head, '→ DC-3 · Queued');
   assert.match(paused.line, /^Project paused by Keith \(.+\)\. Queued changes start when someone resumes it in Project Management \(▶ Resume\)\.$/);
@@ -169,11 +183,13 @@ test('this session’s changes, the header’s summary and each receipt, only fr
   assert.equal(askedWords(fresh.text), 'Sort by arrival', 'the person’s words without the added context line');
 });
 
-test('Please try this: only once it’s in the preview, after the latest event; a review counts for its exact version', () => {
-  const c = view({ state: 'in-preview', words: 'In preview', settled: { at: NOW - 100, why: 'merged' }, candidates: [{ sha: 'c', via: 'branch', branch: 'dev/DC-1', seenAt: NOW - 500 }], reviews: [{ id: 'GV-1', verdict: 'works', revision: S, by: 'Alex', at: NOW }] });
+test('Please try this: only once it’s in the preview (not held), after the latest event; a review counts for its exact version', () => {
+  const M = 'f'.repeat(40);
+  const c = view({ state: 'implemented', revision: M, preview: { running: true, served: S }, inServed: true, settled: { at: NOW - 100, why: 'merged' }, candidates: [{ sha: 'c', via: 'branch', branch: 'dev/DC-1', seenAt: NOW - 500 }], reviews: [{ id: 'GV-1', verdict: 'works', revision: S, by: 'Alex', at: NOW }] });
   assert.equal(wantsTry(c), true);
-  assert.equal(wantsTry(view({ state: 'preview-behind' })), false);
-  assert.equal(wantsTry(view({ state: 'merged' })), false);
+  assert.equal(wantsTry(view({ state: 'implemented', revision: M, preview: { running: true, served: S }, inServed: false })), false);
+  assert.equal(wantsTry(view({ state: 'implemented', revision: M })), false, 'merged alone is never ready to try');
+  assert.equal(wantsTry(view({ state: 'implemented', revision: M, preview: { running: true, served: S }, inServed: true, held: { env: 'live-preview', reason: 'held', findings: 1 } })), false, 'held: not available');
   assert.equal(tryAt(c), NOW - 99);
   assert.equal(reviewAt(c, S)?.id, 'GV-1');
   assert.equal(reviewAt(c, S.slice(0, 7))?.id, 'GV-1');

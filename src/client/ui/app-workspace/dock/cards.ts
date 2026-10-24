@@ -99,7 +99,7 @@ export function tryCard(c: DevChangeView, deps: TryDeps): HTMLElement {
     { 'data-change': c.id, 'data-reviewed': done?.verdict ?? '' },
     h('p.pmc-card-h', {}, `Please try this · ${c.id}`),
     h('p.pmc-card-q', {}, `Try it: ${title}`),
-    h('p.dk-rline', {}, rev ? `It’s in the live preview (version ${short(rev)}, which contains its merge @${short(c.revision)}). Implemented isn’t accepted: your review below is about this version only.` : 'It’s in the live preview.'),
+    h('p.dk-rline', {}, rev ? `It’s in the live preview (version ${short(rev)}, which contains its merge @${short(c.revision)}).` : 'It’s in the live preview.'),
     done
       ? h('p.dk-done', { 'data-verdict': done.verdict }, done.verdict === 'works' ? `✓ Looks right · kept for version ${short(done.revision)} by ${done.by} ${timeAgo(done.at)}` : `Something’s wrong · sent as ${done.correction ?? 'a correction'} by ${done.by} ${timeAgo(done.at)}`)
       : '',
