@@ -384,7 +384,7 @@ test('in Portal no tab of the 1D view shows its title twice: each repeating head
   // Approvals: the name goes, the count stays as a line of its own (only in Portal: the other themes keep "✅ Approvals (n)").
   const apv = read('src/client/ui/roster/approvals.ts');
   assert.ok(apv.includes("h('span.ro-apv-name', {}, `✅ Approvals (${v.approvals.length})`)"));
-  assert.ok(apv.includes("h('span.ro-apv-wait', {}, `${v.approvals.length} waiting on you`)"));
+  assert.ok(apv.includes("h('span.ro-apv-wait', {}, v.admin ? `${v.approvals.length} to approve · part of what needs you` : `${v.approvals.length} waiting on the Project Manager`)"));
   assert.match(read('src/client/ui/roster/roster.css'), /^\.ro-apv-wait \{ display: none; \}$/m);
   assert.match(css, /#team-view \.ro-approvals > \.ro-bar \.ro-apv-wait \{ display: block;/);
   // Standup keeps Run standup and its schedule line, a settings section Save settings and its note: only headings are hidden.

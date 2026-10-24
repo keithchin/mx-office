@@ -88,7 +88,7 @@ test('the card draws the escalations from the strip’s list, and Send answer ca
   const el = card.el as unknown as FakeEl;
   const all = text(el);
   assert.match(all, /Needs you/);
-  assert.match(all, /2 now/);
+  assert.match(all, /2 for you/);
   assert.match(all, /Blocking/);
   assert.match(all, /BR024 Withdraw: should a withdrawn request notify the approver\?/);
   assert.match(all, /A\. Notify the approver Recommended/);
@@ -138,7 +138,7 @@ test('answered: the card goes, an Answered row says what was sent; a redraw keep
   assert.match(all, /Answered/);
   assert.match(all, /Notify the approver · sent to Dylan/);
   assert.equal(el.querySelectorAll('.pt-esc').length, 1, 'the answered card is gone');
-  assert.match(all, /1 now/);
+  assert.match(all, /1 for you/);
 });
 
 test('someone who isn’t the Project Manager sees the card but can’t answer it', () => {

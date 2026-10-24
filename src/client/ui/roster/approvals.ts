@@ -49,7 +49,7 @@ export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): H
     'section.ro-approvals',
     { 'aria-label': 'Approvals' },
     // The heading's name and count apart: in Portal the page header says "Approvals" already, so only the count stays (as "5 waiting on you", ui/portal/layout.css).
-    h('div.ro-bar', {}, h('div', {}, h('h3.ro-apv-h', {}, h('span.ro-apv-name', {}, `✅ Approvals (${v.approvals.length})`), v.approvals.length ? h('span.ro-apv-wait', {}, `${v.approvals.length} waiting on you`) : null), h('p.ro-sub', {},`Level ${a.level} · ${a.name}${v.byStage ? ' · by stage' : ''}: ${a.summary} You, the Project Manager, always have the final say.`))),
+    h('div.ro-bar', {}, h('div', {}, h('h3.ro-apv-h', {}, h('span.ro-apv-name', {}, `✅ Approvals (${v.approvals.length})`), v.approvals.length ? h('span.ro-apv-wait', {}, v.admin ? `${v.approvals.length} to approve · part of what needs you` : `${v.approvals.length} waiting on the Project Manager`) : null), h('p.ro-sub', {},`Level ${a.level} · ${a.name}${v.byStage ? ' · by stage' : ''}: ${a.summary} You, the Project Manager, always have the final say.`))),
     devChangesCard(v.floor),
     items.length ? h('div.ro-props', {}, ...(byJeff && ordered.some((it) => it.kind === 'escalation') ? [sortedNote()] : []), ...items) : h('p.ro-dim', {}, 'Nothing needs you right now.'),
   );

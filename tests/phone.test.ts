@@ -349,8 +349,10 @@ test('notifications are the Needs-you items: the right voice, the buttons that a
   assert.deepEqual(asking.actions, [{ do: 'go', target: { to: 'worker', id: 'k' }, label: 'Open terminal' }]);
   assert.deepEqual(notes.find((n) => n.kind === 'paused')!.actions, [{ do: 'go', target: { to: 'settings', section: 'team' }, label: 'Raise cap' }]);
   assert.deepEqual(notes.find((n) => n.kind === 'pr')!.actions.map((a) => a.label), ['Merge…', 'Review']);
-  // Red: this floor's items, and everyone waiting elsewhere (2 on f2), not double-counting f1.
-  assert.equal(redCount(items, floors, 'f1'), items.filter((n) => n.kind !== 'floor').length + 2);
+  // Red: the one Needs-you count (shared/needs-count.ts): this floor's decisions and actions; another floor's agents are never added to it.
+  assert.equal(redCount(items, floors, 'f1'), items.filter((n) => n.kind !== 'floor' && n.level !== 'info').length);
+  // A member isn't counted what only the Project Manager can act on.
+  assert.equal(redCount(items, floors, 'f1', false), items.filter((n) => ['asking', 'finished', 'lost'].includes(n.kind) && n.level !== 'info').length);
   // Alerts the phone sends itself: new, not a worker asking (session.ts has that), not a loud escalation (the office's own alert).
   const fresh = newAlerts(items, new Set());
   assert.ok(fresh.some((n) => n.key === 'esc-e1'));

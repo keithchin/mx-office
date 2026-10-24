@@ -53,7 +53,9 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
 
   const draw = (v: RosterView) => {
     last = v;
-    badge.textContent = v.approvals.length ? String(v.approvals.length) : '';
+    // Approvals are the Project Manager's to give: a member isn't counted them (shared/needs-count.ts); an admin's are part of the one Needs-you count.
+    badge.textContent = v.approvals.length && v.admin ? String(v.approvals.length) : '';
+    badge.title = v.approvals.length ? (v.admin ? `${v.approvals.length} to approve: part of what needs you on the Overview` : `${v.approvals.length} waiting on the Project Manager`) : '';
     if (!shown()) return;
     const a = AUTONOMY[v.settings.autonomy];
     const tab = (p: Pane, label: string, n?: number) =>

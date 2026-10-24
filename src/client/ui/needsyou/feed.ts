@@ -5,7 +5,8 @@
 
 import type { RosterView } from '../../../shared/roster/types';
 import type { DecisionCard } from '../../../shared/decisions/types';
-import { hereCount, type NeedItem, type NeedTarget } from './logic';
+import { type NeedItem, type NeedTarget } from './logic';
+import { needsCount, type NeedsCount } from '../../../shared/needs-count';
 
 export interface NeedsSnapshot {
   floor?: string;
@@ -17,6 +18,8 @@ export interface NeedsSnapshot {
   roster?: RosterView;
   /** Takes you to an item's fix, as the strip's own buttons do. */
   go(target: NeedTarget): void;
+  /** The one count (shared/needs-count.ts) the strip worked out with these items: every surface shows this, never its own. */
+  count?: NeedsCount;
 }
 
 const listeners = new Set<(s: NeedsSnapshot) => void>();
@@ -39,8 +42,10 @@ export function publishNeeds(s: NeedsSnapshot): void {
 }
 
 /**
- * How many things wait on you on this floor: every actionable item (escalations and decisions, a merged
- * PR not verified, a ✋ sign-off, agents asking, approvals…), not just the escalations. The same number as
- * the Overview's tab count (hereCount), so the panel's strip and the navigation never disagree.
+ * The one count for a snapshot (shared/needs-count.ts): the strip's own when it handed one, else worked out
+ * from its items the same way (a test's snapshot), so the panel, the Overview and the navigation never disagree.
  */
-export const waitingCount = (items: readonly NeedItem[]): number => hereCount(items);
+export const countOf = (s: Pick<NeedsSnapshot, 'items' | 'count' | 'floor'>, admin = true): NeedsCount => s.count ?? needsCount(s.items, { admin, floor: s.floor });
+
+/** How many wait on you on this floor: the one count's `forYou`. */
+export const waitingCount = (items: readonly NeedItem[], admin = true): number => needsCount(items, { admin }).forYou;

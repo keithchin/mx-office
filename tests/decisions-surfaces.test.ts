@@ -57,9 +57,9 @@ test('decisions-surfaces-agree: one builder names every source, so every surface
   assert.match(gather, /needsInputOf\(\{/);
   assert.match(gather, /asks: await asksNeedOf\(ctx, floor\)/);
   assert.match(gather, /splits: await decisionsOf\(ctx\)\.splits\.get\(floor\.id\)/);
-  // The Overview card and the lead panel count the strip's published rows.
-  assert.match(read('src/client/ui/portal/needs-card.ts'), /waitingCount\(items\)/);
-  assert.match(read('src/client/ui/lead-panel/panel.ts'), /waitingCount\(s\.items\)/);
+  // The Overview card and the lead panel show the strip's published count (shared/needs-count.ts), never their own.
+  assert.match(read('src/client/ui/portal/needs-card.ts'), /countOf\(s, /);
+  assert.match(read('src/client/ui/lead-panel/panel.ts'), /countOf\(s, /);
   // Needs-you keys don't collide: an agent asking is ask-<worker>, a surfaced ask asks-<id>.
   assert.ok(needs.some((n) => n.key === 'asks-a1'));
 });

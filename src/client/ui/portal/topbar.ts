@@ -152,11 +152,15 @@ function phoneBell(): HTMLElement | null {
   const badge = launcher.querySelector<HTMLElement>('.tp-badge');
   const draw = () => {
     const n = (badge?.textContent ?? '').trim();
+    // The phone's words for its badge: the one Needs-you count in full ("3 for you in this project · 2 agents waiting in another project").
+    const words = (launcher.getAttribute('aria-label') ?? '').replace(/^Team phone:?\s*/, '');
     count.textContent = n;
     count.hidden = !n;
-    bell.setAttribute('aria-label', n ? `Notifications: ${n} new on the team phone` : 'Notifications: the team phone');
+    bell.setAttribute('aria-label', n || words ? `Notifications: ${words || `${n} for you in this project`}` : 'Notifications: the team phone');
+    bell.title = words ? `Needs you: ${words}` : 'Notifications: the team phone';
   };
   if (badge) new MutationObserver(draw).observe(badge, { childList: true, characterData: true, subtree: true });
+  new MutationObserver(draw).observe(launcher, { attributes: true, attributeFilter: ['aria-label'] });
   draw();
   return bell;
 }

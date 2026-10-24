@@ -31,7 +31,8 @@ import { PmTerminal } from '../pm/term';
 import { termTheme } from '../termtheme';
 import { ChatView } from '../pm/chat/view';
 import { onPmcView, PMC_VIEW_LABEL, PMC_VIEWS, savedPmcView, savePmcView, type PmcView } from '../pm/chat/pref';
-import { onNeeds, waitingCount } from '../needsyou/feed';
+import { onNeeds, countOf } from '../needsyou/feed';
+import { bannerWords, countWords } from '../../../shared/needs-count';
 import { Composer, type ComposerMode } from './composer';
 import { onPanelDock, panelDock, type ChatExtra, type ContextChip } from './dock';
 import { initialsOf, lastAgentId, leadHeading, leadOf, statusLine, terminalWanted, unreadSince, type Lead, type QUICK, type SendPlan } from './logic';
@@ -72,7 +73,9 @@ export class LeadPanel {
   private view: PmView = pmView(undefined, undefined);
   private mode: PmcView = savedPmcView();
   private watching: string | null = null;
-  private waiting = 0;
+  /** The banner's words from the one count (shared/needs-count.ts), and the whole count for its label. */
+  private waiting = '';
+  private waitAll = '';
   private readonly term: PmTerminal;
   private readonly chat: ChatView;
   private readonly composer: Composer;
@@ -160,9 +163,11 @@ export class LeadPanel {
     store.on('convo', () => this.convoChanged());
     document.addEventListener('visibilitychange', () => this.draw());
     onNeeds((s) => {
-      const n = s.floor === this.floor ? waitingCount(s.items) : 0;
-      if (n === this.waiting) return;
-      this.waiting = n;
+      const c = s.floor === this.floor ? countOf(s, !!store.me.admin) : undefined;
+      const words = c ? bannerWords(c) : '';
+      if (words === this.waiting && (c ? countWords(c) : '') === this.waitAll) return;
+      this.waiting = words;
+      this.waitAll = c ? countWords(c) : '';
       this.drawWaiting();
     });
   }
@@ -273,12 +278,13 @@ export class LeadPanel {
   private waitKey = '';
   private drawWaiting() {
     const n = this.waiting;
-    const key = `${n}|${this.lead?.kind}`;
+    const key = `${n}|${this.waitAll}|${this.lead?.kind}`;
     if (key === this.waitKey) return;
     this.waitKey = key;
     this.waitBtn.hidden = !n || this.lead?.kind !== 'lead';
-    this.waitBtn.replaceChildren(h('span', { 'aria-hidden': 'true' }, '⚑'), h('span.lp-grow', {}, h('b', {}, `${n} waiting on you`), ' · on the Overview'), h('span', { 'aria-hidden': 'true' }, '→'));
-    this.waitBtn.setAttribute('aria-label', `${n} waiting on you: go to Needs you on the Overview`);
+    this.waitBtn.replaceChildren(h('span', { 'aria-hidden': 'true' }, '⚑'), h('span.lp-grow', {}, h('b', {}, n), ' · on the Overview'), h('span', { 'aria-hidden': 'true' }, '→'));
+    this.waitBtn.setAttribute('aria-label', `${this.waitAll || n}: go to Needs you on the Overview`);
+    this.waitBtn.title = this.waitAll;
   }
 
   private drawComposer(w: ReturnType<LeadPanel['worker']>) {
