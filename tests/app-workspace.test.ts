@@ -1,13 +1,15 @@
-// The App Workspace (C3) without a browser: its address (&ws=app|eng and the five section ids, every
-// existing deep link unchanged), its stage read from what the office already derives, the business status's
-// missing lines in business words, the banned-terms lint over the words it can draw, and how it plugs in
-// (the tab registry, the hidden sections, a lazy module, no polling, nothing in lite.ts).
+// The Developer view (the code's App Workspace, C3) without a browser: its address (&ws=app|eng, the dev|pm
+// aliases and the five section ids, every existing deep link unchanged), its names (Developer, Project
+// Management), its stage read from what the office already derives, the business status's missing lines said
+// shortly, no banned-terms lint any more, and how it plugs in (the tab registry, the hidden sections, a lazy
+// module, no polling, nothing in lite.ts).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { APP_SECTIONS, appSectionFor, ENGINEERING_FOR, isAppSection, workspaceTab } from '../src/shared/app-workspace/route.js';
-import { BANNED_TERMS, bannedIn, plainMissing, shownStages, STAGES, workspaceStage } from '../src/shared/app-workspace/words.js';
+import { APP_SECTIONS, appSectionFor, DEVELOPER_VIEW, ENGINEERING_FOR, isAppSection, VIEW_NAMES, workspaceTab, wsView } from '../src/shared/app-workspace/route.js';
+import * as words from '../src/shared/app-workspace/words.js';
+import { plainMissing, shownStages, workspaceStage } from '../src/shared/app-workspace/words.js';
 import { asTab, groupOf, isTab, navGroups, pageTitle } from '../src/client/ui/portal/nav-logic.js';
 import { registeredTab } from '../src/client/tabs/registry.js';
 import '../src/client/tabs/index.js';
@@ -31,6 +33,32 @@ test('the address: ws=app opens an App section, ws=eng the Engineering view, no 
   assert.equal(workspaceTab(null, null), null);
   for (const s of APP_SECTIONS) assert.equal(appSectionFor(ENGINEERING_FOR[s.id]), s.id === 'release' ? 'app' : s.id, `${s.id} round-trips (Release's Engineering page is the Overview)`);
   assert.equal(isAppSection('live'), false);
+  // The new names' aliases: ws=dev is ws=app, ws=pm is ws=eng (old links keep working, new ones read better).
+  assert.equal(wsView('dev'), 'app');
+  assert.equal(wsView('app'), 'app');
+  assert.equal(wsView('pm'), 'eng');
+  assert.equal(wsView('eng'), 'eng');
+  assert.equal(wsView('x'), null);
+  assert.equal(workspaceTab('dev', null), 'app');
+  assert.equal(workspaceTab('dev', 'approvals'), 'decisions');
+  assert.equal(workspaceTab('pm', 'decisions'), 'approvals');
+  assert.equal(workspaceTab('pm', 'board'), 'board');
+});
+
+test('the names: Developer and Project Management, in the navigation and the docs', () => {
+  assert.deepEqual(VIEW_NAMES, { app: 'Developer', eng: 'Project Management' });
+  assert.equal(DEVELOPER_VIEW, 'Developer view');
+  assert.equal(registeredTab('app')?.label, 'Developer');
+  assert.equal(navGroups()[0].items[0].label, 'Developer');
+  // No user-visible "App workspace" or "Engineering view" left in what the view draws, the docs or the README.
+  const dir = 'src/client/ui/app-workspace';
+  for (const f of readdirSync(path.join(root, dir), { recursive: true }).map(String).filter((x) => /\.ts$/.test(x))) {
+    const src = read(`${dir}/${f}`).split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+    assert.doesNotMatch(src, /App workspace|Engineering view|App view/i, f);
+  }
+  for (const f of ['src/shared/app-workspace/acceptance-words.ts', 'src/shared/change-requests.ts', 'src/server/change-requests/service.ts', 'src/server/roster/playbooks.ts', 'README.md']) assert.doesNotMatch(read(f).split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n'), /App workspace|Engineering view/, f);
+  assert.match(read('docs/site/using-the-office/developer-view.md'), /^title: Developer view$/m);
+  assert.match(read('docs/site/using-the-office/developer-view.md'), /aliases: \[using-the-office\/app-workspace\]/, 'the old address still lands on the page');
 });
 
 test('every existing deep link keeps its tab; the five sections are tabs too, App in the navigation, the rest hidden', () => {
@@ -41,7 +69,6 @@ test('every existing deep link keeps its tab; the five sections are tabs too, Ap
     assert.equal(registeredTab(s.id)?.hidden, s.id === 'app' ? undefined : true);
   }
   assert.equal(groupOf('app')?.id, 'general');
-  assert.equal(navGroups()[0].items[0].label, 'App workspace');
   for (const s of ['requirements', 'decisions', 'review', 'release']) assert.equal(groupOf(s), undefined, `${s} is in no group`);
   assert.equal(pageTitle('decisions'), 'Decisions');
   // The page reads ws through the address module, before it picks the start tab.
@@ -67,7 +94,7 @@ test('the stage: read from the business status and the progress bar’s phase, n
   assert.deepEqual(shownStages('awaiting').map((s) => s.id), ['before', 'building', 'validation', 'accepted', 'awaiting', 'released']);
 });
 
-test('the business status’s missing lines in business words, each once', () => {
+test('the business status’s missing lines said shortly, each once', () => {
   assert.deepEqual(
     plainMissing([
       "the live app isn't running: start it on the Live app tab to try the work",
@@ -95,26 +122,14 @@ test('the business status’s missing lines in business words, each once', () =>
   );
   // The guided checks' own lines (C5): failed and not run on this version, required checks failed or without a result.
   assert.deepEqual(plainMissing(['J-02 failed against abc1234', 'J-03, J-04 not run against abc1234', 'checks failed on abc1234: unit tests', 'no result on abc1234 for lint']), ['A guided check failed on this version', 'Some guided checks haven’t run on this version yet', 'Some required checks failed on this version', 'Some required checks have no result on this version yet']);
-  assert.deepEqual(plainMissing(['something about a worktree']), ['More detail is on the Engineering view']);
+  assert.deepEqual(plainMissing(['something about a worktree']), ['something about a worktree'], 'builders read the line as it is');
   assert.deepEqual(plainMissing(['Plain words stay as they are']), ['Plain words stay as they are']);
 });
 
-test('the banned-terms lint: it finds the words, and the App Workspace’s own text uses none', () => {
-  assert.deepEqual(bannedIn('Merged PR #12 on branch main'), ['PR', 'merged', 'branch']);
-  assert.deepEqual(bannedIn('The agent team'), ['agent']);
-  assert.deepEqual(bannedIn('A pull  request and a commit on the floor'), ['pull request', 'commit', 'floor']);
-  assert.deepEqual(bannedIn('Approve the scope, try the app, print a badge'), []);
-  assert.deepEqual(bannedIn('price, CIty, sharp'), [], 'whole words only; PR, CI and SHA in capitals only');
-  for (const s of STAGES) assert.deepEqual(bannedIn(`${s.label} ${s.canvas} ${s.panel} ${s.primary}`), [], s.id);
-  for (const s of APP_SECTIONS) assert.deepEqual(bannedIn(`${s.label} ${s.hint}`), [], s.id);
-  // Every string literal the workspace's drawing modules can show (imports, class names and keys aside).
-  const dir = 'src/client/ui/app-workspace';
-  for (const f of readdirSync(path.join(root, dir)).filter((x) => /^(shell|canvas|panel|sections|tab|requests|decision-cards)\.ts$/.test(x))) {
-    const src = read(`${dir}/${f}`).split('\n').filter((l) => !/^\s*(\/\/|import |\*|\/\*)/.test(l)).join('\n');
-    const strings = [...src.matchAll(/'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g)].map((m) => m[1] ?? m[2]).filter((s) => !/^[a-z0-9.#:\-[\]=' "_/]*$/.test(s) && !s.startsWith('/api/'));
-    for (const s of strings) assert.deepEqual(bannedIn(s), [], `${f}: "${s}"`);
-  }
-  assert.ok(BANNED_TERMS.length >= 20);
+test('the banned-terms lint is gone: the audience is builders', () => {
+  assert.equal('bannedIn' in words, false);
+  assert.equal('BANNED_TERMS' in words, false);
+  assert.ok(!readdirSync(path.join(root, 'tests')).includes('app-workspace-words.test.ts'));
 });
 
 test('it plugs in through the registries: its own module, lazy, no polling, nothing in lite.ts or the store', () => {

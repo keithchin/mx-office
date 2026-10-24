@@ -1,10 +1,9 @@
-// The App Workspace (C3, src/client/ui/app-workspace/) in headless Chromium, with the page's own styles and a
-// test source in place of the page's feeds: its five sections, the canvas naming the served revision (and
-// never a blank frame when nothing serves), the side panel's parts wired to the data and the marked slots
-// for change requests, the empty states, the stage switch, the workspace switch
-// (back to the Engineering page you came from, else the closest one), no engineering words in anything it
-// draws, a phone width with no sideways scrolling, and Portal Light, Dark and phone screenshots
-// (AW_SHOTS=<dir> saves them).
+// The Developer view (the code's App Workspace, C3, src/client/ui/app-workspace/) in headless Chromium, with
+// the page's own styles and a test source in place of the page's feeds: its five sections, the canvas naming
+// the served revision (and never a blank frame when nothing serves), the side panel's parts wired to the data
+// and the marked slots for change requests, the empty states, the business status chip in the bar (no stage
+// bar), a phone width with no sideways scrolling, and Portal Light, Dark and phone screenshots (AW_SHOTS=<dir>
+// saves them). The Developer | Project Management switch is tests/view-switch-dom.test.ts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +11,6 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type Page } from 'playwright-core';
 import { findChrome } from '../scripts/perf/pages.mjs';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 
 const root = path.join(import.meta.dirname, '..');
 const shots = process.env.AW_SHOTS;
@@ -63,11 +61,9 @@ async function harness(): Promise<{ js: string; css: string }> {
         const fns = new Set();
         window.__opened = [];
         window.__answered = [];
-        window.__came = undefined;
         const ws = createWorkspace({
           source: { get: () => data, on: (fn) => (fns.add(fn), () => fns.delete(fn)), wake() {}, request: async () => ({ ok: false, error: 'not here' }), answer: async () => ({ ok: true }) },
           open: (t) => window.__opened.push(t),
-          cameFrom: () => window.__came,
         });
         document.querySelector('.lite-main').append(ws.el);
         window.__set = (d) => {
@@ -100,14 +96,7 @@ async function open(page: Page, h: { js: string; css: string }, theme: string) {
 const set = (page: Page, d: object) => page.evaluate((x) => (window as unknown as { __set(d: unknown): void }).__set(x), d as Record<string, unknown>);
 const show = (page: Page, s: string) => page.evaluate((x) => (window as unknown as { __show(s: string): void }).__show(x), s);
 const text = (page: Page, sel: string) => page.evaluate((s) => document.querySelector(s)?.textContent ?? null, sel);
-/** Everything the workspace says: its text and its titles and labels. */
-const words = (page: Page) => page.evaluate(() => {
-  const el = document.querySelector('.aw')!;
-  const attrs = [...el.querySelectorAll('[title],[aria-label]')].flatMap((e) => [e.getAttribute('title') ?? '', e.getAttribute('aria-label') ?? '']);
-  return [(el as HTMLElement).innerText, ...attrs].join('\n');
-});
-
-test('in a browser: sections, canvas, panel, stages, switch, empty states, words and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 120_000 }, async () => {
+test('in a browser: sections, canvas, panel, status chip, no stage bar, empty states and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 120_000 }, async () => {
   const h = await harness();
   const browser = await chromium.launch({ headless: true, executablePath: chrome! });
   try {
@@ -121,7 +110,8 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     // The five sections, App on.
     assert.deepEqual(await page.$$eval('.aw-tab', (b) => b.map((x) => x.textContent)), ['App', 'Requirements', 'Decisions', 'Review', 'Release']);
     assert.equal(await page.getAttribute('.aw-tab[data-section="app"]', 'aria-current'), 'page');
-    assert.equal(await text(page, '.aw-crumb'), 'Visitor Registration · App workspace');
+    assert.equal(await text(page, '.aw-crumb'), 'Visitor Registration · Developer view');
+    assert.equal(await page.getAttribute('.aw', 'aria-label'), 'Developer view');
     // The canvas: the running app in its frame, the served revision named, Open in a new tab always there.
     assert.equal(await page.locator('.aw-frame iframe').count(), 1);
     assert.match((await text(page, '.aw-runline')) ?? '', /Running version 7d3f0b1 · ready since/);
@@ -136,34 +126,24 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     assert.match((await text(page, '[data-part="request"]')) ?? '', /Reading your requests/, 'C4: the current request (none read here)');
     assert.equal(await text(page, '[data-part="next"] .aw-primary'), 'Answer the decision');
     assert.match((await text(page, '.aw-foot')) ?? '', /The team works at 2 Guided · change/);
-    // The stage: Building, marked Now: the plan is still at its build step (the progress line says the same).
-    assert.equal(await text(page, '.aw-stage.now'), 'BuildingNow');
-    assert.equal(await page.locator('.aw-stage').count(), 5, 'Awaiting approval only under an approval policy');
+    // No stage bar: the business status (C2) is a small chip in the bar's first row, beside the project's name.
+    assert.equal(await page.locator('.aw-stages, .aw-stage, .aw-stagenote').count(), 0, 'no stage bar');
+    assert.equal(await text(page, '.aw-bar-top .aw-statuschip'), 'Verification incomplete');
+    assert.match((await page.getAttribute('.aw-statuschip', 'class')) ?? '', /\bbusy\b/);
+    const rows = await page.evaluate(() => ({ crumb: document.querySelector('.aw-crumb')!.getBoundingClientRect(), chip: document.querySelector('.aw-statuschip')!.getBoundingClientRect() }));
+    assert.ok(Math.abs(rows.crumb.top + rows.crumb.height / 2 - (rows.chip.top + rows.chip.height / 2)) < 4, 'the chip shares the name’s row, no row of its own');
+    assert.equal(await page.locator('.aw .aw-switch, .aw .aw-seg').count(), 0, 'the view switch is the top bar’s, not the workspace’s');
     if (shots) await page.screenshot({ path: path.join(shots, 'c3-01-app-light.png') });
-    let w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `no engineering words on App: ${bannedIn(w)}`);
 
-    // The stage switch shows what another stage is about, and goes back.
-    await page.click('.aw-stage[data-stage="released"]');
-    assert.match((await text(page, '.aw-stagenote')) ?? '', /^Released: the page shows the released version; .*This project is at Building/);
-    assert.equal(await page.locator('.aw-frame iframe').count(), 1, 'peeking at a stage changes no data');
-    await page.click('.aw-stagenote .aw-link');
-    assert.equal(await page.isHidden('.aw-stagenote'), true);
-
-    // The section bar and the switch go through the page's own opener.
+    // The section bar goes through the page's own opener.
     await page.click('.aw-tab[data-section="decisions"]');
-    await page.click('.aw-seg[data-ws="eng"]');
-    await page.evaluate(() => ((window as unknown as { __came: string }).__came = 'board'));
-    await page.click('.aw-seg[data-ws="eng"]');
-    assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['decisions', 'live', 'board'], 'App → Engineering: the closest page, else where you came from');
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened), ['decisions']);
 
-    // Every section, in business words; the slots marked; Answer goes through the decision's own way.
+    // Every section; the slots marked; Answer goes through the decision's own way.
     for (const s of ['requirements', 'decisions', 'review', 'release']) {
       await show(page, s);
       assert.equal(await page.getAttribute(`.aw-tab[data-section="${s}"]`, 'aria-current'), 'page');
       assert.equal(await page.locator('.aw-frame iframe').count(), 0, `${s}: the page in place of the canvas`);
-      w = await words(page);
-      assert.deepEqual(bannedIn(w), [], `${s}: ${bannedIn(w)}`);
       if (shots && s === 'decisions') await page.screenshot({ path: path.join(shots, 'c3-02-decisions-light.png') });
       if (shots && s === 'review') await page.screenshot({ path: path.join(shots, 'c3-03-review-light.png') });
     }
@@ -202,8 +182,6 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     if (shots) await page.screenshot({ path: path.join(shots, 'c3-06-app-not-running-light.png') });
     for (const s of ['app', 'requirements', 'decisions', 'review', 'release']) {
       await show(page, s);
-      w = await words(page);
-      assert.deepEqual(bannedIn(w), [], `${s} (empty): ${bannedIn(w)}`);
     }
     await show(page, 'requirements');
     assert.match((await text(page, '.aw-page')) ?? '', /No brief yet/);

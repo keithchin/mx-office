@@ -3,8 +3,8 @@
 // route and the switch end to end and takes Portal Light, Dark and phone screenshots:
 //
 //   - /lite?floor=<p>&ws=app opens the App Workspace (its App section), the Engineering chrome out of the way
-//   - App view → Engineering view keeps the project (no reload) and lands on the Live app page; back again
-//     through the navigation's App workspace, the switch returns to the page you came from
+//   - Developer → Project Management keeps the project (no reload) and lands on the Live app page; back again
+//     through the navigation's Developer, the switch returns to the page you came from
 //   - every old deep link (?tab=board, ?tab=agents, ?tab=live) opens as before, with no workspace
 //   - ?ws=eng&tab=decisions opens Approvals; ?tab=decisions the Decisions section; a reload keeps the section
 //   - C4: Request a change sends a request that comes back with a task id (or the office's refusal, said in the
@@ -91,7 +91,7 @@ async function main() {
     check(await page.evaluate(() => document.body.classList.contains('aw-on')), 'ws=app: the App Workspace is the page');
     check(q(page).get('tab') === 'app' && q(page).get('ws') === 'app' && q(page).get('floor') === floor, `the address says so: ${page.url()}`);
     check(await page.evaluate(() => getComputedStyle(document.getElementById('pt-nav') ?? document.body).display === 'none'), 'the Engineering navigation steps aside');
-    check(/App workspace/.test((await page.textContent('.aw-crumb')) ?? ''), 'the bar names the project and the workspace');
+    check(/Developer view/.test((await page.textContent('.aw-crumb')) ?? ''), 'the bar names the project and the workspace');
     await both(page, 'c3-10-office-app');
     for (const s of ['requirements', 'decisions', 'review', 'release']) {
       await page.click(`.aw-tab[data-section="${s}"]`);
@@ -107,7 +107,7 @@ async function main() {
     // The switch: the project kept, no reload, the closest Engineering page.
     await page.click('.aw-tab[data-section="app"]');
     await page.evaluate(() => (window.__noReload = true));
-    await page.click('.aw-seg[data-ws="eng"]');
+    await page.click('.vs-seg[data-view="eng"]');
     await page.waitForTimeout(500);
     check(await page.evaluate(() => window.__noReload === true), 'the switch doesn’t reload the page');
     check(q(page).get('tab') === 'live' && !q(page).get('ws') && q(page).get('floor') === floor, `App → Engineering: Live app, same project: ${page.url()}`);
@@ -119,7 +119,7 @@ async function main() {
     await page.$eval('#pt-nav [data-nav="app"]', (el) => el.click());
     await page.waitForSelector('.aw:not([hidden])');
     check(q(page).get('tab') === 'app' && q(page).get('ws') === 'app', 'the navigation’s App workspace opens it');
-    await page.click('.aw-seg[data-ws="eng"]');
+    await page.click('.vs-seg[data-view="eng"]');
     await page.waitForTimeout(400);
     check(q(page).get('tab') === 'board', `Engineering view returns to the page you came from: ${q(page).get('tab')}`);
     check(await page.evaluate(() => window.__noReload === true), 'still the same page');

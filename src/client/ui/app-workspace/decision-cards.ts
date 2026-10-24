@@ -38,7 +38,7 @@ export function artifactSlot(a: DecisionArtifact, floor: string | null, open: (t
   }
   if (a.kind === 'walkthrough' || a.kind === 'journey') {
     body.push(h('p', {}, a.kind === 'walkthrough' ? `Walkthrough ${a.ref}` : `Guided check ${a.ref}`));
-    body.push(h('button.aw-link', { type: 'button', onclick: () => open(a.kind === 'walkthrough' ? 'walkthroughs' : 'testing') }, a.kind === 'walkthrough' ? 'Watch it on the Engineering view' : 'See its results on the Engineering view'));
+    body.push(h('button.aw-link', { type: 'button', onclick: () => open(a.kind === 'walkthrough' ? 'walkthroughs' : 'testing') }, a.kind === 'walkthrough' ? 'Watch it in Project Management' : 'See its results in Project Management'));
   } else {
     body.push(h('p.aw-small', {}, a.ref));
     if (file) body.push(h('a.aw-link', { href: file, target: '_blank', rel: 'noopener' }, 'Open it in a new tab ↗'));

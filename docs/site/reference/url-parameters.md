@@ -12,6 +12,7 @@ The address always says where you are, so you can bookmark or share it. The para
 |---|---|---|
 | `floor` | A project's id | `/lite?floor=acme-orders` |
 | `tab` | The page. Without it a project opens on its Overview (the Command Center), or on the tab that browser tab showed last. See [Tab ids](#tab-ids) | `&tab=standup` |
+| `ws` | `dev` (old name `app`): the [Developer view](../using-the-office/developer-view.md), on the section closest to `tab`; `pm` (old name `eng`): Project Management, an App section in `tab` mapped to its page there | `&ws=dev&tab=approvals` (opens Decisions) |
 | `section` | With `tab=settings`: the Settings section. See [Settings sections](#settings-sections) | `&tab=settings&section=notify` |
 | `team` | With `tab=teams`: `management`, `design`, `development`, `testing`, `analysis` | `&tab=teams&team=testing` |
 | `teams` | With `tab=board`: the team filter, comma-separated | `&tab=board&teams=design,testing` |
@@ -28,6 +29,7 @@ The address always says where you are, so you can bookmark or share it. The para
 | `org` (old name `team`) | Team (General) |
 | `teams` | Team boards (General) |
 | `documents` (old name `deliverables`) | Documents (General) |
+| `app`, `requirements`, `decisions`, `review`, `release` | The [Developer view](../using-the-office/developer-view.md)'s sections (General › Developer opens `app`; the others are in its own section bar) |
 | `board` | Board (Project Management) |
 | `approvals` | Approvals (Project Management) |
 | `questions` | [Questions](../using-the-office/questions.md) (Project Management) |

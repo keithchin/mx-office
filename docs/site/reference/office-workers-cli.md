@@ -84,7 +84,7 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `--trigger` | `plan`, `scope`, `design`, `architecture`, `revisions-exhausted`, `blocked`, `milestone`, `repeated-failure`, `budget-risk`, `security`, `data-loss`, `client-milestone`, `budget-overrun`, `blocked-no-path`, `needs-human` (a hands-on action only a person can do: merge, sign in, paste a key, install, allow, restart), `question` (a question only the Project Manager can answer). The last two are never filed as FYI |
 | `--option` | Repeat up to 6 times |
 | `--recommend` | Your recommendation |
-| `--artifact` | What to look at to answer it: `screenshot:<path>`, `process-map:<path>`, `document:<path>` (from the project root), `walkthrough:<id>` or `journey:<J-nn>`. Shown beside the question in the App workspace; or put `Artifact: <kind>:<ref>` on a line of its own in the details |
+| `--artifact` | What to look at to answer it: `screenshot:<path>`, `process-map:<path>`, `document:<path>` (from the project root), `walkthrough:<id>` or `journey:<J-nn>`. Shown beside the question in the Developer view; or put `Artifact: <kind>:<ref>` on a line of its own in the details |
 | `--details` | Or the details on stdin |
 
 ```bash

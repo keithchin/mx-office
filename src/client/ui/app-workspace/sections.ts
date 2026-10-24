@@ -56,7 +56,7 @@ export function sectionPage(deps: { open(tab: string): void; answer(x: Workspace
     const list = d.decisions;
     const body = list === undefined ? none('Checking what waits on you…') : decisionCards(list, { floor: d.floor, admin: d.admin, open: deps.open, answer: deps.answer, redraw: deps.redraw });
     const out = [card('Decisions for you', body)];
-    if (d.others) out.push(card('For the team’s side', h('p', {}, `${d.others} more ${d.others === 1 ? 'item waits' : 'items wait'} on someone: sign-ins, permissions, the team’s own questions and other hands-on steps.`), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See them on the Engineering view')));
+    if (d.others) out.push(card('For the team’s side', h('p', {}, `${d.others} more ${d.others === 1 ? 'item waits' : 'items wait'} on someone: sign-ins, permissions, the team’s own questions and other hands-on steps.`), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See them in Project Management')));
     out.push(card('Requests', h('div.aw-row', {}, h('p.aw-small', {}, 'What you asked for, newest first, with where each one is.'), h('span.aw-grow'), d.floor ? h('button.aw-btn.aw-ask', { type: 'button', onclick: () => deps.request() }, 'Request a change') : ''), requestList(d.requests)));
     return out;
   }

@@ -13,8 +13,9 @@ const params = () => new URLSearchParams(location.search);
 /** The floor the address asked for when the page opened (read once, before the connection goes up). */
 export const askedFloor: string | null = params().get('floor');
 /**
- * The tab the address asked for when the page opened (the 1D view's Board, Workers, …). `&ws=app` asks for
- * the App Workspace (one of its sections), `&ws=eng` for the Engineering view (shared/app-workspace/route.ts);
+ * The tab the address asked for when the page opened (the 1D view's Board, Workers, …). `&ws=app` (or `dev`)
+ * asks for the Developer view (one of its sections), `&ws=eng` (or `pm`) for Project Management
+ * (shared/app-workspace/route.ts);
  * without `ws` the tab as asked, as always.
  */
 export const askedTab: string | null = workspaceTab(params().get('ws'), params().get('tab'));

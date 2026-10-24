@@ -16,7 +16,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { cleanTreePath, deniedPath, pageUrl, plainName, FILES_PAGE, type ExplorerNode } from '../src/shared/app-explorer.js';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 import { explorerChanges, explorerLevel } from '../src/server/app-explorer/index.js';
 import { fileAt, folderAt } from '../src/server/app-explorer/files.js';
 import { appExplorerRoutes } from '../src/server/http/routes/app-explorer.js';
@@ -95,10 +94,8 @@ test('the business tree from the app at a revision: Pages by part with addresses
   assert.deepEqual(labels(data.nodes), ['Host approval', 'Visitor']);
   assert.equal(data.nodes[0].key, 'domainmodel:VisitorDesk');
   const logic = await lvl(ctx, floor, a, 'logic/VisitorDesk');
-  assert.deepEqual(labels(logic.nodes), ['Show badge', 'Visitor save'], 'conventions’ prefixes left out, “commit” said as “save”');
+  assert.deepEqual(labels(logic.nodes), ['Show badge', 'Visitor commit'], 'conventions’ prefixes left out, engineering words as they are');
   assert.deepEqual(logic.nodes.map((n) => n.hint), ['Logic that runs in the browser', 'Logic that runs on the server'], 'the kind only in the tooltip');
-  // Every label passes the App Workspace's words check.
-  for (const n of [...top.nodes, ...parts.nodes, ...pages.nodes, ...data.nodes, ...logic.nodes]) assert.deepEqual(bannedIn(`${n.label} ${n.hint ?? ''}`), [], n.label);
   // At the newer revision: the added page is there; the older revision's answer is unchanged.
   assert.deepEqual(labels((await lvl(ctx, floor, b, 'pages/VisitorDesk')).nodes), ['Host dashboard', 'Visitor new edit', 'Visitor overview']);
   assert.equal((await lvl(ctx, floor, a, 'pages/VisitorDesk')).nodes.length, 2);
@@ -114,7 +111,7 @@ test('the business tree from the app at a revision: Pages by part with addresses
 test('plain labels and page addresses', () => {
   assert.equal(plainName('VisitorDesk.ACT_Visitor_NewEdit'), 'Visitor new edit');
   assert.equal(plainName('HTTPRequestLog'), 'HTTP request log');
-  assert.equal(plainName('SUB_Merge_Repo_Model'), 'Combine store design');
+  assert.equal(plainName('SUB_Merge_Repo_Model'), 'Merge repo model', 'engineering words stay as they are');
   assert.equal(plainName('DS_GetOpenItems'), 'Get open items');
   assert.equal(pageUrl('visitors'), '/p/visitors');
   assert.equal(pageUrl('/p/visitors'), '/p/visitors');

@@ -23,7 +23,7 @@ export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgenc
                                                 screenshot:<path>, process-map:<path>,
                                                 document:<path>, walkthrough:<id> or journey:<J-nn>
                                                 (paths from the project root); shown beside the
-                                                decision in the App workspace, never guessed`;
+                                                decision in the Developer view, never guessed`;
 
 /**
  * The escalate command's arguments (the words after `escalate`). `--option` may be given several
@@ -84,7 +84,7 @@ export const ESCALATE_TOOL = {
       details: { type: 'string', description: "What happened, what you checked, what it affects. For a Studio Pro hand-add or \"mxcli can't\": a `Tried:` line, then one `- ` line per attempt with its exact error." },
       options: { type: 'array', items: { type: 'string' }, description: 'The choices the Project Manager has, each a short line.' },
       recommendation: { type: 'string', description: 'Which option you recommend, and why, in a line.' },
-      artifact: { type: 'string', description: 'What to look at to answer it, as <kind>:<ref>: screenshot:<path>, process-map:<path>, document:<path> (paths from the project root), walkthrough:<id> or journey:<J-nn>. Shown beside the decision in the App workspace; only what you name here is shown, never a guess.' },
+      artifact: { type: 'string', description: 'What to look at to answer it, as <kind>:<ref>: screenshot:<path>, process-map:<path>, document:<path> (paths from the project root), walkthrough:<id> or journey:<J-nn>. Shown beside the decision in the Developer view; only what you name here is shown, never a guess.' },
     },
     required: ['title'],
     additionalProperties: false,

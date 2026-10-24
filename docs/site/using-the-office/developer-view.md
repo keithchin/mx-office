@@ -1,16 +1,26 @@
 ---
-title: App workspace
-description: General › App workspace - the project for a business owner, page first - the running app as the canvas, its status for that exact version, the decision that needs you and one next step, in business words. Switch to the Engineering view and back without losing your place.
+title: Developer view
+description: General › Developer - the project page first, for the people building it - the running app as the canvas with an explorer beside it, its status for that exact version, the decision that needs you and one next step. The Developer | Project Management switch at the top right of every project page goes back and forth without losing your place.
 weight: 1.5
+aliases: [using-the-office/app-workspace]
 ---
 
-The **App workspace** (**General › App workspace** in the Portal navigation, the **🧭 App workspace** button in the other themes, `/lite?floor=<project>&ws=app`) shows a project the way a business owner looks at it: the **running app is the main thing on screen**, and beside it a panel that says where the work is, for which version, what needs you and what to do next. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which in the workspace is called the **Engineering view**.
+The **Developer view** (**General › Developer** in the Portal navigation, the **🧭 Developer** button in the other themes, **Developer** in the switch at the top right, `/lite?floor=<project>&ws=dev`) shows a project the way the people building it look at it: the **running app is the main thing on screen**, an explorer of its pages, data and logic beside it, and a panel that says where the work is, for which version, what needs you and what to do next. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which is called **Project Management** (the Overview, Board, Agents, Live app, Approvals, Settings and every other page, with the navigation).
 
-It uses plain business words. The pages you know from the Engineering view (agents, the board, Git, pull requests, terminals, settings) are one click away, through the switch.
+## The switch
+
+**Developer | Project Management** sits at the top right of every project page, in the top bar, in the same place and at the same size in both views, in Portal Light and Dark, the classic themes and on a phone (where it reads **Dev | PM**). The view you're in is the one drawn filled in.
+
+- **Developer** opens the section closest to the page you're on (Approvals → Decisions, Documents → Requirements, Testing → Review, anything else → App).
+- **Project Management** goes back to the page you came from, or the one closest to the section you were on (App → Live app, Requirements → Documents, Decisions → Approvals, Review → Testing, Release → Overview).
+
+The page doesn't reload, so you stay on the same project and the same running version. From the keyboard, Tab to the switch and press ← (Developer) or → (Project Management).
+
+Switching changes what you see, never what you may do: every button in the Developer view goes to what the office already does, with that page's own checks (starting the app, answering a decision, accepting, changing the level). Anyone signed in can open it.
 
 ## What's on screen
 
-At the top: the project's name, the five **sections** and the **App view | Engineering view** switch. Under them, the **stage** the project is at. Then the canvas (or a section's page) and, on the right, the panel. On a phone the panel comes under the canvas.
+At the top: the project's name with a small chip of its [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*…; its tooltip says the full line), and the five **sections**. Then the canvas (or a section's page) and, on the right, the panel. On a phone the panel comes under the canvas.
 
 ### The sections
 
@@ -18,25 +28,25 @@ At the top: the project's name, the five **sections** and the **App view | Engin
 | --- | --- | --- |
 | **App** | `?tab=app` | The running app, with the panel |
 | **Requirements** | `?tab=requirements` | The approved brief: its goal, the areas of the app, the open questions, and a link to the whole file in [Documents](deliverables.md) |
-| **Decisions** | `?tab=decisions` | The business decisions the team needs from you, most blocking first, each with what to look at beside it when the team named something, and answered here ([Decisions](#decisions)). What else waits on someone (sign-ins, permissions, the team's own questions, other hands-on steps) is counted, with a link to the Engineering view. Under them, **Requests**: every change you asked for, with its state |
-| **Review** | `?tab=review` | The status of the version running now and of each part of the plan, what is still to check, in business words, and the **guided checks** of that version: each with its result on exactly that version, its steps, **Try it**, and your own mark ([Guided validation](#guided-validation)) |
+| **Decisions** | `?tab=decisions` | The business decisions the team needs from you, most blocking first, each with what to look at beside it when the team named something, and answered here ([Decisions](#decisions)). What else waits on someone (sign-ins, permissions, the team's own questions, other hands-on steps) is counted, with a link to Project Management. Under them, **Requests**: every change you asked for, with its state |
+| **Review** | `?tab=review` | The status of the version running now and of each part of the plan, what is still to check, in plain words, and the **guided checks** of that version: each with its result on exactly that version, its steps, **Try it**, and your own mark ([Guided validation](#guided-validation)) |
 | **Release** | `?tab=release` | What you'd be accepting (the version, the latest finished version it is, its status and what's missing, the guided checks, the open corrections), **Accept this version** and **Reopen** through the [acceptance](progress-and-acceptance.md#acceptance) you know, and the deployment, which stays with people: the office doesn't deploy ([Accepting from here](#accepting-from-here)) |
 
 ### The canvas
 
 While the [live app](live-app.md) runs, it's shown here, in the Live app page's viewer, under a line that names the **running version** (*Running version 7d3f0b1 · ready since 10:31*): the version that actually answers, never one it's still updating to. **Open in a new tab ↗** is always there. Some parts of an app only work in a tab of their own (in a frame on another address some widgets can't reach the page around them), and the office can't tell from here which, so if a page doesn't work in the canvas, open it in a new tab.
 
-When nothing runs there is **no frame** at all, never an empty one: the canvas says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens the Engineering view's Live app page where it's started. Before the build, or before the app has run, the canvas also shows the brief.
+When nothing runs there is **no frame** at all, never an empty one: the canvas says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens Project Management's Live app page where it's started. Before the build, or before the app has run, the canvas also shows the brief.
 
 ### The explorer
 
-On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in business words and **at the running version** (so it matches what you click through in the canvas):
+On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words and **at the running version** (so it matches what you click through in the canvas):
 
 | Group | What's in it | Clicking an item |
 | --- | --- | --- |
 | **Pages** | The app's screens, by part of the app (the app's own parts first, ready-made Marketplace parts after) | A page with an address of its own opens **running in the canvas** at that address. A page that only opens from another page (it needs a record passed to it) shows a **preview with sample data** instead, with a note saying so |
 | **Data** | The kinds of records each part of the app keeps | The part's data diagram (records, their fields and how they relate), read-only, with the record picked |
-| **Logic** | What the app does when something happens, in plain names (*Visitor save*); the tooltip says whether it runs on the server or in the browser | Its step-by-step diagram, read-only |
+| **Logic** | What the app does when something happens, in plain names (*Visitor new edit*); the tooltip says whether it runs on the server or in the browser | Its step-by-step diagram, read-only |
 | **Documents**, **Process map**, **Design** | The project's documents from [Documents](deliverables.md); Process map and Design only when the project has them | The Documents viewer |
 
 **Find…** filters the tree (a page in a part you haven't opened is found too). Select an item and its bar shows **Request a change**, which opens the usual [Request a change](#change-requests) with the item as its context (*About: Page: Visitor list*), and, for admins, **Change this** where the Model page offers it (pages, records, logic). Anything opened in the canvas's place has **← Back to the running app**; the running app isn't reloaded meanwhile.
@@ -47,7 +57,7 @@ Drag the explorer's edge (or focus it and press ← →) to make it wider or nar
 
 #### Show all files
 
-The **Show all files** switch (for builders and IT; remembered in your browser) swaps the business tree for the project's own files at the running version: folders and files, read-only, text and pictures shown in the canvas's place, big folders a few hundred rows at a time with **Show more**. File names are shown as they are, so this view is the one place in the App workspace that may use engineering words.
+The **Show all files** switch (for builders and IT; remembered in your browser) swaps the business tree for the project's own files at the running version: folders and files, read-only, text and pictures shown in the canvas's place, big folders a few hundred rows at a time with **Show more**. File names are shown as they are.
 
 Some files are **never shown**, whatever the project contains: git's own folder (`.git`), the office's data folder (`.agent-office`), environment files (`.env`, `.env.*`), keys and certificates (`*.key`, `*.pem`, `*.pfx`, `*.p12`, …), anything named `credentials*` or `secret*`, every `config.json` (the office's own holds tokens), token files and tool settings that keep tokens (`.npmrc`, `.git-credentials`, `.claude/settings.local.json`, SSH keys), and everything the project's `.gitignore` matches. The office only reads the files from the project's history at that version, never from elsewhere on the computer, and refuses any path with `..` or an absolute path.
 
@@ -64,10 +74,6 @@ Some files are **never shown**, whatever the project contains: git's own folder 
 | footer | The team's level of independence (*The team works at 2 Guided*), with **change** for admins | Settings › Team |
 
 A part that has nothing yet says what will appear in it. Nothing in the workspace is a placeholder value.
-
-### The stage
-
-The stage line shows where the project is: **Before the build**, **Building**, **Business validation**, **Accepted** or **Released** (and **Awaiting approval**, only for a project under an approval policy). The office works it out from what it already knows: the business status, and on a toolkit project the stage before the build. Nothing new is stored. Click another stage to read what the workspace shows at that stage. The page keeps showing the project as it is now, and **Back to …** returns.
 
 ## Change requests
 
@@ -94,11 +100,11 @@ The office links the change to the request by the task id the team puts on its w
 
 ## Decisions
 
-The App workspace shows only the decisions meant for you as the business owner: questions for the client, a stage to sign off, a design system for the app, and what the team escalated about the plan, the scope, the design, a milestone or a question only you can answer. The team's own matters (reviews, failing checks, merges, sign-ins, permissions, architecture, security, budget) stay on the Engineering view, which shows every decision, these included. A decision the office can't place (for example an escalation that says nothing about what it's about) stays on the Engineering view too.
+The Developer view shows only the decisions meant for you as the business owner: questions for the client, a stage to sign off, a design system for the app, and what the team escalated about the plan, the scope, the design, a milestone or a question only you can answer. The team's own matters (reviews, failing checks, merges, sign-ins, permissions, architecture, security, budget) stay in Project Management, which shows every decision, these included. A decision the office can't place (for example an escalation that says nothing about what it's about) stays in Project Management too.
 
-**What to look at.** When the team names something that helps you answer (a page screenshot, the process map, a document, a walkthrough or a guided check), it's shown beside the question: a picture inline, a document or map to open in a new tab, a walkthrough or check on the Engineering view. Only what the team named is shown; the office never picks something because the question mentions it.
+**What to look at.** When the team names something that helps you answer (a page screenshot, the process map, a document, a walkthrough or a guided check), it's shown beside the question: a picture inline, a document or map to open in a new tab, a walkthrough or check in Project Management. Only what the team named is shown; the office never picks something because the question mentions it.
 
-**Answering.** A decision with options shows them (the team's recommendation picked to start with); add a note, or write your answer when there are no options, and **Send decision**. It goes through the same path as the Engineering view's decision cards, Project Manager only, and is kept with the version of the question you saw. If the question changed meanwhile (someone else answered it), nothing is sent and the card says *This question changed since you opened it. Here's the new version.* with what it is now. Client questions and stage sign-offs open where they're answered today, with that page's own checks.
+**Answering.** A decision with options shows them (the team's recommendation picked to start with); add a note, or write your answer when there are no options, and **Send decision**. It goes through the same path as Project Management's decision cards, Project Manager only, and is kept with the version of the question you saw. If the question changed meanwhile (someone else answered it), nothing is sent and the card says *This question changed since you opened it. Here's the new version.* with what it is now. Client questions and stage sign-offs open where they're answered today, with that page's own checks.
 
 ## Guided validation
 
@@ -119,23 +125,17 @@ Your marks are shown beside the status. They don't change it: the business statu
 
 The **Release** section shows what you'd be accepting: the version (*v1*), the latest finished version it is (*a4776d3*), the project's status with what's still missing, the guided checks of the version on screen and the open corrections, with their state. When the app on screen runs another version than the one being accepted, it says so.
 
-**Accept this version** (the Project Manager only, as on the Engineering view) asks the office what it would record, lists the open corrections as still open (ticked, each with who owns it; untick what you don't want noted) and an optional line for anything else, and asks you to confirm. It's the same acceptance as the progress bar's ✅ Accept: the same route, permissions and checks (the review of what's recorded, the [security baseline](security-baseline.md) at the version, the version's and the cycle's checks), nothing added or skipped. When the office refuses, the dialog says why in plain words (*This version can't be accepted yet: the security checks haven't passed on it*, with what's missing; *Something changed while you were looking … Look at it again and confirm*), and nothing is recorded. Once a version is accepted, **Reopen for the next version** starts the next one with what it's for, as **↩ Reopen** does. The full record, with every piece of evidence, stays on the Engineering view's acceptance record.
-
-## Switching views
-
-**Engineering view** opens the same project in the rest of the office. The page doesn't reload, so you stay on the same project and the same running version. You land on the page you came from, or the one closest to the section you were on (App → Live app, Requirements → Documents, Decisions → Approvals, Review → Testing, Release → Overview). **General › App workspace** brings you back.
-
-Switching changes what you see, never what you may do: every button in the workspace goes to what the office already does, with that page's own checks (starting the app, answering a decision, accepting, changing the level). Anyone signed in can open the workspace.
+**Accept this version** (the Project Manager only, as in Project Management) asks the office what it would record, lists the open corrections as still open (ticked, each with who owns it; untick what you don't want noted) and an optional line for anything else, and asks you to confirm. It's the same acceptance as the progress bar's ✅ Accept: the same route, permissions and checks (the review of what's recorded, the [security baseline](security-baseline.md) at the version, the version's and the cycle's checks), nothing added or skipped. When the office refuses, the dialog says why in plain words (*This version can't be accepted yet: the security checks haven't passed on it*, with what's missing; *Something changed while you were looking … Look at it again and confirm*), and nothing is recorded. Once a version is accepted, **Reopen for the next version** starts the next one with what it's for, as **↩ Reopen** does. The full record, with every piece of evidence, stays on Project Management's acceptance record.
 
 ## Addresses
 
-Every address that worked before still opens the same page: `?tab=board`, `?tab=agents`, `?tab=live` and the rest open the Engineering view, as always. The workspace adds:
+Every address that worked before still opens the same page: `?tab=board`, `?tab=agents`, `?tab=live` and the rest open Project Management, as always. The Developer view adds:
 
-- `&ws=app`: the App workspace, on its App section, or on the section closest to the `tab` given (`&ws=app&tab=approvals` opens Decisions);
+- `&ws=dev` (or the older `&ws=app`): the Developer view, on its App section, or on the section closest to the `tab` given (`&ws=dev&tab=approvals` opens Decisions);
 - `&tab=app|requirements|decisions|review|release`: that section;
-- `&ws=eng`: the Engineering view (`&ws=eng&tab=decisions` opens Approvals).
+- `&ws=pm` (or the older `&ws=eng`): Project Management (`&ws=pm&tab=decisions` opens Approvals).
 
-A reload keeps the section you're on, and changing project from the workspace keeps you in it.
+A reload keeps the section you're on, and changing project from the Developer view keeps you in it. The old address of this page, `/docs/using-the-office/app-workspace`, opens it too.
 
 ## What the team writes
 

@@ -97,7 +97,7 @@ export class RequestBook {
     const page = cleanPage(ask.page);
     const revision = typeof ask.revision === 'string' && /^[0-9a-f]{7,64}$/i.test(ask.revision) ? ask.revision.toLowerCase() : undefined;
     const m = this.deps.intake(floorId).find((x) => x.atWork && x.workerId);
-    if (!m) return 'No team lead is at work on this project yet, so nobody can take the request. Start the team on the Engineering view, then ask again.';
+    if (!m) return 'No team lead is at work on this project yet, so nobody can take the request. Start the team in Project Management, then ask again.';
     const b = this.book(floorId);
     // The number is taken before the awaits, so two requests at once never share one.
     const id = `CR-${b.next++}`;
@@ -125,7 +125,7 @@ export class RequestBook {
       actor: { kind: 'human', name: by, ...(ask.owner ? { id: ask.owner } : {}) },
       action: 'change-request.created',
       target: { kind: 'worker', id: m.workerId ?? m.role, label: m.name },
-      summary: `Asked for a change (${id}) from the App workspace, handed to ${m.name}${handed.status === 'held' ? ' after their current turn' : ''}`,
+      summary: `Asked for a change (${id}) from the Developer view, handed to ${m.name}${handed.status === 'held' ? ' after their current turn' : ''}`,
       details: { id, page, revision, delivery: handed.status, length: text.length },
       ids: { taskId: handed.taskId, ...(handed.executionId ? { executionId: handed.executionId } : {}), roleId: m.role, ...(m.workerId ? { agentInstanceId: m.workerId } : {}) },
     });

@@ -89,8 +89,8 @@ export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
           busy
             ? h('p.aw-muted', {}, 'It shows here as soon as it answers.')
             : s.available
-              ? h('p', {}, h('button.aw-btn', { type: 'button', onclick: () => deps.open('live') }, 'Start the app'), h('span.aw-muted', {}, ' on the Engineering view’s Live app page.'))
-              : h('p.aw-muted', {}, 'The office can’t run the app on this computer yet; the Engineering view’s Live app page says why.'),
+              ? h('p', {}, h('button.aw-btn', { type: 'button', onclick: () => deps.open('live') }, 'Start the app'), h('span.aw-muted', {}, ' on Project Management’s Live app page.'))
+              : h('p.aw-muted', {}, 'The office can’t run the app on this computer yet; Project Management’s Live app page says why.'),
         );
       }
       drawBrief(d, stage === 'before' || !s?.started);

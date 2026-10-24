@@ -17,7 +17,6 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type Page } from 'playwright-core';
 import { findChrome } from '../scripts/perf/pages.mjs';
-import { bannedIn } from '../src/shared/app-workspace/words.js';
 
 const root = path.join(import.meta.dirname, '..');
 const shots = process.env.AX_SHOTS;
@@ -115,7 +114,6 @@ async function harness(): Promise<{ js: string; css: string }> {
         const ws = createWorkspace({
           source: { get: () => data, on: (fn) => (fns.add(fn), () => fns.delete(fn)), wake() {}, request: async (a) => (window.__asked.push(a), { ok: true, request: { id: 'CR-9', member: 'Ada' } }), answer: async () => ({ ok: true }) },
           open: (t) => window.__opened.push(t),
-          cameFrom: () => undefined,
           explorer: window.__explorer,
         });
         document.querySelector('.lite-main').append(ws.el);
@@ -158,19 +156,6 @@ const get = <T>(page: Page, k: string) => page.evaluate((key) => (window as unkn
 const rowsText = (page: Page) => page.$$eval('.ax-tree [role="treeitem"] .ax-label', (els) => els.map((e) => e.textContent));
 const row = (page: Page, label: string) => page.locator('.ax-tree [role="treeitem"]', { has: page.locator(`.ax-label:text-is("${label}")`) });
 const focused = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.querySelector?.('.ax-label')?.textContent ?? document.activeElement?.textContent ?? null);
-/** The workspace's words: everything it says, its titles and labels; without the parts marked exempt unless `all`. */
-const words = (page: Page, all = false) =>
-  page.evaluate((everything) => {
-    const el = document.querySelector('.aw') as HTMLElement;
-    const style = document.createElement('style');
-    if (!everything) style.textContent = '[data-words-exempt]{display:none!important}';
-    document.head.append(style);
-    const text = el.innerText;
-    style.remove();
-    const attrs = [...el.querySelectorAll('[title],[aria-label]')].filter((e) => everything || !e.closest('[data-words-exempt]')).flatMap((e) => [e.getAttribute('title') ?? '', e.getAttribute('aria-label') ?? '']);
-    return [text, ...attrs].join('\n');
-  }, all);
-
 test('in a browser: the explorer’s business tree, opening, requests, words, all files, live sync, layout and the phone', { skip: chrome ? false : 'no Chromium here', timeout: 180_000 }, async () => {
   const h = await harness();
   const browser = await chromium.launch({ headless: true, executablePath: chrome! });
@@ -262,21 +247,12 @@ test('in a browser: the explorer’s business tree, opening, requests, words, al
     await page.fill('.ax-search', '');
     await page.waitForFunction(() => !![...document.querySelectorAll('.ax-tree .ax-label')].find((e) => e.textContent === 'Documents'));
 
-    // The words check passes on the business view.
-    let w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `business view: ${bannedIn(w)}`);
-    assert.equal(await page.locator('[data-words-exempt]').count(), 0, 'nothing exempt while the switch is off');
-
-    // Show all files: raw names, exempt only while the switch is on.
+    // Show all files: raw names.
     await page.click('.ax-switch');
     await page.waitForFunction(() => [...document.querySelectorAll('.ax-tree .ax-label')].some((e) => e.textContent === 'merge-notes.md'));
-    assert.equal(await page.locator('[data-words-exempt]').count(), 1);
     assert.equal(await page.getAttribute('.ax-tree', 'aria-label'), 'The project’s files');
     await row(page, 'javasource').click();
     await page.waitForSelector('[data-id="f:javasource/GitHelper.java"]');
-    assert.ok(bannedIn(await words(page, true)).length > 0, 'raw file names do use engineering words: the exemption is needed');
-    w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `all files, outside the rows: ${bannedIn(w)}`);
     await row(page, 'README.md').click();
     await page.waitForSelector('.ax-pane:not([hidden]) .ax-text');
     assert.equal(await page.textContent('.ax-text'), 'The text of README.md');
@@ -286,10 +262,7 @@ test('in a browser: the explorer’s business tree, opening, requests, words, al
     assert.equal(JSON.parse((await page.evaluate(() => localStorage.getItem('agent-office.aw.explorer'))) ?? '{}').all, true, 'the switch is remembered');
     await page.click('.ax-switch');
     await page.waitForFunction(() => [...document.querySelectorAll('.ax-tree .ax-label')].some((e) => e.textContent === 'Pages'));
-    assert.equal(await page.locator('[data-words-exempt]').count(), 0, 'switched off: held to the words again');
     await page.click('.ax-back');
-    w = await words(page);
-    assert.deepEqual(bannedIn(w), [], `business view again: ${bannedIn(w)}`);
     if (shots) await page.screenshot({ path: path.join(shots, 'explorer-05-business-dark.png') });
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-light'));
 

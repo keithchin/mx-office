@@ -146,7 +146,7 @@ export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'pa
   return [
     `Change request ${r.id} from ${r.by}: ${requestTitle(r.text)}`,
     '',
-    `${r.by} asked for this in the App workspace, looking at the running app.`,
+    `${r.by} asked for this in the Developer view, looking at the running app.`,
     '',
     '```change-request',
     `id: ${r.id}`,

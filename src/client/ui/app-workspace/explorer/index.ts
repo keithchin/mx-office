@@ -5,9 +5,8 @@
 //   business (default)  Pages, Data, Logic (server/app-explorer/: from the app's units at that revision),
 //                       then Documents, Process map and Design (the Documents page's own list), in plain words
 //   all files           "Show all files": the project's raw files at that revision, read-only, minus what the
-//                       server never shows (shared/app-explorer.ts deniedPath, the .gitignore). Its rows are
-//                       file names as they are, so they're exempt from the App Workspace's words check
-//                       (data-words-exempt, only while the switch is on)
+//                       server never shows (shared/app-explorer.ts deniedPath, the .gitignore), file names
+//                       as they are
 //
 // Opening a page with an address shows it running in the canvas (the Live app viewer's go); anything else
 // opens in the pane (./pane.ts) with Back to the running app. The selected row's bar has Request a change
@@ -32,7 +31,6 @@ import './explorer.css';
 
 export const PREFS_KEY = 'agent-office.aw.explorer';
 /** Set on the rows while "Show all files" is on: raw file names aren't held to the business words. */
-export const WORDS_EXEMPT = 'data-words-exempt';
 const W_MIN = 180;
 const W_MAX = 520;
 
@@ -130,8 +128,6 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     grip.setAttribute('aria-valuenow', String(prefs.w));
     collapseBtn.setAttribute('aria-expanded', String(!prefs.collapsed));
     allBox.checked = prefs.all;
-    if (prefs.all) rows.setAttribute(WORDS_EXEMPT, '');
-    else rows.removeAttribute(WORDS_EXEMPT);
     heading.textContent = prefs.all ? 'All files' : 'Explorer';
     tree.setLabel(prefs.all ? 'The project’s files' : 'The app');
   }
@@ -331,7 +327,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     const change = canChange
       ? h('button.aw-btn.ax-change', {
           type: 'button',
-          title: 'Ask the team to change this, through the same path as on the Engineering view',
+          title: 'Ask the team to change this, through the same path as in Project Management',
           onclick: (e: Event) => {
             const btn = e.currentTarget as HTMLElement;
             const o = { floor: f!, ref: d.live?.branch ?? 'main', ...(rev ? { sha: rev } : {}), kind: n.type!, qn: n.qn!, back: () => btn.focus() };
