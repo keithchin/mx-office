@@ -103,16 +103,9 @@ export function decisionCard(x: WorkspaceDecision, c: CardsCtx): HTMLElement {
   return h('li.aw-decision', { 'data-level': x.level, 'data-id': x.id, class: x.artifact ? 'with-artifact' : '' }, ...(x.artifact ? [artifactSlot(x.artifact, c.floor, c.open)] : []), main);
 }
 
-/** The decision cards, most blocking first; the notes of cards that left the list (answered, or answered elsewhere) above them. */
-export function decisionCards(list: readonly WorkspaceDecision[], c: CardsCtx): HTMLElement {
-  return h('div', {}, ...leftNotes(list, c), list.length ? h('ul.aw-decisions', {}, ...list.map((x) => decisionCard(x, c))) : h('p.aw-none', {}, 'Nothing waits on you. When the team needs a decision from you, it shows here, most blocking first.'));
-}
-
 /** What the cards said after a send, for decisions that left the list (answered, here or elsewhere). */
 export function leftNotes(list: readonly WorkspaceDecision[], c: CardsCtx): HTMLElement[] {
   const gone = [...notes].filter(([id]) => !list.some((x) => x.id === id));
   return gone.map(([id, n]) => h('div.aw-note-msg', { class: n.kind, role: 'status', 'data-note': n.kind, 'data-id': id }, n.kind === 'stale' ? h('p', {}, h('b', {}, STALE)) : '', h('p', {}, h('i', {}, n.question)), h('p', {}, n.text), h('button.aw-link', { type: 'button', onclick: () => (notes.delete(id), c.redraw()) }, 'OK')));
 }
 
-/** For tests: forget the notes. */
-export const forgetNotes = () => notes.clear();

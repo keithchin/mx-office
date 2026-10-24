@@ -1,16 +1,15 @@
-// What guided validation (C5) reads and sends, for the App Workspace's Review and Release sections:
+// What guided validation (C5) reads and sends, for the Developer view's Live preview and its "Please try this"
+// cards (./dock/):
 //
-//   feed        GET /api/guided-validation for the version on screen (the served revision): asked only when
-//               Review or Release shows, and again when that version or its results move (the live app's
-//               own message carries the readiness, whose journey results are those of the served commit),
-//               one ask in flight at a time. No timer.
-//   mark        POST /api/guided-validation/mark ("Works as expected" / "Something's wrong")
-//   acceptance  the progress bar's acceptance routes, unchanged (GET /api/acceptance/draft for the review
-//               token, POST /api/acceptance with the same body the Engineering view's dialog sends), with
-//               the server's refusal handed back (status and words) rather than toasted, so the Release
-//               section can say it in business words
+//   feed        GET /api/guided-validation for the version running (the served revision): asked only when the
+//               Live preview shows, and again when that version or its results move (the live app's own
+//               message carries the readiness, whose journey results are those of the served commit), one ask in
+//               flight at a time. No timer.
+//   mark        POST /api/guided-validation/mark ("Works as expected" / "Something's wrong" on a guided check, or
+//               "Looks right" / "Something's wrong" on a change tried from its card)
+//
+// Accepting a version is Project Management's (the progress bar's own routes, unchanged).
 
-import type { AcceptanceDraft, AcceptanceView, Exception } from '../../../shared/acceptance';
 import type { FindingRecord, ValidationView } from '../../../shared/guided-validation';
 import { myName } from '../project-run/api';
 
@@ -25,17 +24,6 @@ export interface MarkAsk {
   pageMoved?: boolean;
 }
 export type MarkSent = { ok: true; finding: FindingRecord } | { ok: false; status: number; error: string };
-
-/** What the server answered an Accept or a Reopen: done, or its refusal (status, words, whether the review went stale). */
-export type ActResult = { ok: true; version: string } | { ok: false; status: number; error: string; stale?: boolean };
-
-/** The acceptance path as the Release section uses it (the page's own, or a test's). */
-export interface AcceptancePort {
-  draft(floor: string): Promise<AcceptanceDraft | undefined>;
-  view(floor: string): Promise<AcceptanceView | undefined>;
-  accept(floor: string, a: { reviewToken: string; version: string; exceptions: Exception[]; scopeNote?: string }): Promise<ActResult>;
-  reopen(floor: string, version: string, scopeNote: string): Promise<ActResult>;
-}
 
 const json = async <T>(url: string): Promise<T | undefined> => {
   try {
@@ -56,22 +44,6 @@ async function post(url: string, body: object): Promise<{ status: number; data: 
 }
 
 const q = (floor: string) => `floor=${encodeURIComponent(floor)}`;
-
-/** The page's acceptance path: the same routes and bodies as the progress bar's dialog. */
-export const pageAcceptance: AcceptancePort = {
-  draft: (floor) => json<AcceptanceDraft>(`/api/acceptance/draft?${q(floor)}`),
-  view: (floor) => json<AcceptanceView>(`/api/acceptance?${q(floor)}`),
-  async accept(floor, a) {
-    const { status, data } = await post('/api/acceptance', { floor, action: 'accept', confirm: true, ...a });
-    const rec = data.record as { version?: string } | undefined;
-    return status === 200 && rec ? { ok: true, version: String(rec.version ?? a.version) } : { ok: false, status, error: String(data.error ?? ''), ...(data.stale === true ? { stale: true } : {}) };
-  },
-  async reopen(floor, version, scopeNote) {
-    const { status, data } = await post('/api/acceptance', { floor, action: 'reopen', version, scopeNote });
-    const r = data.reopen as { version?: string } | undefined;
-    return status === 200 && r ? { ok: true, version: String(r.version ?? version) } : { ok: false, status, error: String(data.error ?? '') };
-  },
-};
 
 /** POST /api/guided-validation/mark: the mark as kept, or why not. */
 export async function postMark(floor: string, m: MarkAsk): Promise<MarkSent> {
