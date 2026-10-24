@@ -5,7 +5,7 @@ weight: 30
 ---
 
 > [!NOTE]
-> Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
+> Describes release 74 (`c4c6a14` on `main`). **Last checked against release 74 on 2026-10-24** for the sources-of-truth table (including the stores added in releases 68 to 74), the running app, acceptance and the persistence table; first written against release 66 (`39d0083a`, 2026-10-20).
 > **Verification scope:** the sources and writers were read in code. The durability of answers, hand-offs, task creation and the store readers is covered by tests that were run (`durable-dispatch`, `task-durability`, `store-safety`, `restart-truth`, `flow`). Readiness verdicts are pinned by `liveapp-ready`, including the case where a milestone with no journeys reads *built, no journey evidence yet* rather than Ready (changed after release 66). The business status (App Workspace C2, after release 71) is pinned by `business-status`, a table of scenarios over the shared function and the views that read it. Power-loss durability is **not** claimed by the code and was not tested.
 
 ## The idea
@@ -39,6 +39,12 @@ Two rules follow:
 | Budget | `budget/` ledger, from transcripts and usage | Office | — | Durable write about a second after a change; providers without metering have gaps (not re-checked) |
 | Design binding | `design-systems/projects.json` in the data folder | Office | The adoption's operation record is reconciled with git at start | Critical write. The `design` key committed to `agent-office.project.json` is **written but never loaded as the binding** (the office only reads its digest at a git ref to recognise a squash merge, `src/server/design/adoption.ts`); an existing app adopting Atlas defaults gets no committed entry |
 | Toolkit pin | `agent-office.project.json` + `toolkit-pins.json` + `PROJECT.md` | Office | Three copies; no documented reconciliation between them | Mixed |
+| Reviews, merge-gate overrides, cleared *unreviewed* marks | `merge-gate/<project>.jsonl` | Office, from `Review:` comments, GitHub reviews, a person's review in the PR window, an admin's override | Each review bound to the head it reviewed; a new commit makes it stale | Append-only, each line fsync'd |
+| Security policy, security read per commit, `mx check` per commit | `security/<project>.json` | Office | Each read and check carries its commit | Durable write |
+| Change requests (request ↔ task link) | `change-requests/<project>.json` | Office, on **Request a change** | The request's state is derived from the task, the PR and the served revision; only the link is stored | Durable write |
+| Guided-validation marks | `guided-validation/<project>.json` | Office, on a person's mark | Only for the version the live app serves now (409 otherwise); evidence beside the business status, not an input of it | Durable write |
+| What a project adopted from another app | `adopt-from/<project>.json` | Office, at setup | The binding, pin and role skills stay with the modules that own them | Critical write |
+| What the Developer view's explorer shows | Derived: main's newest commit as this machine has it (no fetch), or the live app's revision when picked | Office (derived) | The running app is only information beside it (*n commits behind main*) | Read from git; nothing stored |
 
 ## Distinctions the office keeps
 
@@ -72,7 +78,7 @@ An update fetches first while the old build still serves, then stops it for the 
 
 ### Passing tests vs acceptance
 
-Passing checks gate only task verification, and only when that switch is on. Acceptance does not require passing tests: failing gates and CI become suggested exceptions on the acceptance draft (`src/server/acceptance/evidence.ts`). Walkthrough recordings are not acceptance evidence.
+Passing checks gate only task verification, and only when that switch is on. Acceptance does not require passing tests: failing gates and CI become suggested exceptions on the acceptance draft (`src/server/acceptance/evidence.ts`). It does require the **security baseline** at the delivery commit, including a clean `mx check` there (unless the project's security policy is advisory); see [Security baseline](../using-the-office/security-baseline.md). Walkthrough recordings and guided-validation marks are not acceptance evidence.
 
 ### Business status derived from evidence
 
@@ -104,7 +110,7 @@ stateDiagram-v2
 | Roster | Kept up to the last background save; answer and escalation paths flush critically | Kept | Changes in the half second before a crash on paths without a critical flush |
 | `restart-pending.json`, project pauses, `queue.json`, review-gate state, toolkit pins, keep-awake | Atomic replace without fsync: old or new content, usually | Kept | An operating-system crash right after the write |
 | Walkthrough settings and manifests, audit and incident appends, acceptance appends | Plain write or append | Kept | A crash mid-write |
-| Live app process and served commit, tell-limit counts, last-message cache, walkthrough queue | **Lost** (the last served commit is kept as *last ran*, its end time only if the office shut down) | **Lost** (the same) | — |
+| Live app process and served commit, last-message cache, walkthrough queue (the tell-limit window is kept in `tell-limit.json`, a background file) | **Lost** (the last served commit is kept as *last ran*, its end time only if the office shut down) | **Lost** (the same) | — |
 | Agent processes | Windows: **end with the office**, resumed by session id afterwards. Unix: survive | Same, after waiting for turns to end | A provider that no longer has the session (a fresh conversation, with only a toast) |
 
 None of these stores is transactional across files. Where two records must agree (an answer and its hand-off, an adoption and its git commit), the office writes intent first and reconciles on start; it does not roll back.

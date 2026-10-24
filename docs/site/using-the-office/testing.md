@@ -8,6 +8,9 @@ The **Testing** page (**App Insights › Testing** in the Portal navigation, `/l
 
 ![The Testing page](../images/testing.png "The Testing page: main and the Stage 6 gate, the three counts, the test plan, a row per use case and the runs")
 
+> [!TIP]
+> **Trying the app yourself.** The Developer view's **Review** section lists the guided checks of the running version (the project's journeys as they are in that version), each with its result on exactly that version, **Try it**, and your mark: *Works as expected*, or *Something's wrong*, which goes to the team lead as a correction. Marks are your evidence beside the business status; they don't change it. See [Developer view › Guided validation](developer-view.md#guided-validation).
+
 ## Three revisions per run
 
 Every test run the office records keeps three revisions apart:

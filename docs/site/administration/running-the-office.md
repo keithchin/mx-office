@@ -89,17 +89,17 @@ The office can't reliably respawn itself on Windows, so the launcher has to loop
 
 Open pages tell you which happened. During a restart through the loop they show **Restarting… reconnecting**, and reload by themselves once the office is back. A connection that only dropped (the computer waking from sleep, say) shows **Reconnecting to Mx Office…**, never *restarting*: only the office says it is restarting. When the office exits without the loop (or you press Ctrl+C), they show **The office has stopped. Start it again with start-office.ps1**. They also show that when the office disappears without saying why (a crash) and doesn't answer the page's next few reconnects. Either way, the page reloads by itself as soon as the office is back.
 
-In `start-office.ps1`, wrap the line that runs the office:
+The launchers that come with the office, `scripts/start-office.ps1` and `scripts/start-office.sh`, already run it in this loop and set the variable. If you start the office with a launcher of your own, run it the same way:
 
 ```powershell
 $env:AGENT_OFFICE_LAUNCHER_LOOP = '1'
 do {
-  node "$PSScriptRoot\agent-office-src\bin\agent-office.js" @officeArgs
+  node <office folder>\bin\agent-office.js @officeArgs
   $code = $LASTEXITCODE
 } while ($code -eq 75)
 ```
 
-Keep the rest of the launcher (the token, the password, `PATH`) above the loop, so a restart inherits it.
+Keep the rest of your launcher (the environment, `PATH`) above the loop, so a restart inherits it.
 
 ## Rolling back to an older build
 
@@ -115,12 +115,14 @@ What the older build sees is still safe: an escalation is resolved only after it
 
 ## Update
 
-The office runs from its source build in `agent-spike\agent-office-src`, branch `main`:
+The office runs from a build of its own checkout, on branch `main`: the folder you installed it into (`%USERPROFILE%\mx-office-app` on Windows or `~/mx-office-app` on a Mac with the one-line installer, unless you chose another), or wherever you cloned it. `main` moves only when a release is made; changes are merged into `staging/integration` first and tried on a [test office](test-offices.md).
 
-1. Pull the new `main` (feature branches are merged through `staging/integration` and tried on a [test office](test-offices.md) first).
-2. `npm run build`.
+1. In that folder, get the new `main`: `git pull --ff-only` (or run the one-line installer again: it pulls when the office is already there).
+2. `npm ci`, then `npm run build`.
 3. Restart the office with **🔁 Restart safely** (see [Releasing and restarting safely](#releasing-and-restarting-safely)), or by hand after pausing the projects. Then press **Ctrl+F5** in the browser.
+
+The installer and `git pull` take `main`'s newest commit; to stay on a particular release, check out its commit (each [release](../release-notes.md) names it) instead.
 
 ## Helper scripts
 
-In `agent-spike\`: `queue-runs.mjs` (queue issues on a project with a model), `add-floor.mjs` (add a repository as a project) and `token-check.mjs` (what the agents' token can reach; it never prints the token).
+The repository's `scripts/` folder holds the installers (`get-mx-office.ps1`, `get-mx-office.sh`), the launchers (`start-office.ps1`, `start-office.sh`), the shortcut installers (`install-shortcut.ps1`, `install-shortcut.sh`) and the docs screenshot and test scripts. `node bin/agent-office.js --help` lists the office's own commands (see [Server CLI](../reference/server-cli.md)).

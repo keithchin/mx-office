@@ -5,7 +5,7 @@ weight: 10
 ---
 
 > [!NOTE]
-> Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
+> Describes release 74 (`c4c6a14` on `main`). **Last checked against release 74 on 2026-10-24** for the Git and GitHub section (the merge gate), the app runtime, acceptance, the modules added since release 66 and the mxcli and toolkit lines; the process table, channels and stores were first checked at release 66 (`39d0083a`, 2026-10-20) and not re-read line by line since.
 > **Verification scope:** process layout, channels and stores were confirmed by reading the code. Restart, PTY host, store-safety and desktop teardown behaviour is also covered by tests that were run (`safe-restart`, `restart-truth`, `store-safety`, `ptys-host-win`, `desktop-core`, `desktop-teardown`). The desktop quit on a real Windows log-off was not observed, only unit-tested.
 
 ## At a glance
@@ -94,7 +94,7 @@ The UI is a set of pages built by Vite (`src/client/`):
 | `/start` | Home |
 | `/home` | Projects |
 | `/clients`, `/firm` | Clients, The Firm |
-| `/lite` | A project's pages (the 1D view), with the Portal left navigation (`src/client/ui/portal/nav-logic.ts`) |
+| `/lite` | A project's pages (the 1D view): **Project Management**, with the Portal left navigation (`src/client/ui/portal/nav-logic.ts`), and the **Developer view** (`&ws=dev`, reached by the Developer \| Project Management switch at the top right of every project page; see [Developer view](../using-the-office/developer-view.md#addresses)) |
 | `/pixel` | The 2D Office view |
 | `/docs` | These docs |
 | `/m` | The phone version (PWA) |
@@ -131,7 +131,7 @@ See [Workers and worktrees](../concepts/workers-and-worktrees.md).
 
 ## Git, GitHub and Team Server
 
-- The office talks to GitHub through `gh`: it polls the pull-request list every 90 s (`src/server/github.ts`), fetches extra fields of recently merged PRs (merger, comments, reviews, commits) for the review gate (`src/server/review-gate/fields.ts`), opens PRs from an agent's desk, infers PRs from an agent's own `gh pr create`, and merges when a person presses Merge in the PR window. **That merge runs `gh pr merge` with no gate check.**
+- The office talks to GitHub through `gh`: it polls the pull-request list every 90 s (`src/server/github.ts`), fetches extra fields of recently merged PRs (merger, comments, reviews, commits) for the review gate (`src/server/review-gate/fields.ts`), opens PRs from an agent's desk, infers PRs from an agent's own `gh pr create`, and merges when a person presses Merge in the PR window. **That merge goes through the merge gate** (since release 71, `src/server/merge-gate/`): it refuses a head without an independent approval of that exact commit, unless an admin overrides it (audited). The office also posts the gate's verdict as the `mx-office/review` commit status and reads (never writes) the base branch's protection. The gate stops only the office's own Merge button: an agent's `gh pr merge` or GitHub's UI is stopped only by branch protection that requires the status (see [Review gate](../using-the-office/review-gate.md#the-merge-gate)).
 - Agents use `gh` too, with **one shared agents token**, so on GitHub every agent is the same account.
 - **Local-only projects** (`src/server/local-only.ts`) never call GitHub; the Playbook tells the Lead to merge locally.
 - **Team Server**: there is no pull-request or merge path. The Mendix token reaches agents as environment variables (`src/server/connections/env.ts`) and nothing more.
@@ -157,21 +157,42 @@ The full list of stores, with what each holds and its discipline, is on [Data lo
 
 ## App runtime
 
-- **Live app** (`src/server/liveapp/`): a clone of the project's default branch, run with `mxcli run --local` on Postgres. While it runs, a poll (every 60 s) fetches the default branch and restarts the app on a newer commit; the old app is stopped before the build, so an update means a short downtime. A failed build gets one clean retry, then stays failed. It reads *running* after the first HTTP answer below 500 and isn't probed again; a crash is noticed when the process exits. The running commit is kept **in memory only**: after an office restart the app is stopped until someone starts it. See [Live app](../using-the-office/live-app.md).
+- **Live app** (`src/server/liveapp/`): a clone of the project's default branch, run with `mxcli run --local` on Postgres, in one folder and one database per project, reused by every build. While it runs, a poll (every 60 s) fetches the default branch. What a newer commit does depends on what changed (`src/server/liveapp/classify.ts`, the rule in `src/shared/liveapp/speed.ts`):
+  - **No app files changed** (docs, journals, evidence): no restart; the serving build serves on, and the tab names the commit it was built from.
+  - **Only pages, microflows, nanoflows or the theme, with hot reload on** (the default since release 73; off when an admin turned it off, when this mxcli has no `--watch`, or when the app started with less than 2.5 GB free): the checkout moves under the running app and mxcli's watch applies it in place (`hot.ts`, `hot-mode.ts`). The served commit moves only once mxcli said it applied the change and the app answers below 400. A hot reload that doesn't confirm falls back to a restart.
+  - **Anything else** (domain model, enumerations, security, Java, or hot reload off): a restart. The new commit is fetched first with the old build still serving (a fetch that fails leaves it serving: *update failed, still running …*); then the old build is stopped, because the new one builds in the same folder against the same database, so **from then until the new build answers, nothing serves**, and the state says so. A failed build gets one clean retry, then stays failed; there is **no fallback** to the previous build.
+
+  The office keeps the **served** commit (set only once a build answers, cleared when that runtime stops) apart from the **target** it is building or updating to. It reads *running* after the first HTTP answer below 500; after that there is **no liveness probe**: a crash is noticed when the process exits, a hung app isn't. The served commit is in memory; the last one is also written to `live/<project>.served.json` (`served.ts`), so after an office restart the tab says *Nothing running · last ran abc1234*, and the app stays stopped until someone starts it (or **Keep warm** starts it with the office). There is no backup of the app's database. See [Live app](../using-the-office/live-app.md).
 - **Recording app** (`src/server/app-instance/`): the office's own copy of the app at one commit, in a workspace kept warm between batches, on a fresh database per group of journeys. It waits while the live app builds and retries a port or bundle failure once.
 
 ## Testing, acceptance and walkthroughs
 
 - **Test-run records** (`src/shared/testing/record.ts`, `src/server/testing/`) each carry the tested revision, the revision the tests came from, and where the evidence is. Sources: PR checks, report files (whose revision is whatever the file says), gate-check, and the office's own `mxcli test`. See [Testing](../using-the-office/testing.md).
 - **Verification of merged tasks** on their merge commit runs only when *Judge merged tasks* is on (off by default).
-- **Acceptance** (`src/server/acceptance/`) is a human act by an admin, bound to the default branch's head and the deliverables' digest; it does not consult the live app, readiness, test runs or walkthroughs. See [Progress and acceptance](../using-the-office/progress-and-acceptance.md).
+- **Acceptance** (`src/server/acceptance/`) is a human act by an admin, bound to the default branch's head and the deliverables' digest. It is **refused while the project's security baseline isn't met at the delivery commit** (since release 71: the app's security at that commit below the policy, or no clean `mx check` of it; when only the check is missing the office starts one), unless the project's security policy is advisory (`src/server/security-gate/`). It records the testing summary at that commit, but doesn't require passing tests, and it does not consult the live app, readiness or walkthroughs. The Developer view's **Accept this version** uses the same route and checks. See [Progress and acceptance](../using-the-office/progress-and-acceptance.md).
 - **Walkthroughs** (`src/server/walkthroughs/`) are captioned videos of journeys recorded on the recording app: presentation, not acceptance evidence. See [Walkthroughs](../using-the-office/walkthroughs.md).
 
 ## Toolkit integration and shared knowledge
 
 - A **toolkit pin** is a detached worktree of the shared toolkit clone at `<clone>-pins/<sha12>`, shared by every project on that commit (`src/server/toolkit-pin/pins.ts`). It is recorded in `agent-office.project.json`, the office's `toolkit-pins.json` and `PROJECT.md`. Playbooks point at skills inside the pin.
 - The office runs a few toolkit scripts itself (`init-project.sh`, `gate-check.sh`, `sync-project.sh`, `open-questions.sh`, `wire-company-brain.sh`) and parses their output; the rest it only names in prompts.
-- mxcli commands the office runs itself: `run --local`, `project-tree` and `describe` (Model tab), `test`, `report`, `lint`, `theme`, `new`, `auth status`. There is no per-project mxcli pin.
+- mxcli commands the office runs itself: `run --local` (with `--watch` for hot reload), `project-tree` and `describe` (Model tab), `test`, `report`, `lint`, `theme`, `new`, `auth status`, and the MDL that sets a new app's security. **mxcli isn't pinned**, per project or for the office: the office uses whichever mxcli it finds (see [mxcli](../integrations/mxcli.md)), and first-run's Fix downloads mxcli's newest release, not the build the office was tested with.
+- A toolkit pin can be reproduced only on a machine whose toolkit clone has that commit: the pin is a commit of the office's own toolkit clone, and the instruction files name its path on this machine (`src/server/toolkit-pin/instructions.ts`).
 - A **company brain** is a folder with `README.md` and `ROUTING.md`, connected to a client; each hire gets one line pointing at it, and the office records what each session was offered.
 
 The whole picture is on [Reusable skills and knowledge across applications](reusable-skills-and-knowledge.md).
+
+## Modules added since release 66
+
+Each is a module of its own under `src/server/` (with its rules in `src/shared/`), plugged in through the registries:
+
+| Module | Since | What it does | Its record |
+|---|---|---|---|
+| `adopt-from/` | 68 | Start a new project from another app of the client (design system version, toolkit pin, role skills, brain) | `<data>/adopt-from/<project>.json` |
+| `merge-gate/` | 71 | Reviews bound to the head they reviewed, the Merge button's check, the `mx-office/review` status | `<data>/merge-gate/<project>.jsonl` |
+| `security-gate/` | 71 | The security policy, what the office read of the app's security per commit, `mx check` per commit, the refusals at sign-off and acceptance | `<data>/security/<project>.json` |
+| `business-status/` | 72 | The one business status, derived (nothing stored) | — |
+| `change-requests/` | 72 | **Request a change**: a task for the team lead, with the page and version on screen | `<data>/change-requests/<project>.json` |
+| `guided-validation/` | 73 | The Developer view's **Review**: guided checks of the served version and the person's marks | `<data>/guided-validation/<project>.json` |
+| `app-explorer/` | 73, 74 | The Developer view's explorer, reading main's newest commit (not the running app) | — (read from git) |
+| `dev-changes/` | 74 | Developer changes (`DC-n`): the queue, source revision and candidates | `<data>/dev-changes/<project>.jsonl` ([Revisions and Developer changes](revisions-and-changes.md)) |

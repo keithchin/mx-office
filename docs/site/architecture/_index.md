@@ -5,8 +5,8 @@ weight: 25
 ---
 
 > [!NOTE]
-> Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
-> **Verification scope:** the statements on these pages were checked by reading the code at that commit and, where noted, by running the office's own tests (about 210 tests across the dispatch, restart, review-gate, readiness, walkthrough, navigation and Needs-you suites, all green). Behaviour that only shows with real agents, real projects or a real Windows desktop session (how often agents follow instructions, how often a milestone reaches Ready, power-loss durability) was **not** verified and is marked where it matters.
+> Describes release 74 (`c4c6a14` on `main`). **Last checked against release 74 on 2026-10-24**; first written against release 66 (`39d0083a`, 2026-10-20). Each page's own note says what was re-checked for release 74 and what wasn't.
+> **Verification scope:** the statements on these pages were checked by reading the code (at release 66, and again at release 74 for the statements each page's note names) and, where noted, by running the office's own tests (about 210 tests across the dispatch, restart, review-gate, readiness, walkthrough, navigation and Needs-you suites, all green). Behaviour that only shows with real agents, real projects or a real Windows desktop session (how often agents follow instructions, how often a milestone reaches Ready, power-loss durability) was **not** verified and is marked where it matters.
 
 This section explains the office for two kinds of reader:
 
@@ -30,7 +30,7 @@ It does two different jobs, and it helps to keep them apart:
 
 | Party | Owns | Does not own |
 |---|---|---|
-| **Mx Office** (Node server, browser UI, optional Electron shell) | The project list, team rosters, task identity, decision answers and their hand-off records, Needs-you cards, the budget ledger, the audit log, incidents, the live app and recording app processes, walkthrough records, toolkit pins, agent terminals (PTYs), the hook endpoints agents report to | The model's reasoning; what an agent actually does inside a turn; GitHub branch protection; the content of the Mendix model |
+| **Mx Office** (Node server, browser UI, optional Electron shell) | The project list, team rosters, task identity, decision answers and their hand-off records, Needs-you cards, the budget ledger, the audit log, incidents, the live app and recording app processes, walkthrough records, toolkit pins, agent terminals (PTYs), the hook endpoints agents report to, review and merge-gate records, each project's security record, change requests and Developer changes, guided-validation marks, acceptance records | The model's reasoning; what an agent actually does inside a turn; GitHub branch protection; the content of the Mendix model once setup is done (it writes to the model only in the steps listed below) |
 | **Agent runtimes** (`claude`, `codex`, … each in its own terminal) | Their session and transcript files, tool use and their own permission prompts (Claude Code's permission layer), commits in their worktree, `gh` calls (pull requests, merges) | Office records: they reach the office only through hooks and the `office-workers` CLI or MCP tools |
 | **mxcli-project-toolkit** (pinned per project) | The stage process P to 7, skills and agent definitions, `gate-check.sh`, `init-project.sh`, `sync-project.sh`, the journey runner, project hooks | Office state. The office *reads* its outputs (gate-check output, the build plan, BUILD-LOG, reports) |
 | **mxcli** | Reading and changing the Mendix model, `run --local`, `test`, `lint`, `report`, `theme` | Orchestration |
@@ -40,8 +40,14 @@ It does two different jobs, and it helps to keep them apart:
 Three consequences follow from this split:
 
 1. The office **does not run the model**. The agent CLI does, under its own permission layer.
-2. The office **does not change the Mendix model**. Agents do that with mxcli. The office runs a handful of mxcli commands of its own (run the app, draw the Model tab, score and test a commit, apply a theme).
-3. The office **does not enforce the toolkit's process**. Skills, gates and scripts are instructions and checks the agents run; the office reads their results.
+2. The office **changes the Mendix model only at setup and when you adopt a design system**, and commits only in a few named steps. Agents make every other model change, with mxcli. What the office itself writes:
+   - **Setting up a new app** (the New project wizard): it creates the app (`mxcli new`, `src/server/wizard/mendix-app.ts`), sets its security to the baseline (Production, strict mode off, demo users on: `src/server/security-gate/wizard.ts`), and applies the chosen design system's theme (`mxcli theme`, `src/server/wizard/design-step.ts`). An existing app's model is never touched at setup.
+   - **Setup commits**: the wizard commits and pushes what it wrote (the toolkit scaffold and, for a new app, the app; for a change to an existing app, the brief and the Stage 0b rows in `PROJECT.md`) (`src/server/wizard/steps.ts`).
+   - **Adopting a design system in an existing app**: after you press Adopt on the ✋ card, it applies the theme on a branch of its own (`agent-office/design-<theme>`), commits and pushes that branch (never the default branch, never forced), and the binding changes only once someone merges it (`src/server/design/adoption.ts`).
+   - **Instruction files**: it writes the role Playbooks and the toolkit-pin block in `CLAUDE.md`, `CLAUDE.local.md` and `AGENTS.md` (`src/server/toolkit-pin/instructions.ts`), and tells agents to use the pin instead of the toolkit's own "pull the toolkit" step.
+   - **GitHub**: it posts the `mx-office/review` commit status, and merges a pull request only when a person presses Merge in the PR window and the [merge gate](../using-the-office/review-gate.md#the-merge-gate) allows it (or an admin overrides it, audited).
+   - Otherwise it only reads the model: it runs the app, draws the Model tab and the Developer view's explorer, scores and tests a commit, and runs `mx check` in its own copy of the app.
+3. The office **does not enforce the toolkit's process**. Skills, gates and scripts are instructions and checks the agents run; the office reads their results. Where the Playbook and a toolkit skill disagree, the Playbook's one rule settles it: on *how* to do something, follow the skill; on *who decides*, follow the Playbook (`src/server/roster/playbooks.ts`). It declares two overrides of the toolkit: an ask for the Project Manager goes as an escalation, not a chat question, and the pinned toolkit is never pulled, even where the toolkit's own session ritual says to. Nothing detects other conflicts between the two.
 
 ## How the pieces relate
 
@@ -71,7 +77,8 @@ flowchart LR
   Agents -- "commits in worktrees" --> Repo
   Agents -- "push, PR, merge (gh, one shared token)" --> GH
   Agents -- "model calls" --> LLM
-  Office -- "PR list, merged-PR fields, merge on request (gh)" --> GH
+  Office -- "PR list, merged-PR fields, review status, merge on request through the merge gate (gh)" --> GH
+  Office -- "setup: new app, security baseline, theme, scaffold commit; design adoption on its own branch (mxcli, git)" --> Repo
   Office -- "fetch default branch, read journals and BUILD-LOG (files, git)" --> Repo
   Office -- "start, stop, read logs (child processes)" --> Apps
   Office -- "red Needs-you items (links)" --> Out

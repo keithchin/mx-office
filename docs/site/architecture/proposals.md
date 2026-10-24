@@ -1,15 +1,30 @@
 ---
 title: Proposed simplifications
-description: PROPOSED, not built - a simpler navigation, one Inbox with one count, revision-bound review safeguards, structured agent reports, readiness separated from walkthroughs, a routine design card, clearer team setup and consistent terminology, with a phased plan.
+description: Proposals made at release 66 and where each stands at release 74 - done, partly built or still proposed - from a simpler navigation and one Inbox to review safeguards, structured agent reports, readiness, design configuration, team setup and terminology, with a phased plan.
 weight: 70
 badge: Proposed
 ---
 
 > [!IMPORTANT]
-> **Everything on this page is PROPOSED.** None of it is built in release 66. The current behaviour each proposal would change is described on the other pages of this section and linked from each item.
+> **This page mixes done, partly built and proposed items.** It was written at release 66 as proposals only; some have been built since. Where each stands at **release 74** (`c4c6a14` on `main`, **last checked 2026-10-24**):
+>
+> | Item | Status at release 74 |
+> |---|---|
+> | Required autonomy step (C1) | **Done** (release 68) |
+> | Business status (C2) | **Done** (release 72) |
+> | App Workspace shell (C3), now the Developer view | **Done** (release 72; renamed in release 74) |
+> | Change requests and decisions with artifacts (C4) | **Done** (release 72) |
+> | Guided validation and accept (C5) | **Done** (release 73) |
+> | The artifact beside the decision | **Done** in its minimal form (release 68) |
+> | Review safeguards | **Partly built**: proposals 1 to 3 done (release 71); 4 and 5 proposed |
+> | Readiness and walkthroughs | **Partly built**: no Ready without journeys (release 67); served vs target and *last ran* on the Live app (release 71); the rest proposed |
+> | One Inbox and one count | **Partly built**: one count for the tray, Home, Teams and phone pushes, including answers whose delivery is unknown (release 67); the rest proposed |
+> | Navigation, structured agent reports, design configuration, team setup, terminology | **Proposed**, not built |
+>
+> Only items marked **Proposed** describe behaviour the office doesn't have. The current behaviour each proposal would change is described on the other pages of this section and linked from each item.
 
 > [!NOTE]
-> Proposals made against release 66 (commit `39d0083a`, the same `src/` as release 65), assessed 2026-10-20.
+> Proposals made against release 66 (commit `39d0083a`, the same `src/` as release 65), assessed 2026-10-20; status re-checked against release 74.
 > **Verification scope:** the *today* part of each proposal was confirmed in code and, for navigation, Needs you, the review gate and readiness, by tests that were run. The proposals themselves are untested designs; their effect on performance and on users is unknown until built.
 
 > [!NOTE]
@@ -38,7 +53,9 @@ Every existing `?tab=` id and alias keeps working, and links from Teams cards, p
 
 ## One Inbox and one count
 
-**Today:** one aggregator (`collectDecisions` in `src/shared/needsyou.ts`) feeds five different count rules: the project strip, the tray / Home / Teams *red items*, web push, the phone badge and the phone's Status tab. Some items that need a person (an answer whose delivery is unknown, a record that differs from your decision) appear only on the Overview's card and are counted nowhere; severity-1 incidents never reach the tray or Teams, while some informational items do. See [Needs you](../using-the-office/needs-you.md).
+**Partly built since:** release 67 gave the tray, Home, Teams and phone pushes one count (`src/shared/needs-actionable.ts`), with an answer whose delivery the office couldn't confirm counted as *Needs intervention*. The rest below is still proposed.
+
+**Today (as assessed at release 66):** one aggregator (`collectDecisions` in `src/shared/needsyou.ts`) fed five different count rules: the project strip, the tray / Home / Teams *red items*, web push, the phone badge and the phone's Status tab. Some items that need a person (an answer whose delivery is unknown, a record that differs from your decision) appear only on the Overview's card and are counted nowhere; severity-1 incidents never reach the tray or Teams, while some informational items do. See [Needs you](../using-the-office/needs-you.md).
 
 **Proposed:**
 
@@ -85,7 +102,7 @@ Also proposed here: route the idle-lead console prompt through the same delivery
 - One revision strip on the Live app: *Running abc1234 · main def5678 · tests for abc1234: 3 journeys (2 pass) · recordings for abc1234: 2*.
 - A recording policy (*on demand*, *milestones*, *every eligible build*) migrated from today's switch, kept in the same file but written durably.
 - Failure kinds (app step, app boot, sign-in, session cap, harness, cancelled, office stopped); only real results count as done; harness and boot failures retried once.
-- Live app liveness: probe on every poll, mark *unresponsive*, persist the last running commit, offer *Start* after a restart.
+- Live app liveness: probe on every poll, mark *unresponsive*, offer *Start* after a restart. (Partly built: since release 71 the last served commit is kept and shown as *last ran* after a restart; the probe is still proposed.)
 - Journey results stamped with the tested commit (needs a toolkit change).
 
 **Effect:** **removes** false Ready; fewer automatic recordings by default would **transfer** pressing Record to you.
@@ -116,7 +133,7 @@ Also proposed here: route the idle-lead console prompt through the same delivery
 
 ## App Workspace shell (App Workspace C3): done
 
-**Built** on `feat/app-workspace-shell`, so no longer proposed: the App Workspace (since renamed the [Developer view](../using-the-office/developer-view.md), with a Developer | Project Management switch in the top bar of every project page) as five project tabs of the 1D view (`?tab=app|requirements|decisions|review|release`, `&ws=app` / `&ws=eng`), from the tab registry as a module of its own (`src/client/ui/app-workspace/`, loaded on first use): the running app as the canvas naming the served revision (Open in a new tab always; no frame when nothing serves), a side panel that reads the shared business status, Needs you's decisions, the progress bar and the finished changes, a stage line read from the business status and the progress bar's phase (nothing stored), and an App view | Engineering view switch that keeps the project and changes no permission. Guided validation (C5) has since filled its slots. Its words are checked against a banned-terms list (`src/shared/app-workspace/words.ts`). See [Developer view](../using-the-office/developer-view.md).
+**Built** on `feat/app-workspace-shell`, so no longer proposed: the App Workspace (since renamed the [Developer view](../using-the-office/developer-view.md), with a Developer | Project Management switch in the top bar of every project page) as five project tabs of the 1D view (`?tab=app|requirements|decisions|review|release`, `&ws=app` / `&ws=eng`), from the tab registry as a module of its own (`src/client/ui/app-workspace/`, loaded on first use): the running app as the canvas naming the served revision (Open in a new tab always; no frame when nothing serves), a side panel that reads the shared business status, Needs you's decisions, the progress bar and the finished changes, a stage line read from the business status and the progress bar's phase (nothing stored), and a switch, now **Developer | Project Management** (it was *App view | Engineering view* until release 74), that keeps the project and changes no permission. Guided validation (C5) has since filled its slots. Its words were once checked against a banned-terms list; since release 74 the view is for builders and says *commit* or *model* where those are meant (`src/shared/app-workspace/words.ts`). See [Developer view](../using-the-office/developer-view.md).
 
 ## Change requests and decisions with artifacts (App Workspace C4): done
 
@@ -168,14 +185,14 @@ The knowledge promotion lifecycle is proposed on [Reusable skills and knowledge]
 
 ## Phased plan (summary)
 
-| Phase | Contents | Notes |
-|---|---|---|
-| 0. Honesty fixes | Ready requires journeys; CI conclusions mapped correctly; GitHub read failures shown as such; card copy for answers to busy agents; Solo copy; docs catch-up | Small, independent |
-| 1. One Inbox model | Category and count functions; every surface uses them; outcome-unknown and follow-through join; phone answers pass the revision; expiry; provenance | Counts change: release-note them |
-| 2. Navigation | Inbox page; regrouped navigation; classic themes reach every tab; 2D view links; Settings *Common*; optional-tools switch | Client-only |
-| 3. Review safeguards | Revision and verdict; Project Manager review record; pre-merge signal; read-only branch-protection status; review policy; one merge rule | Grandfather old PRs |
-| 4. Readiness, walkthroughs, live app | Revision strip; recording policy; failure kinds and one retry; liveness; commit-stamped journey results | The last needs the toolkit |
-| 5. Coordination and state | One delivery path; structured reports; a task for every work request; durable small stores; hook tokens out of `workers.json` | |
-| 6. Team setup and design | Consequence-first team summary; design binding read-back; routine design card; toolkit remotes and upstreaming the fork's fixes | |
+| Phase | Contents | Notes | Status at release 74 |
+|---|---|---|---|
+| 0. Honesty fixes | Ready requires journeys; CI conclusions mapped correctly; GitHub read failures shown as such; card copy for answers to busy agents; Solo copy; docs catch-up | Small, independent | **Done** (release 67), docs catch-up ongoing |
+| 1. One Inbox model | Category and count functions; every surface uses them; outcome-unknown and follow-through join; phone answers pass the revision; expiry; provenance | Counts change: release-note them | **Partly built** (one count for the server-fed surfaces) |
+| 2. Navigation | Inbox page; regrouped navigation; classic themes reach every tab; 2D view links; Settings *Common*; optional-tools switch | Client-only | Proposed |
+| 3. Review safeguards | Revision and verdict; Project Manager review record; pre-merge signal; read-only branch-protection status; review policy; one merge rule | Grandfather old PRs | **Partly built** (all but the review policy and one merge rule) |
+| 4. Readiness, walkthroughs, live app | Revision strip; recording policy; failure kinds and one retry; liveness; commit-stamped journey results | The last needs the toolkit | **Partly built** (served vs target, *last ran*; Developer changes have their own revision strip) |
+| 5. Coordination and state | One delivery path; structured reports; a task for every work request; durable small stores; hook tokens out of `workers.json` | | Proposed |
+| 6. Team setup and design | Consequence-first team summary; design binding read-back; routine design card; toolkit remotes and upstreaming the fork's fixes | | Proposed |
 
 Every increment follows the repository's rules: a reviewed PR, `npm run typecheck`, `npm test`, `npm run build`, the performance quick check for page or server changes, screenshots for visual changes, and docs updated in the same PR. When an increment ships, move its description from this page into the current-state pages.

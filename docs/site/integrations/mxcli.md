@@ -4,11 +4,14 @@ description: Mendix Labs' command-line tool - how agents read and change the Men
 weight: 2
 ---
 
-**mxcli** (Mendix Labs, nightly build) lets agents read and change a Mendix app's `.mpr` model through **MDL** scripts, the Mendix Definition Language.
+**mxcli** (Mendix Labs) lets agents read and change a Mendix app's `.mpr` model through **MDL** scripts, the Mendix Definition Language.
+
+> [!IMPORTANT]
+> **mxcli isn't pinned.** The office uses whichever mxcli it finds (below), and accepts any version. **🚀 First-run setup's Fix downloads mxcli's newest release** (`github.com/mendixlabs/mxcli/releases/latest`), which is not necessarily the build the office was tested with: the live app's hot-reload messages and the Playbooks' mxcli checks were verified on the nightly build `nightly-20261003`. The setup still writes `MXCLI_VERSION=nightly` into a project's `.claude/toolkit.env` for the toolkit, but that is only the toolkit's label: nothing makes the agents, the toolkit and the office use the same mxcli build. If a newer mxcli changes its output, hot reload falls back to restarts. A per-project mxcli pin, like the toolkit pin, is **planned**, not built. mxcli itself says it is a proof of concept.
 
 ## Where it is
 
-`C:\Users\<you>\agent-spike\tools\mxcli\mxcli.exe` (`agent-spike\bin\mxcli.exe` before the layout change). The office picks one mxcli for everything, however it was started (the launcher, the [desktop app](../administration/desktop-app.md) or `npm start`): the one chosen in 🚀 First-run setup, else `AGENT_OFFICE_MXCLI`, else that workspace one, and only then an `mxcli` on `PATH`. The live app, the Model tab, Testing and the wizard run it, and its folder goes first on the agents' `PATH`. `AGENT_OFFICE_LIVE_MXCLI` (or `mxcli` in `live-app.json`) still overrides it for the live app. The office prints the one it uses at start (`mxcli:`).
+First-run setup's Fix puts it in the office home's `tools\mxcli\` folder (`tools/mxcli/` on a Mac), or you give it the path of one you have. The office picks one mxcli for everything, however it was started (the launcher, the [desktop app](../administration/desktop-app.md) or `npm start`): the one chosen in 🚀 First-run setup, else `AGENT_OFFICE_MXCLI`, else an older workspace layout's `tools\mxcli` folder if there is one, and only then an `mxcli` on `PATH`. The live app, the Model tab, Testing and the wizard run it, and its folder goes first on the agents' `PATH`. `AGENT_OFFICE_LIVE_MXCLI` (or `mxcli` in `live-app.json`) still overrides it for the live app. The office prints the one it uses at start (`mxcli:`).
 
 The live app tells mxcli which mxbuild to build with (`--mxbuild-path`): `MXBUILD_PATH` in the project's `.claude/toolkit.env`, else the office's `MXBUILD_PATH`, else, on Windows, the installed Studio Pro of the project's Mendix version (`C:\Program Files\Mendix\<version>\modeler\mxbuild.exe`), before any download mxcli cached. The Mendix CDN only publishes Linux mxbuild, so a cached one can't run on Windows; when mxcli still picks one, the live app says so and how to fix it (install that Studio Pro, or set the mxbuild path). An mxcli too old for `--mxbuild-path` only gets `MXBUILD_PATH` in its environment.
 
