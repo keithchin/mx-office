@@ -14,6 +14,7 @@ import { gh } from '../github.js';
 import { git } from '../asks/sources.js';
 import { contains } from '../tasks/git.js';
 import { modelOf } from '../model/index.js';
+import { mprIn } from '../model/store.js';
 import { explorerChanges } from '../app-explorer/index.js';
 import { checkCandidate, heldIn } from '../data-impact/seams.js';
 import { ENV_LIVE } from '../../shared/data-impact.js';
@@ -58,11 +59,33 @@ export async function flagPr(floor: Floor, pr: number, text: string): Promise<vo
 const targetOf = (c: DevChange, merged?: string) => c.candidates.filter((x) => !x.late).at(-1)?.sha ?? merged;
 const baseOf = (c: DevChange) => c.activated?.main ?? c.source.sha;
 
-/** The guard on a change's candidate: true while it's held (a model it can't read holds as unknown). */
+const mendixKept = new Map<string, Promise<boolean>>();
+
+/** Whether the commit is a Mendix app (an .mpr at the top or one folder down): the guard is about its domain model only. */
+function isMendix(dir: string, sha: string): Promise<boolean> {
+  const key = `${dir}|${sha}`;
+  let p = mendixKept.get(key);
+  if (!p) {
+    // ls-tree takes no globs: the top level, then (only when none there) each folder's own top level.
+    const names = (out: string | undefined) => (out ?? '').split('\n').filter(Boolean);
+    p = git(['ls-tree', '--name-only', sha], dir).then(async (out) => {
+      if (mprIn(names(out))) return true;
+      const dirs = names(await git(['ls-tree', '--name-only', '-d', sha], dir)).filter((d) => !d.startsWith('.')).slice(0, 50);
+      const one = await git(['ls-tree', '--name-only', sha, '--', ...dirs.map((d) => `${d}/`)], dir);
+      return !!mprIn(names(one));
+    });
+    mendixKept.set(key, p);
+    if (mendixKept.size > 300) mendixKept.delete(mendixKept.keys().next().value!);
+  }
+  return p;
+}
+
+/** The guard on a change's candidate: true while it's held (a Mendix model it can't read holds as unknown; a project with no .mpr has no domain model to guard). */
 export async function candidateHeld(ctx: Ctx, floor: Floor, c: DevChange, f?: Pick<ChangeFacts, 'merged'>): Promise<boolean> {
   const base = baseOf(c);
   const target = targetOf(c, f?.merged?.sha);
   if (!base || !target || base === target) return false;
+  if (!(await isMendix(floor.dir, target))) return false;
   const units = modelOf(ctx).units;
   const v = await checkCandidate(ctx, c.id, { floorId: floor.id, dir: floor.dir, base, target, units }).finally(() => units.blobs(floor.dir).close());
   return v.hold;

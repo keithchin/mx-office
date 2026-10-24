@@ -10,6 +10,7 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type Page } from 'playwright-core';
 import { findChrome } from '../scripts/perf/pages.mjs';
+import { changeFour } from '../src/shared/dev-changes.js';
 
 const root = path.join(import.meta.dirname, '..');
 const shots = process.env.AW_SHOTS;
@@ -24,7 +25,7 @@ const SCENARIOS = [
   { id: 'J-03', title: 'A badge prints with the host’s name', steps: ['Open the visitor', 'Click Print badge', 'The badge shows the host’s name'], result: 'not-run', earlier: { status: 'passed', revision: OLD }, marks: 1, finding: { id: 'GV-2', revision: A, scenario: 'J-03', title: 'A badge prints with the host’s name', verdict: 'wrong', by: 'Alex Lee', at: now - 600_000, note: 'The host’s name is missing on the badge', correction: { id: 'DC-5', taskId: 'tsk_01JABCDEFGHJKMNPQRSTVWXYZ5' } } },
 ];
 const VALIDATION = { floor: 'f1', revision: A, scenarios: SCENARIOS, checks: { passed: 12, failed: 0, skipped: 1 }, corrections: [{ id: 'DC-5', taskId: 'tsk_01JABCDEFGHJKMNPQRSTVWXYZ5', scenario: 'J-03', title: 'A badge prints with the host’s name', revision: A, at: now - 600_000 }] };
-const DEV = { floor: 'f1', strip: { main: A, preview: { status: 'running', served: A } }, current: 'DC-5', changes: [{ id: 'DC-5', text: 'Something’s wrong…', by: 'Alex Lee', at: now - 600_000, source: { sha: A, kind: 'viewed' }, revision: A, queue: 'active', candidates: [], branch: 'dev/DC-5', state: 'with-team', words: 'With the team', detail: 'The team lead has it. Nothing saved on its branch yet.', mayCancel: false, via: 'validation' }] };
+const DEV = { floor: 'f1', strip: { main: A, preview: { status: 'running', served: A } }, current: 'DC-5', changes: [{ id: 'DC-5', text: 'Something’s wrong…', by: 'Alex Lee', at: now - 600_000, source: { sha: A, kind: 'viewed' }, revision: A, queue: 'active', candidates: [], branch: 'dev/DC-5', state: 'working', words: 'Working', detail: 'The team lead has it. Nothing saved on its branch yet.', mayCancel: false, via: 'validation', facts: changeFour({ state: 'working', words: 'Working', tone: 'busy' }) }] };
 
 const DATA = {
   floor: 'f1',
@@ -140,7 +141,7 @@ test('in a browser: guided checks under the live preview, marks, a correction as
     assert.match((await text(page, '.aw-validation')) ?? '', /For version 7d3f0b1, the one running in the app[\s\S]*1 of 3 passed, 1 failed, 1 not run on this version; 1 marked working, 1 with something wrong[\s\S]*Automatic checks on this version: 12 passed, 1 didn’t run to the end\./);
     // The marks, and the correction with its request's state.
     assert.match((await text(page, '.aw-scn[data-scenario="J-01"] .aw-mark')) ?? '', /Works as expected marked by Alex Lee[\s\S]*Quick, as at the desk today/);
-    assert.match((await text(page, '.aw-scn[data-scenario="J-03"] .aw-corr')) ?? '', /Sent to the team as DC-5 With the team/);
+    assert.match((await text(page, '.aw-scn[data-scenario="J-03"] .aw-corr')) ?? '', /Sent to the team as DC-5 Working/);
     // Steps in the journey's words, and where each starts.
     await openAllSteps(page);
     assert.deepEqual(await page.$$eval('.aw-scn[data-scenario="J-01"] .aw-steps li', (l) => l.map((x) => x.textContent)), SCENARIOS[0].steps);
