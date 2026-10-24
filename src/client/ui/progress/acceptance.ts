@@ -9,6 +9,9 @@ import type { AcceptanceDraft, AcceptanceRecord, AcceptanceView, Cycle, Evidence
 import { suggestVersion, versionProblem } from '../../../shared/acceptance';
 import { h, openModal, toast } from '../dom';
 import { getAcceptance, getDraft, postAccept, postReopen } from './api';
+import { gatesSection } from './gates';
+import { blockers } from '../../../shared/acceptance-gates';
+import { openProjectTab } from '../../tabs/host';
 
 const ST: Record<EvidenceLine['status'], string> = { pass: '✅', fail: '❌', pending: '⏳', present: '📄', missing: '⚠️ gap', unknown: '❔ unknown' };
 /** The elements of a list that has `null`s for what isn't there. */
@@ -74,15 +77,25 @@ export async function openAcceptance(floor: string, after: () => void) {
   const modal = openModal(el, { doing: 'reading the acceptance record', reading: true });
   const v = await getAcceptance(floor);
   if (!v) return void body.replaceChildren(h('p.acc-dim', {}, "The acceptance record couldn't be read just now."));
+  const gatesBox = h('div.acc-gatesbox', {}, h('p.acc-dim', {}, 'Checking what would refuse Accept…'));
   draw(v);
   function draw(view: AcceptanceView) {
     const cur = view.cycles[view.cycles.length - 1];
     body.replaceChildren(
       ...(view.chain.ok ? [] : [h('p.acc-changed', { role: 'alert' }, '⚠️ The acceptance file doesn’t fit its hash chain: a line was edited or removed outside the office.')]),
       h('p.acc-intro', {}, 'Acceptance is the Project Manager’s explicit ✅ Accept, never a merge. Each version keeps its record; reopening starts the next version and never erases one.'),
+      // What will refuse Accept, before it's pressed (the server's own checks, nothing started).
+      ...(cur.record ? [] : [gatesBox]),
       ...[...view.cycles].reverse().map((c, i) => cycleView(c, i === 0, view.changed)),
     );
     const accept = h('button.btn.primary', { type: 'button', onclick: () => (modal.close(), void openAccept(floor, view, after)) }, `✅ Accept ${cur.version}…`);
+    if (!cur.record)
+      void getDraft(floor).then((d) => {
+        if (!d?.gates) return void gatesBox.replaceChildren(h('p.acc-dim', {}, 'What would refuse Accept couldn’t be worked out just now; Accept still checks it.'));
+        gatesBox.replaceChildren(gatesSection(d.gates, (tab) => (modal.close(), void openProjectTab(tab))));
+        const n = blockers(d.gates).length;
+        if (n) accept.textContent = `✅ Accept ${cur.version}… (${n} thing${n === 1 ? '' : 's'} will refuse it)`;
+      });
     const reopen = h('button.btn', { type: 'button', onclick: () => (modal.close(), openReopen(floor, view, after)) }, `↩ Reopen for ${suggestVersion(view.cycles)}…`);
     footer.replaceChildren(...(view.admin ? [cur.record ? reopen : accept] : [h('span.acc-dim', {}, '🔒 Only the Project Manager (an admin) accepts or reopens.')]));
   }
@@ -128,7 +141,11 @@ async function openAccept(floor: string, view: AcceptanceView, after: () => void
     suggestedBox.replaceChildren(...(x.suggestions.length ? [h('p.acc-dim', {}, 'Gaps and failures found now, to carry as exceptions:'), suggested] : []));
   };
   drawEvidence(d);
+  // Before anything is typed: what will refuse it (enforced) and what's only recorded (informational).
+  const gates = d.gates ?? [];
+  const stops = blockers(gates);
   body.replaceChildren(...kids(
+    gates.length ? gatesSection(gates, (tab) => (modal.close(), void openProjectTab(tab))) : null,
     h('div.acc-form', {}, h('label', {}, 'Version ', version), h('label.acc-wide', {}, 'Scope note', note), build, deploy),
     evidence,
     h('section.acc-sec', {}, h('h3', {}, 'Exceptions (each with an owner)'), excs, h('button.btn.small', { type: 'button', onclick: () => exceptionRow({ text: '', owner: '' }, excs).querySelector('input')?.focus() }, '+ Add an exception'), suggestedBox),
@@ -163,7 +180,12 @@ async function openAccept(floor: string, view: AcceptanceView, after: () => void
     toast(`✅ ${r.record.version} accepted`);
     after();
   });
-  footer.replaceChildren(go);
+  // An enforced gate failing: the office would refuse it, so the button says why instead of letting it be pressed.
+  if (stops.length) {
+    go.disabled = true;
+    go.title = stops.map((g) => g.text).join(' · ');
+    footer.replaceChildren(h('span.acc-problem.acc-stops', { role: 'status' }, `Accept is refused until ${stops.length === 1 ? 'this is' : `these ${stops.length} are`} met: ${stops.map((g) => g.label).join(', ')}`), go);
+  } else footer.replaceChildren(go);
 }
 
 /** ↩ Reopen: the next version and what it's for; the accepted record stays as it is. */

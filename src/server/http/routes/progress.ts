@@ -8,6 +8,7 @@ import { accept, acceptanceDraft, acceptanceView, isStale, reopen } from '../../
 import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { progressOf } from '../../progress/index.js';
+import { acceptancePreflight } from '../../acceptance/preflight.js';
 import { readBody, send } from '../util.js';
 import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
@@ -39,7 +40,7 @@ export const progressRoutes = {
       return send(res, 200, await acceptanceView(ctx, floor, ctx.meOf(session.account?.id).admin));
     },
   },
-  /** GET /api/acceptance/draft?floor=<id>: what ✅ Accept would record now (for the dialog's review). */
+  /** GET /api/acceptance/draft?floor=<id>: what ✅ Accept would record now (for the dialog's review), and what will refuse it (gates). */
   draft: {
     method: 'GET',
     path: '/api/acceptance/draft',
@@ -47,7 +48,10 @@ export const progressRoutes = {
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such project' });
-      return send(res, 200, await acceptanceDraft(ctx, floor, ctx.meOf(session.account?.id).admin));
+      const admin = ctx.meOf(session.account?.id).admin;
+      const draft = await acceptanceDraft(ctx, floor, admin);
+      // What will refuse Accept, before it's pressed: the same checks, nothing started (acceptance/preflight.ts).
+      return send(res, 200, { ...draft, gates: await acceptancePreflight(ctx, floor, admin, draft) });
     },
   },
   /** POST /api/acceptance {floor, action: accept|reopen, reviewToken (accept), version?, scopeNote?, exceptions?, build?, deploy?}. The Project Manager (an admin) only. */

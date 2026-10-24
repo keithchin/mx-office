@@ -109,3 +109,11 @@ html[data-theme='terminal'] .pg-mini-track .pg-seg { border-radius: 0; }
 .pg-mini-track .pg-seg.active { background: var(--info); }
 .pg-mini-track .pg-seg.pending { background: var(--rule); }
 .pg-mini-track .pg-seg.current { box-shadow: 0 0 0 1px var(--accent); }
+
+/* Before you accept (./gates.ts): what will refuse Accept, enforced first, then what's only informational. */
+.acc-gates { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--card); }
+.acc-gates .acc-problem { margin-top: 0; }
+.acc-gates .acc-lines li.acc-gate-fail small { color: var(--bad-ink); }
+.acc-gates .acc-lines li.acc-gate-info { color: var(--ink-2); }
+.acc-gate-go { margin-left: 4px; }
+.acc-modal footer .acc-stops { flex: 1; margin: 0 8px 0 0; font-weight: 600; font-size: 12.5px; }

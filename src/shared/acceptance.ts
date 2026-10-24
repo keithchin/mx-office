@@ -10,6 +10,7 @@
 import type { EvidenceRef } from './evidence/types.js';
 import type { TestingSummary } from './testing/verify.js';
 import type { DecisionRev } from './task-links.js';
+import type { AcceptGate } from './acceptance-gates.js';
 
 /** One fact the record cites: what it is, what the office found, and a gap's reason when it found nothing. */
 export interface EvidenceLine {
@@ -121,6 +122,8 @@ export interface AcceptanceDraft {
   suggestions: Exception[];
   cost: CostSnapshot;
   admin: boolean;
+  /** What will refuse Accept now and what's only informational (server/acceptance/preflight.ts); the route adds it. */
+  gates?: AcceptGate[];
 }
 
 // ---- Rules (pure) ---------------------------------------------------------------------------------
