@@ -76,6 +76,7 @@ import { designImportRoutes } from './design-import.js';
 import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
 import { securityRoutes } from './security.js';
+import { dataImpactRoutes } from './data-impact.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -265,6 +266,8 @@ export const routes: readonly Route[] = [
   // The security baseline and the mx check gate, on App Insights › Security (security-gate/).
   securityRoutes.view,
   securityRoutes.act,
+  dataImpactRoutes.view,
+  dataImpactRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,
