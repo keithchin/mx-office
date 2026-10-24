@@ -10,7 +10,7 @@
 .ax .ax-head { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .ax .ax-headrow { display: flex; align-items: center; gap: 6px; }
 .ax .ax-title { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); }
-.ax .ax-icon { border: 1px solid transparent; background: none; color: var(--ink-2, var(--muted)); border-radius: 4px; width: 26px; height: 26px; font: inherit; cursor: pointer; }
+.ax .ax-icon { display: inline-grid; place-items: center; padding: 0; border: 1px solid transparent; background: none; color: var(--ink-2, var(--muted)); border-radius: 4px; width: 28px; height: 28px; font: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
 .ax .ax-icon:hover { background: var(--hover, var(--sunken)); color: var(--ink); }
 .ax .ax-icon:focus-visible, .ax .ax-grip:focus-visible, .ax .ax-row:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: -2px; }
 .ax .ax-search { width: 100%; box-sizing: border-box; min-height: 30px; font: inherit; font-size: 13px; padding: 3px 8px; border: 1px solid var(--rule-strong, var(--line)); border-radius: 4px; background: var(--paper, var(--card)); color: var(--ink); }
@@ -44,7 +44,7 @@
 .ax .ax-bar-acts .aw-btn { padding: 4px 10px; font-size: 13px; }
 .ax .ax-grip { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 2; }
 .ax .ax-grip:hover { background: var(--accent-soft); }
-.ax .ax-expand, .ax .ax-drawer-btn, .ax .ax-scrim { display: none; }
+.ax .ax-rail, .ax .ax-drawer-btn, .ax .ax-scrim { display: none; }
 
 /* The revision line: what's read, where the live app is (information only), and a stale note. */
 .ax .ax-revline { display: flex; flex-direction: column; gap: 4px; }
@@ -59,10 +59,21 @@
 .ax .ax-bar-detail { font: 11.5px/1.35 var(--mono, monospace); color: var(--muted); overflow-wrap: anywhere; }
 .ax .ax-bar-acts .aw-btn:disabled { opacity: .55; cursor: not-allowed; }
 
-/* Collapsed: a slim strip with the button that brings it back. */
-.ax.ax-collapsed .ax-side { width: 36px; }
+/* Collapsed: a 44px rail of icons (as the Portal navigation's and the coordinator panel's): » on top, then
+   Find, the sections and Show all files, each its name as the tooltip. Its own line icons (portal/icons.ts),
+   styled here so they show in every theme. */
+.ax .ax-side { transition: width .18s ease; }
+.ax.ax-collapsed .ax-side { width: 44px; }
 .ax.ax-collapsed :is(.ax-head, .ax-rows, .ax-grip) { display: none; }
-.ax.ax-collapsed .ax-expand { display: block; margin: 8px auto; }
+.ax.ax-collapsed .ax-rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; }
+.ax .ax-rail .ax-icon { width: 32px; height: 32px; }
+.ax .ax-rail .ax-icon[hidden] { display: none; }
+.ax .ax-rail .ax-icon[aria-pressed='true'] { background: var(--accent-soft); color: var(--ink); }
+.ax .ax-rail-sep { width: 20px; height: 1px; margin: 4px 0; background: var(--line); }
+.ax .ax-rail-ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.ax .ax-rail-ico .f { fill: currentColor; stroke: none; }
+.ax.ax-dragging .ax-side { transition: none; }
+@media (prefers-reduced-motion: reduce) { .ax .ax-side { transition: none; } }
 
 /* The pane, in the canvas's place. */
 .aw .ax-pane { display: flex; flex-direction: column; gap: 8px; min-height: 520px; height: 100%; }
@@ -120,6 +131,6 @@
   .ax.ax-open .ax-side { transform: none; visibility: visible; }
   .ax.ax-collapsed .ax-side { width: min(86vw, 340px); }
   .ax.ax-collapsed :is(.ax-head, .ax-rows) { display: flex; }
-  .ax .ax-collapse, .ax .ax-expand, .ax .ax-grip { display: none !important; }
+  .ax .ax-collapse, .ax .ax-rail, .ax .ax-grip { display: none !important; }
   .ax.ax-open .ax-scrim { display: block; position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .35); }
 }

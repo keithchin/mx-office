@@ -12,8 +12,11 @@
 //   ⚙ Settings · View App · Edit in Studio Pro
 //
 // Every item is one of the tabs (the same ids: lite.ts's showTab opens it, so ?tab= links, the tabs'
-// badges and every other way in still work) or an action. The chevron on the pane's edge folds it to an
-// icon rail, whose groups open as flyouts. On a phone it's a drawer, opened from the ☰ at the bar's left.
+// badges and every other way in still work) or an action. « beside Home (or [ outside a text box) folds
+// it to a 56px icon rail, as the coordinator's » folds its panel: every item an icon with its label as the
+// tooltip and its badge on the corner, the project card its tile, each group a flyout of its pages (click,
+// Enter or hover; Esc gives the focus back). » unfolds it; this browser remembers which, per viewer. On a
+// phone it's a drawer, opened from the ☰ at the bar's left.
 // Drawn once; a badge changing (the tab row's, watched with a MutationObserver) touches only its item.
 
 import { store } from '../../state';
@@ -161,16 +164,30 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     h('li', {}, h('a.pt-item', { href: '/firm' }, icon('audit', 'pt-item-ico'), h('span.pt-item-l', {}, 'The Firm'))),
     h('li', {}, h('a.pt-item', { href: '/docs' }, icon('help', 'pt-item-ico'), h('span.pt-item-l', {}, 'Documentation'))),
   );
-  const fold = h('button.pt-nav-fold', { type: 'button' }, icon('chevronLeft', 'pt-fold-l'), icon('chevronRight', 'pt-fold-r'));
-  fold.addEventListener('click', () => {
-    state = { ...state, rail: !state.rail };
+  // The coordinator panel's control, mirrored: « folds the pane to its rail, » brings it back (lead-panel/).
+  const fold = h('button.pt-nav-fold', { type: 'button', 'aria-controls': 'pt-nav', 'aria-keyshortcuts': '[' }, h('span.pt-fold-l', { 'aria-hidden': 'true' }, '«'), h('span.pt-fold-r', { 'aria-hidden': 'true' }, '»'));
+  fold.addEventListener('click', () => setRail(!state.rail, true));
+  function setRail(rail: boolean, focus = false) {
+    if (rail === state.rail) return;
+    state = { ...state, rail };
     saveState(state);
     closeFlyout();
     drawRail();
+    drawGroups();
+    if (focus) fold.focus();
+  }
+  // [ folds and unfolds it, unless you're typing (or holding a modifier: Ctrl+[ is the terminal's Esc).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '[' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || mobile()) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"], .xterm')) return;
+    if (getComputedStyle(pane).display === 'none' || document.querySelector('dialog[open], .modal-backdrop, [aria-modal="true"]')) return;
+    e.preventDefault();
+    setRail(!state.rail);
   });
   // Home, on top of everything: the office's landing page (start/), whose own navigation has it picked.
   const home = h('a.pt-item.pt-home-item', { href: HOME_PAGE, title: 'Home: what needs you, and how every project is going' }, icon('home', 'pt-item-ico'), h('span.pt-item-l', {}, 'Home'));
-  const pane = h('nav.pt-nav.pt-only', { id: 'pt-nav', 'aria-label': 'Project navigation' }, h('div.pt-nav-in', {}, home, card, groupsList, h('hr.pt-nav-rule'), bottom, goTo), fold);
+  const pane = h('nav.pt-nav.pt-only', { id: 'pt-nav', 'aria-label': 'Project navigation' }, h('div.pt-nav-in', {}, h('div.pt-nav-top', {}, home, fold), card, groupsList, h('hr.pt-nav-rule'), bottom, goTo));
   const scrim = h('div.pt-scrim.pt-only', { 'aria-hidden': 'true' });
   scrim.addEventListener('click', () => drawer(false));
   const main = document.querySelector('.lite-main');
@@ -188,7 +205,8 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
       const els = groupEls.get(g.id)!;
       const open = groupOpen(state, g.id, current);
       els.li.classList.toggle('open', open);
-      els.head.setAttribute('aria-expanded', String(open));
+      // Folded, a head opens its flyout rather than its list: what it says it has open is that.
+      els.head.setAttribute('aria-expanded', String(state.rail ? flyout.dataset.group === g.id : open));
       els.list.hidden = !open;
       const shown = new Set(visibleItems(g, admin).map((i) => i.id));
       for (const li of els.list.children) (li as HTMLElement).hidden = !shown.has((li as HTMLElement).dataset.li as TabId);
@@ -201,20 +219,33 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
       btn.classList.toggle('pt-blocked', !!why);
       if (why) btn.setAttribute('aria-disabled', 'true');
       else btn.removeAttribute('aria-disabled');
-      btn.title = why ?? it.hint;
     }
+    drawTips();
     drawGroupBadges();
   }
   function drawRail() {
     body.classList.toggle('pt-rail', state.rail);
     fold.setAttribute('aria-label', state.rail ? 'Expand the navigation' : 'Collapse the navigation');
-    fold.title = state.rail ? 'Expand the navigation' : 'Collapse the navigation to icons';
+    fold.title = state.rail ? 'Expand the navigation ([)' : 'Collapse the navigation to icons ([)';
     fold.setAttribute('aria-expanded', String(!state.rail));
-    for (const [, els] of groupEls) els.head.title = state.rail ? els.head.textContent ?? '' : '';
+    if (state.rail) home.setAttribute('aria-label', 'Home');
+    else home.removeAttribute('aria-label');
+    for (const g of navGroups()) {
+      const head = groupEls.get(g.id)!.head;
+      head.title = state.rail ? g.label : '';
+      if (state.rail) head.setAttribute('aria-haspopup', 'menu');
+      else head.removeAttribute('aria-haspopup');
+    }
+    drawTips();
+  }
+  /** Folded, an item's words are its tooltip (with why it can't work now, if it can't); open, its line for the header. */
+  function drawTips() {
     for (const it of NAV_BOTTOM) {
       const el = itemEls.get(it.id)!;
-      if (state.rail) el.setAttribute('aria-label', it.label);
-      else el.removeAttribute('aria-label');
+      const why = it.kind === 'action' ? deps.blocked?.(it.id as NavAction) : undefined;
+      el.title = state.rail ? (why ? `${it.label}: ${why}` : it.label) : (why ?? it.hint);
+      // Its name for a screen reader, words hidden or not (readBadges adds the badge to it).
+      if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', it.label);
     }
   }
   function drawSelected() {
@@ -257,7 +288,11 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     for (const g of navGroups()) {
       const els = groupEls.get(g.id)!;
       const closed = !groupOpen(state, g.id, current) || state.rail;
-      paintBadge(els.badge, closed ? groupBadge(visibleItems(g, admin).map((i) => badges.get(i.id) ?? null)) : null);
+      const b = closed ? groupBadge(visibleItems(g, admin).map((i) => badges.get(i.id) ?? null)) : null;
+      paintBadge(els.badge, b);
+      // Folded, the head is only an icon: its name (and its badge) are said by its label.
+      if (state.rail) els.head.setAttribute('aria-label', b ? `${g.label}, ${b.kind === 'count' ? b.text : 'new'}` : g.label);
+      else els.head.removeAttribute('aria-label');
     }
   }
   const tabs = document.querySelector('.lite-tabs');
@@ -312,7 +347,10 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     const paneR = pane.getBoundingClientRect();
     flyout.style.left = `${Math.round(paneR.right + 4)}px`;
     flyout.style.top = `${Math.round(Math.min(r.top - 6, innerHeight - flyout.offsetHeight - 8))}px`;
-    for (const [id, els] of groupEls) els.head.classList.toggle('flying', id === g);
+    for (const [id, els] of groupEls) {
+      els.head.classList.toggle('flying', id === g);
+      if (state.rail) els.head.setAttribute('aria-expanded', String(id === g));
+    }
     if (focus) flyout.querySelector<HTMLElement>('.pt-fly-item')?.focus();
   }
   function toggleFlyout(g: GroupId, head: HTMLElement, focus: boolean) {
@@ -325,7 +363,10 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     const g = flyout.dataset.group as GroupId | undefined;
     flyout.hidden = true;
     delete flyout.dataset.group;
-    for (const [, els] of groupEls) els.head.classList.remove('flying');
+    for (const [, els] of groupEls) {
+      els.head.classList.remove('flying');
+      if (state.rail) els.head.setAttribute('aria-expanded', 'false');
+    }
     if (refocus && g) groupEls.get(g)?.head.focus();
   }
   flyout.addEventListener('keydown', (e) => {
