@@ -124,7 +124,7 @@ The bar doesn't poll. It refreshes when you:
 
 A delivery is accepted only when the Project Manager says so with **✅ Accept**. A merge never counts as acceptance. Each delivery has a version: **v1**, then **v1.1**, **v2** and so on.
 
-You can also accept from the Developer view's **Release** section (**Accept this version**): the same acceptance, with the same permissions and checks, beside the guided checks of the running version and your marks on them. See [Developer view › Guided validation](developer-view.md#guided-validation) and [Accepting from here](developer-view.md#accepting-from-here).
+Accepting happens here only: the Developer view has no Accept button. Its guided checks (under **Live preview**) and a **Looks right** in its chat are reviews of one version and accept nothing. See [Developer view › Guided validation](developer-view.md#guided-validation) and [Accepting a version](developer-view.md#accepting-a-version).
 
 ### Accepting a delivery
 
