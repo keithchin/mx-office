@@ -170,3 +170,25 @@ body.lite.lp-on .tp-launch { right: calc(var(--lp-space) + 16px); }
 html[data-theme='terminal'] :is(.lp-qchip, .lp-composer, .lp-box, .lp-send, .lp-turn, .lp-hint, .lp-face, .lp-badge, .lp-tab, .lp-iconbtn) { border-radius: 0; }
 html:not([data-theme^='clean']):not([data-theme^='portal']) .lp { border-left-width: var(--bw, 2px); }
 @media (prefers-reduced-motion: reduce) { .lp, body.lite.lp-on .lite-main { transition: none; } }
+
+/* ---- Docked in a view (./dock.ts, the Developer view): its header, the context chip, Ask | Request a change -- */
+.lp-dockhead { flex: none; max-height: 40%; overflow-y: auto; border-bottom: 1px solid var(--line); background: var(--paper-2); }
+body.lp-docked .lp-qa { display: none; }
+.lp-ctx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px 0; }
+.lp-ctx-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 26px; padding: 0 4px 0 9px; border: 1px solid var(--info-line, var(--line)); border-radius: 13px; background: var(--accent-soft); color: var(--ink); font-size: 12.5px; }
+.lp-ctx-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-ctx-i { font-size: 11px; }
+.lp-ctx-x { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink-2); font-size: 11px; cursor: pointer; }
+.lp-ctx-x:hover { background: var(--hover); }
+.lp-ctx-add { height: 26px; padding: 0 8px; border: 1px dashed var(--rule-strong); border-radius: 13px; background: transparent; color: var(--ink-2); font: inherit; font-size: 12px; cursor: pointer; }
+.lp-ctx-add:disabled { opacity: .5; cursor: default; }
+.lp-ctx-add[hidden] { display: none; }
+.lp-modes { flex: none; display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.lp-modes[hidden] { display: none; }
+.lp-mode { height: 24px; padding: 0 8px; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 11.5px; cursor: pointer; }
+.lp-mode + .lp-mode { border-left: 1px solid var(--line); }
+.lp-mode[aria-checked='true'] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.lp-mode:disabled { opacity: .45; cursor: not-allowed; }
+.lp-docked .lp-cbar-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-foot { margin: 6px 2px 0; font-size: 11px; color: var(--faint); }
+.lp-foot[hidden] { display: none; }

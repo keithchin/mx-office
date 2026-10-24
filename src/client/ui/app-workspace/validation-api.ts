@@ -16,7 +16,9 @@ import { myName } from '../project-run/api';
 
 export interface MarkAsk {
   revision: string;
-  scenario: string;
+  scenario?: string;
+  /** A change tried from its "Please try this" card (DC-<n>), in place of a scenario. */
+  change?: string;
   verdict: 'works' | 'wrong';
   note?: string;
   page?: string;

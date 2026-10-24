@@ -27,8 +27,10 @@ export interface RequestAsk {
   ref?: ElementRef;
   /** The revision viewed when it was asked (the explorer's: main's newest unless another was picked). */
   source?: string;
-  /** The dialog's idempotency key. */
+  /** The dialog's (or the docked composer's) idempotency key. */
   key?: string;
+  /** Which entry point asked: the docked chat, or this dialog (its fallback). */
+  via?: 'chat' | 'dialog';
 }
 
 export type RequestSent = { ok: true; change: DevChange; again: boolean } | { ok: false; error: string };
@@ -205,7 +207,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
     }
     submit.disabled = true;
     const aboutWords = el ? `${el.chip} (${el.where})` : c.about;
-    void send({ text: aboutWords ? `${text}\n\nAbout: ${aboutWords}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}), ...(el ? { ref: el.ref } : {}), ...(c.source ? { source: c.source } : {}), key }).then((r) => {
+    void send({ text: aboutWords ? `${text}\n\nAbout: ${aboutWords}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}), ...(el ? { ref: el.ref } : {}), ...(c.source ? { source: c.source } : {}), key, via: 'dialog' }).then((r) => {
       submit.disabled = false;
       if (!r.ok) {
         err.hidden = false;

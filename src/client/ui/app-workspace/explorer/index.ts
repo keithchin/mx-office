@@ -27,7 +27,7 @@
 // drawer opened by a button. Keyboard and ARIA: ./tree.ts.
 
 import { h } from '../../dom';
-import { MARKETPLACE, type ExplorerChanges, type ExplorerHead, type ExplorerNode } from '../../../../shared/app-explorer';
+import { type ExplorerHead, type ExplorerNode } from '../../../../shared/app-explorer';
 import type { DocumentsView } from '../../../../shared/app-documents';
 import type { DeliverablesView } from '../../../../shared/deliverables';
 import type { WorkspaceData } from '../data';
@@ -38,6 +38,8 @@ import type { ElementContext } from './element-ref';
 import { explorerRail, type RailTarget } from './rail';
 import { revisionLine } from './revision';
 import { TreeView, type TreeModel } from './tree';
+import { markDots } from './dots';
+import { firstPage } from './first-page';
 import './explorer.css';
 
 export const PREFS_KEY = 'agent-office.aw.explorer';
@@ -74,6 +76,8 @@ export interface ExplorerDeps {
    * its model reference (the page, or the widget picked on its Model preview) and the revision viewed.
    */
   request(about: string, page?: string, at?: { element: ElementContext; rev: string; words?: string }): void;
+  /** What's selected changed: the item opened (a page with the widget picked on it, at the revision shown), or none. */
+  selection?(s: ExplorerSelection | undefined): void;
   /** Tests: the requests, the documents viewer, Change this, the Model tab's requests. */
   api?: ExplorerApi;
   docs?(floor: string): Promise<DeliverablesView | undefined>;
@@ -82,9 +86,19 @@ export interface ExplorerDeps {
   model?: PaneDeps['api'];
 }
 
+/** What the explorer has open, as context for a request ("Page: My orders", the page or widget, the revision). */
+export interface ExplorerSelection {
+  about: string;
+  element?: ElementContext;
+  rev?: string;
+  page?: string;
+}
+
 export interface Explorer {
   readonly el: HTMLElement;
   readonly pane: Pane;
+  /** Opens the app's first page in the Model preview, when nothing is open yet (once per revision). */
+  openFirst(): void;
   /** The workspace drew: follow the project and the live app's revision. */
   update(d: WorkspaceData): void;
 }
@@ -93,6 +107,8 @@ const CHANGE_KINDS = new Set(['page', 'microflow', 'nanoflow', 'entity']);
 const servedOf = (d: WorkspaceData) => d.live?.served?.sha ?? d.live?.lastServed?.sha;
 const ABOUT: Record<string, string> = { page: 'Page', entity: 'Data', domainmodel: 'Data', microflow: 'Logic', nanoflow: 'Logic', doc: 'Document', file: 'File' };
 const isDocs = (id: string) => id.startsWith('docs:');
+/** "Page: My orders", "Logic: Save order", "File: docs/brief.md". */
+const aboutOf = (n: ExplorerNode) => `${ABOUT[n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? ''] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
 
 export function createExplorer(deps: ExplorerDeps): Explorer {
   const api = deps.api ?? explorerApi();
@@ -123,7 +139,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   const model = () => (searching() ? found : prefs.all ? files : biz);
 
   const tree = new TreeView(model(), { expand: (n) => void expand(n), open: (n) => openNode(n), select: (n) => ((selected = n ?? undefined), drawBar()), more: (p, c) => void more(p, c), changed: () => draw() }, 'The app');
-  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), live: () => !!deps.data().appUrl, file: (p) => api.file(floor!, rev!, p), openEntry: (id) => openEntry(id), ...(api.facts ? { facts: (qn: string) => (floor && rev ? api.facts!(floor, rev, qn) : Promise.resolve(undefined)) } : {}), request: (r) => askAbout(r.node, { element: r.element, rev: r.rev }), ...(deps.model ? { api: deps.model } : {}) });
+  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), live: () => !!deps.data().appUrl, file: (p) => api.file(floor!, rev!, p), openEntry: (id) => openEntry(id), ...(api.facts ? { facts: (qn: string) => (floor && rev ? api.facts!(floor, rev, qn) : Promise.resolve(undefined)) } : {}), request: (r) => askAbout(r.node, { element: r.element, rev: r.rev }), selected: (c, n) => deps.selection?.(n ? { about: aboutOf(n), ...(c ? { element: c } : {}), ...(rev ? { rev } : {}), ...(n.type === 'page' && n.url ? { page: n.url } : {}) } : undefined), ...(deps.model ? { api: deps.model } : {}) });
   const revLine = revisionLine({ pick: (w) => pick(w), refresh: () => void toRev(head?.rev) });
 
   const search = h('input.ax-search', { type: 'search', placeholder: 'Find a page, record, logic, document…', 'aria-label': 'Find in the explorer' }) as HTMLInputElement;
@@ -392,8 +408,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     const n = selected;
     if (!n || n.kind === 'group' || (n.kind === 'module' && n.type !== 'domainmodel') || n.kind === 'folder') return void bar.replaceChildren();
     const f = floor;
-    const kind = n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? '';
-    const about = `${ABOUT[kind] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
+    const about = aboutOf(n);
     const ask = h('button.aw-btn.ax-ask', { type: 'button', onclick: () => askAbout(n) }, 'Request a change');
     const d = deps.data();
     const live = n.type === 'page' && n.url
@@ -417,8 +432,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
 
   /** Request a change about a row: a page carries its model reference (the widget picked on its preview, when that page is open) and the revision viewed. */
   function askAbout(n: ExplorerNode, at?: { element: ElementContext; rev: string }) {
-    const kind = n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? '';
-    const about = `${ABOUT[kind] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
+    const about = aboutOf(n);
     const open = pane.node?.id === n.id && !pane.el.hidden ? pane.element() : undefined;
     const element = at?.element ?? open ?? (n.type === 'page' && n.qn ? { ref: { docType: 'page' as const, docQn: n.qn, label: n.label }, chip: n.label, where: `page ${n.qn}` } : undefined);
     const viewed = at?.rev || rev;
@@ -505,7 +519,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     if (!prev || !floor) return;
     const ch = await api.changes(floor, prev, next).catch(() => undefined);
     if (!ch || g !== gen) return;
-    markDots(ch);
+    markDots(biz, files, ch);
     draw();
     // A page open live in the canvas that changed: opened again (the live app reloads it at its own pace).
     const at = deps.where();
@@ -517,43 +531,34 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     return Promise.all([...m.expanded].filter((id) => !isDocs(id) && (keepOld || !m.kids.get(id))).map((id) => fetchLevel(m, id, m === files ? id.slice(2, -1) : id, keepOld)));
   }
 
-  function markDots(ch: ExplorerChanges) {
-    const GROUP: Record<string, string> = { page: 'pages', microflow: 'logic', nanoflow: 'logic', domainmodel: 'data' };
-    const parents = (id: string) => {
-      // Every open row above a changed one: its group, the Marketplace fold, its module and folders.
-      for (const [at, lv] of biz.kids) if (lv.nodes.some((x) => x.id === id) && at !== '') biz.dots.add(at);
-    };
-    for (const key of ch.docs) {
-      const kind = key.slice(0, key.indexOf(':'));
-      const qn = key.slice(kind.length + 1);
-      const group = GROUP[kind];
-      if (!group) continue;
-      const module = kind === 'domainmodel' ? qn : qn.slice(0, qn.indexOf('.'));
-      biz.dots.add(group).add(`${group}/${encodeURIComponent(module)}`);
-      if (biz.kids.get(`${group}/${MARKETPLACE}`)?.nodes.some((x) => x.id === `${group}/${encodeURIComponent(module)}`)) biz.dots.add(`${group}/${MARKETPLACE}`);
-      if (kind !== 'domainmodel') {
-        biz.dots.add(key);
-        for (let i = 0; i < 4; i++) for (const id of [...biz.dots]) parents(id);
-      } else for (const n of biz.kids.get(`data/${encodeURIComponent(module)}`)?.nodes ?? []) biz.dots.add(n.id);
-    }
-    for (const p of ch.files) {
-      files.dots.add(`f:${p}`);
-      const parts = p.split('/');
-      for (let i = 1; i < parts.length; i++) files.dots.add(`f:${parts.slice(0, i).join('/')}/`);
-      for (const [at, lv] of biz.kids) if (isDocs(at)) for (const n of lv.nodes) if (n.kind === 'doc' && (n.detail ?? '').split(' ').includes(p)) biz.dots.add(n.id).add(at).add(at.split('/')[0]);
-    }
-  }
-
   const onFocus = () => {
     if (floor && document.visibilityState !== 'hidden') void askHead();
   };
   window.addEventListener('focus', onFocus);
   document.addEventListener('visibilitychange', onFocus);
 
+  /** The app's first page in the Model preview, once per revision, while nothing is open. */
+  let firstFor: string | undefined;
+  async function openFirst() {
+    const f = floor;
+    const r = rev;
+    if (!f || !r || pane.node || firstFor === r) return;
+    firstFor = r;
+    const ix = await api.index(f, r).catch(() => undefined);
+    if (!ix?.levels || f !== floor || r !== rev || pane.node) return;
+    const n = firstPage(ix.levels);
+    if (!n) return;
+    selected = n;
+    tree.selectedId = n.id;
+    drawBar();
+    openNode(n);
+  }
+
   paintLayout();
   return {
     el,
     pane,
+    openFirst: () => void openFirst(),
     update(d) {
       const s = servedOf(d);
       if (d.floor !== floor) {

@@ -227,6 +227,8 @@ export function pageSource(): WorkspaceSource {
       const r = await postMark(f, m);
       if (r.ok) {
         validation.now();
+        // A review or a correction changes the Developer changes (the try card, a new DC).
+        devFeed.now(f);
         if (r.finding.correction) requests.now(f);
       }
       return r;

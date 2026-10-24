@@ -1,15 +1,15 @@
-// The Review section's guided validation (C5, shared/guided-validation.ts): the scenarios of the version on
-// screen, each with its result at exactly that version (Passed / Failed / Not run on this version; a result on
+// The Developer view's guided validation (C5, shared/guided-validation.ts), under its Live preview: the scenarios
+// of the version running, each with its result at exactly that version (Passed / Failed / Not run on this version; a result on
 // another version is only ever a note), its steps in the journey's own words, Try it (the canvas opened at its
 // start page, where the journey names one) and the person's own mark: Works as expected, or Something's
-// wrong, which goes to the team as a correction (a change request with its task id) and shows here with the
-// request's state. The mark's dialog captures the page and version the way Request a change does; ✕ and Esc
+// wrong, which goes to the team as a correction (a Developer change, DC-n, queued like any request) and shows here
+// with the change's state. The mark's dialog captures the page and version the way Request a change does; ✕ and Esc
 // close it and give the focus back to the button that opened it.
 
 import { h, openModal, timeAgo } from '../dom';
 import { NOTE_MAX, RESULT_TONE, RESULT_WORDS, VERDICT_WORDS, WRONG_MIN, scenarioSummary, summaryLine, type ScenarioView, type ValidationView, type Verdict } from '../../../shared/guided-validation';
-import type { ChangeRequestView } from '../../../shared/change-requests';
-import { statePill } from './requests';
+import type { DevChangeView } from '../../../shared/dev-changes';
+import { changePill } from '../dev-changes/view';
 import './validation.css';
 import type { MarkAsk, MarkSent } from './validation-api';
 
@@ -24,13 +24,13 @@ export interface ValidationDeps {
   done(text: string): void;
 }
 
-/** A finding's correction, with its request's state when the Requests feed has it. */
-function correctionLine(id: string, requests: readonly ChangeRequestView[] | undefined): HTMLElement {
-  const r = requests?.find((x) => x.id === id);
-  return h('p.aw-small.aw-corr', { 'data-correction': id }, `Sent to the team as ${id} `, r ? statePill(r) : h('span.aw-pill.idle', {}, 'Received'));
+/** A finding's correction, with its change's state when the dev-changes feed has it (a correction from before the queue: Received). */
+function correctionLine(id: string, changes: readonly DevChangeView[] | undefined): HTMLElement {
+  const c = changes?.find((x) => x.id === id);
+  return h('p.aw-small.aw-corr', { 'data-correction': id }, `Sent to the team as ${id} `, c ? changePill(c) : h('span.aw-pill.idle', {}, 'Received'));
 }
 
-function scenarioRow(s: ScenarioView, requests: readonly ChangeRequestView[] | undefined, deps: ValidationDeps, open: (s: ScenarioView, verdict: Verdict, from: HTMLElement) => void): HTMLElement {
+function scenarioRow(s: ScenarioView, requests: readonly DevChangeView[] | undefined, deps: ValidationDeps, open: (s: ScenarioView, verdict: Verdict, from: HTMLElement) => void): HTMLElement {
   const f = s.finding;
   const earlier = s.earlier ? h('p.aw-small.aw-earlier', {}, `${s.earlier.status === 'passed' ? 'Passed' : 'Failed'} on an earlier version (${short(s.earlier.revision)}); that doesn’t count for this one.`) : '';
   const steps = s.steps.length ? h('ol.aw-steps', {}, ...s.steps.map((t) => h('li', {}, t))) : h('p.aw-none', {}, 'Its steps aren’t written down in a way the office can show.');
@@ -65,7 +65,7 @@ function scenarioRow(s: ScenarioView, requests: readonly ChangeRequestView[] | u
 }
 
 /** The guided validation card's body for the version on screen. */
-export function validationPart(v: ValidationView | undefined, onScreen: string | undefined, requests: readonly ChangeRequestView[] | undefined, deps: ValidationDeps): HTMLElement {
+export function validationPart(v: ValidationView | undefined, onScreen: string | undefined, requests: readonly DevChangeView[] | undefined, deps: ValidationDeps): HTMLElement {
   if (!onScreen) return h('p.aw-none', {}, 'No version is running in the app right now, so there’s nothing to try. When it runs, its guided checks show here with their results for that version.');
   if (!v) return h('p.aw-none', {}, `Reading the guided checks for version ${short(onScreen)}…`);
   const sum = scenarioSummary(v.scenarios);
@@ -107,7 +107,7 @@ export function openMarkDialog(s: ScenarioView, verdict: Verdict, revision: stri
     h(
       'div.body',
       {},
-      h('p', {}, wrong ? 'Say what went wrong. It goes to the team lead as a correction, with this check and version, and shows under Requests with its state.' : 'Mark this check as working on this version. It is kept with the version, for everyone to see.'),
+      h('p', {}, wrong ? 'Say what went wrong. It goes to the team as a correction (a change, DC-n), with this check and version, and its state shows in the chat: it waits in the queue if the team is busy or not at work.' : 'Mark this check as working on this version. It is kept with the version, for everyone to see.'),
       box,
       h('dl.aw-about', {}, ...about.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
       h('p.aw-small', {}, 'The version and page are taken from what’s on screen. Your mark is shown beside the status; it doesn’t change what the automatic checks found.'),
@@ -136,7 +136,7 @@ export function openMarkDialog(s: ScenarioView, verdict: Verdict, revision: stri
         return;
       }
       modal.close();
-      deps.done(r.finding.correction ? `Sent to the team as ${r.finding.correction.id}: it shows under Requests with its state` : `Marked “${s.title}” as working on this version`);
+      deps.done(r.finding.correction ? `Sent to the team as ${r.finding.correction.id}: its state shows in the chat` : `Marked “${s.title}” as working on this version`);
     });
   });
   box.focus();

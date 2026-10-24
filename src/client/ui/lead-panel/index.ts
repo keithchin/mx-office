@@ -11,7 +11,9 @@
 //   expanded    ⤢ Expand: the terminal in a wide overlay, ✕ top right; Esc closes it and gives focus
 //               back to what opened it
 //
-// Its styles are lead-panel.css; the page makes room for it with body.lp-on (and .lp-collapsed).
+// Its styles are lead-panel.css; the page makes room for it with body.lp-on (and .lp-collapsed). A view that
+// docks it beside its own canvas (./dock.ts, the Developer view) shows it there too, even where the person
+// turned the panel off for Project Management's pages: it's the same panel, conversation and state.
 
 import type { Net } from '../../net';
 import type { ServerMsg } from '../../../shared/protocol';
@@ -21,6 +23,7 @@ import { onPmcView } from '../pm/chat/pref';
 import { LeadPanel } from './panel';
 import { panelShown, PANEL_SHOW_KEY, readPanelState, writePanelState } from './logic';
 import { setLeadAsk, SHOW_EVENT } from './hooks';
+import { onPanelDock, panelDock, setDockFocus } from './dock';
 import './lead-panel.css';
 
 export interface LeadPanelDeps {
@@ -58,7 +61,8 @@ export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
   const mq = matchMedia(PHONE);
   let sheet = false;
   let overlay: Modal | undefined;
-  let shown = panelShown(store);
+  let setting = panelShown(store);
+  let shown = setting || !!panelDock();
 
   const collapseBtn = h('button.lp-iconbtn.lp-collapse', { type: 'button', 'aria-label': 'Collapse the panel', title: 'Collapse' }, '»');
   const sheetX = h('button.lp-iconbtn.lp-sheet-x', { type: 'button', 'aria-label': 'Close the chat', title: 'Close (Esc)' }, '✕');
@@ -126,14 +130,21 @@ export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
   });
   mq.addEventListener('change', () => apply());
   onPmcView(() => apply());
-  addEventListener(SHOW_EVENT, () => ((shown = panelShown(store)), apply()));
-  addEventListener('storage', (e) => e.key === PANEL_SHOW_KEY && ((shown = panelShown(store)), apply()));
+  const reshow = () => ((setting = panelShown(store)), (shown = setting || !!panelDock()), apply());
+  addEventListener(SHOW_EVENT, reshow);
+  addEventListener('storage', (e) => e.key === PANEL_SHOW_KEY && reshow());
+  onPanelDock(() => {
+    const was = shown;
+    shown = setting || !!panelDock();
+    if (was !== shown) apply();
+  });
 
   /** Lays the frame out for where it is now, and attaches or lets go of the terminal to match. */
   function apply() {
     const phone = mq.matches;
     const body = document.body.classList;
     body.toggle('lp-on', shown);
+    body.toggle('lp-docked', !!panelDock());
     body.toggle('lp-collapsed', shown && !phone && st.collapsed);
     body.toggle('lp-sheet', shown && phone && sheet);
     aside.hidden = !shown;
@@ -229,5 +240,13 @@ export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
     if (shown) panel.ask(text);
   };
   setLeadAsk(ask);
+  setDockFocus(
+    (chip, mode) => {
+      if (mq.matches) setSheet(true, false);
+      else if (st.collapsed) setCollapsed(false, false);
+      panel.focusWith(chip, mode ?? 'change');
+    },
+    (chip) => panel.selection(chip),
+  );
   return { route: (msg) => panel.route(msg), ask };
 }

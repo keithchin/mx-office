@@ -11,7 +11,8 @@
 import type { ConvoMsg, ConvoToolStatus } from '../../../../shared/protocol/convo';
 import { h } from '../../dom';
 import { markdownFile } from '../../markdown';
-import { chatItems, sameChat, screenText, type ChatItem, type Convo, type ToolMsg } from './logic';
+import { chatItems, mergeByTime, sameChat, screenText, type ChatItem, type Convo, type ToolMsg } from './logic';
+import type { ChatExtra } from '../../lead-panel/dock';
 import './chat.css';
 
 /** How many rows are on the page at first, and how many more each Show earlier adds (200 at once took a tenth of a second to draw on a busy floor). */
@@ -33,6 +34,10 @@ export interface ChatState {
   /** What it's doing or asking, in a line (WorkerInfo.activity). */
   activity?: string;
   convo: Convo | undefined;
+  /** A docked view's cards, merged into the conversation by time (ui/lead-panel/dock.ts). */
+  extras?: readonly ChatExtra[];
+  /** What an empty conversation says. */
+  empty?: string;
 }
 
 export interface ChatDeps {
@@ -138,18 +143,20 @@ export class ChatView {
 
   private drawRows(c: Convo | undefined) {
     const stick = this.pinned;
-    const items = c ? chatItems(c.messages) : [];
+    const items = mergeByTime(c ? chatItems(c.messages) : [], this.state?.extras ?? []);
     const shown = items.slice(-this.limit);
     this.earlier.hidden = items.length <= shown.length;
     const who = this.state ? `${this.state.who.name}|${this.state.who.icon}|${this.state.who.color ?? ''}` : '';
     const keep = new Set<string>();
     let at: ChildNode | null = this.rows.firstChild;
     for (const it of shown) {
-      keep.add(it.id);
-      const sig = who + JSON.stringify(it);
-      let d = this.drawn.get(it.id);
+      const x = 'draw' in it ? it : undefined;
+      const id = x ? `x:${x.id}` : it.id;
+      keep.add(id);
+      const sig = x ? `x|${x.sig}` : who + JSON.stringify(it);
+      let d = this.drawn.get(id);
       if (!d || d.sig !== sig) {
-        const el = this.row(it);
+        const el = x ? x.draw() : this.row(it as ChatItem);
         // A folded run you opened stays open as it grows.
         if (d?.el instanceof HTMLDetailsElement && el instanceof HTMLDetailsElement) el.open = d.el.open;
         if (d) {
@@ -157,7 +164,7 @@ export class ChatView {
           if (at === d.el) at = el;
         }
         d = { sig, el };
-        this.drawn.set(it.id, d);
+        this.drawn.set(id, d);
       }
       if (d.el !== at) this.rows.insertBefore(d.el, at);
       at = d.el.nextSibling;
@@ -167,7 +174,7 @@ export class ChatView {
       d.el.remove();
       this.drawn.delete(id);
     }
-    if (!shown.length) this.rows.replaceChildren(h('p.pmc-chat-empty', {}, c ? 'Nothing said yet. Ask away below.' : 'Loading the conversation…'));
+    if (!shown.length) this.rows.replaceChildren(h('p.pmc-chat-empty', {}, this.state?.empty ?? (c ? 'Nothing said yet. Ask away below.' : 'Loading the conversation…')));
     else this.rows.querySelector(':scope > .pmc-chat-empty')?.remove();
     if (stick) this.list.scrollTop = this.list.scrollHeight;
   }

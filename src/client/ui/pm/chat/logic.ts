@@ -56,6 +56,28 @@ function runLabel(tools: readonly ToolMsg[]): string {
   return files.size === 1 ? tools[0].summary : fold.many(files.size);
 }
 
+/** A row's time: its message's, or its first tool call's (undefined: the transcript didn't say). */
+export const itemAt = (it: ChatItem): number | undefined => (it.kind === 'msg' ? it.msg.at : it.tools[0]?.at);
+
+/**
+ * The conversation's rows with a docked view's cards merged in by time: a card goes before the first row that's
+ * later than it (a row with no time keeps its place after the one before), the rest at the end. Stable, so a
+ * redraw keeps the order.
+ */
+export function mergeByTime<T extends { at: number }>(items: readonly ChatItem[], extras: readonly T[]): (ChatItem | T)[] {
+  if (!extras.length) return items.slice();
+  const cards = [...extras].sort((a, b) => a.at - b.at);
+  const out: (ChatItem | T)[] = [];
+  let i = 0;
+  for (const it of items) {
+    const t = itemAt(it);
+    if (t !== undefined) while (i < cards.length && cards[i].at <= t) out.push(cards[i++]);
+    out.push(it);
+  }
+  while (i < cards.length) out.push(cards[i++]);
+  return out;
+}
+
 /** The conversation as rows: each tool call a row of its own, except runs of edits, reads or searches, folded. */
 export function chatItems(messages: readonly ConvoMsg[]): ChatItem[] {
   const out: ChatItem[] = [];
@@ -82,6 +104,10 @@ export interface ChatShown {
   status?: string;
   activity?: string;
   convo: Convo | undefined;
+  /** Cards a docked view merges into the conversation (ui/lead-panel/dock.ts): a new list is a change. */
+  extras?: readonly { id: string; at: number; sig: string }[];
+  /** What an empty conversation says instead of "Nothing said yet". */
+  empty?: string;
 }
 
 /**
@@ -94,6 +120,8 @@ export function sameChat(prev: ChatShown | undefined, next: ChatShown): boolean 
     !!prev &&
     prev.workerId === next.workerId &&
     prev.convo === next.convo &&
+    prev.extras === next.extras &&
+    prev.empty === next.empty &&
     prev.status === next.status &&
     prev.activity === next.activity &&
     prev.who.name === next.who.name &&

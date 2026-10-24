@@ -10,6 +10,10 @@
 // Terminal view of an open panel, the expanded overlay, or the chat's terminal-text fallback, with the
 // browser tab visible. The team comes from the page's one roster (ui/teams/world.ts), the conversation
 // from the convo slice, the waiting count from the Needs-you strip: no fetches or timers of its own.
+//
+// Docked in a view (./dock.ts: the Developer view) it is the same panel and the same conversation, with the
+// view's header above the chat, its cards merged into the conversation, and the composer's context chips and
+// Ask | Request a change. With no lead at work the chat still shows there (the cards, and requests that queue).
 
 import type { Net } from '../../net';
 import type { ServerMsg } from '../../../shared/protocol';
@@ -28,7 +32,8 @@ import { termTheme } from '../termtheme';
 import { ChatView } from '../pm/chat/view';
 import { onPmcView, PMC_VIEW_LABEL, PMC_VIEWS, savedPmcView, savePmcView, type PmcView } from '../pm/chat/pref';
 import { onNeeds, waitingCount } from '../needsyou/feed';
-import { Composer } from './composer';
+import { Composer, type ComposerMode } from './composer';
+import { onPanelDock, panelDock, type ChatExtra, type ContextChip } from './dock';
 import { initialsOf, lastAgentId, leadHeading, leadOf, statusLine, terminalWanted, unreadSince, type Lead, type QUICK, type SendPlan } from './logic';
 
 export interface PanelDeps {
@@ -53,6 +58,9 @@ export interface PanelDeps {
   /** The panel has what it shows for `floor` (the floor's loading overlay, ui/loading/). */
   onLoaded?(floor: string): void;
 }
+
+/** An empty conversation (docked with no lead: the view's cards only). */
+const NO_CONVO = { available: true, messages: [] };
 
 export class LeadPanel {
   readonly el: HTMLElement;
@@ -88,6 +96,9 @@ export class LeadPanel {
   private convoFor: string | undefined;
   /** The project whose kept scroll position is still to be put back. */
   private restoreFor: string | undefined;
+  /** A docked view's header slot, and its cards as last asked for. */
+  private readonly dockHead = h('div.lp-dockhead', { hidden: true });
+  private extras: readonly ChatExtra[] | undefined;
 
   constructor(private readonly deps: PanelDeps, frameButtons: HTMLElement[]) {
     const { net } = deps;
@@ -95,7 +106,14 @@ export class LeadPanel {
     this.term = new PmTerminal(net, this.termHost);
     this.chat = new ChatView({ openTerminal: () => this.view.workerId && deps.openWorker(this.view.workerId), lines: () => this.term.lines(), page: 24 });
     this.term.onWrite = () => this.chat.terminalChanged();
-    this.composer = new Composer({ send: (t, p) => this.send(t, p), quick: (q) => void this.quick(q), draft: (t) => this.floor && deps.draft(this.floor, t) });
+    this.composer = new Composer({
+      send: (t, p) => this.send(t, p),
+      quick: (q) => void this.quick(q),
+      draft: (t) => this.floor && deps.draft(this.floor, t),
+      request: (t, c) => this.request(t, c),
+      context: () => panelDock()?.context(),
+      about: (c) => panelDock()?.about(c) ?? `About: ${c.label}`,
+    });
 
     this.tabs = PMC_VIEWS.map((v) =>
       h('button.lp-tab', { type: 'button', role: 'tab', id: `lp-tab-${v}`, 'aria-controls': `lp-pane-${v}`, 'data-v': v, onclick: () => this.pick(v) }, PMC_VIEW_LABEL[v]),
@@ -131,10 +149,11 @@ export class LeadPanel {
       h('p.lp-term-note', {}, 'Connects only while this tab is visible. To steer the agent, use Chat.'),
     );
     this.emptyEl = h('div.lp-empty', { hidden: true });
-    this.el = h('div.lp-body', {}, header, this.chatPane, this.termPane, this.emptyEl);
+    this.el = h('div.lp-body', {}, header, this.dockHead, this.chatPane, this.termPane, this.emptyEl);
     this.avatar = () => this.avatarEl();
 
     onPmcView((v) => ((this.mode = v), this.draw()));
+    onPanelDock(() => this.docked());
     onRoster(() => this.draw());
     store.on('floor', () => this.sync());
     store.on('workers', () => this.draw());
@@ -191,11 +210,13 @@ export class LeadPanel {
     if (!this.roster) this.view = { ...this.view, hire: undefined };
     this.drawHead();
     const chatOk = this.lead?.kind === 'lead';
+    const dock = !!panelDock();
     this.tabRow.hidden = !chatOk;
-    this.emptyEl.hidden = chatOk;
-    if (!chatOk) this.drawEmpty();
-    const chatting = this.mode === 'chat' || this.deps.phone();
-    this.chatPane.hidden = !chatOk || !chatting;
+    this.emptyEl.hidden = chatOk || dock;
+    if (!chatOk && !dock) this.drawEmpty();
+    const chatting = this.mode === 'chat' || this.deps.phone() || (dock && !chatOk);
+    this.chatPane.classList.toggle('lp-nolead', dock && !chatOk);
+    this.chatPane.hidden = !(chatOk || dock) || !chatting;
     this.termPane.hidden = !chatOk || chatting;
     this.expandBtn.hidden = !chatOk || chatting || this.deps.phone();
     this.termLink.hidden = !chatOk || !this.deps.phone() || !this.view.live;
@@ -263,7 +284,8 @@ export class LeadPanel {
   private drawComposer(w: ReturnType<LeadPanel['worker']>) {
     const name = this.lead && this.lead.kind !== 'none' ? this.lead.name : 'the lead';
     const busy = !!w && w.status === 'working' && this.view.canPrompt;
-    const hint = this.view.hint?.replace('The Project Coordinator', name);
+    const nobody = !!panelDock() && this.lead?.kind !== 'lead';
+    const hint = nobody ? `${this.lead?.kind === 'benched' ? `${name} is benched` : 'No one leads the team yet'}: a change you request is kept and waits in the queue until the team is started in Project Management. Ask needs a lead.` : this.view.hint?.replace('The Project Coordinator', name);
     this.composer.show({ name, canPrompt: this.view.canPrompt, team: !!this.roster, midTurn: busy ? workingFor(w.workingSince, Date.now()).replace(/^working,?\s*/, '') || 'now' : undefined, hint, bad: this.view.state === 'needs-you' });
   }
 
@@ -365,11 +387,17 @@ export class LeadPanel {
   private drawChat() {
     const id = this.watching;
     // Only while you can see it: collapsed (or on a phone, with the sheet down) it draws nothing; opening it catches up.
-    if (this.chatPane.hidden || !id || !this.deps.open() || document.hidden) return;
+    if (this.chatPane.hidden || !this.deps.open() || document.hidden) return;
+    const extras = panelDock() ? this.extras : undefined;
+    if (!id) {
+      // Docked with nobody to talk to: the view's cards only (requests still queue).
+      if (panelDock()) this.chat.show({ workerId: '', who: { name: 'Team lead', icon: '🧭' }, convo: NO_CONVO, extras, empty: 'Requests you make here are kept as changes (DC-n) and wait in the queue until the team is at work. Their state shows here.' });
+      return;
+    }
     const m = this.member();
     const w = store.workers.get(id);
     const convo = store.convo.get(id);
-    this.chat.show({ workerId: id, who: { name: m?.name ?? w?.name ?? 'Team lead', icon: m?.icon ?? '🧭', color: w?.color }, status: w?.status, activity: w?.activity, convo });
+    this.chat.show({ workerId: id, who: { name: m?.name ?? w?.name ?? 'Team lead', icon: m?.icon ?? '🧭', color: w?.color }, status: w?.status, activity: w?.activity, convo, ...(extras ? { extras } : {}) });
     // Where you'd scrolled on your last visit to this project, once its conversation is in.
     const list = this.list;
     if (this.restoreFor === this.floor && convo?.messages.length && list) {
@@ -447,6 +475,44 @@ export class LeadPanel {
     const { [m.role]: own, ...leads } = choices;
     this.composer.remember(q.prompt);
     void this.run('tell', { prompt: q.prompt, when: own === 'after' ? 'after' : 'now', leads }).then((x) => x && toast(own === 'after' ? 'Queued for after their turn ⏳' : 'Sent ✓'));
+  }
+
+  // ---- Docked in a view (./dock.ts) ------------------------------------------------------------------
+  /** A view took the dock or let it go, or its header or cards changed. */
+  private docked() {
+    const d = panelDock();
+    if (d?.header) {
+      if (this.dockHead.firstChild !== d.header) this.dockHead.replaceChildren(d.header);
+    } else this.dockHead.replaceChildren();
+    this.dockHead.hidden = !d?.header;
+    this.composer.setDock(!!d, d?.footer);
+    this.composer.drawCtx();
+    this.extras = d ? d.extras() : undefined;
+    this.draw();
+  }
+
+  /** A change from the composer: the view's one record; a note to the lead (after its turn) when it waits in the queue. */
+  private async request(text: string, chip: ContextChip | undefined): Promise<boolean> {
+    const d = panelDock();
+    if (!d) return false;
+    const r = await d.request(text, chip);
+    if (!r.ok) {
+      toast(r.error, 'warn');
+      return false;
+    }
+    if (r.note && this.view.canPrompt && this.lead?.kind === 'lead') void this.run('tell', { prompt: r.note, when: 'after' });
+    return true;
+  }
+
+  /** The view's selection changed: the composer's chip follows. */
+  selection(chip: ContextChip | undefined) {
+    this.composer.setChip(chip);
+  }
+
+  /** "Request a change to this" on the view: the chat in front, the chip on, the box focused. */
+  focusWith(chip: ContextChip | undefined, mode: ComposerMode) {
+    if (this.mode !== 'chat') savePmcView('chat');
+    this.composer.focusWith(chip, mode);
   }
 
   /** "Ask <name>" from somewhere else (an escalation in Needs you): the box, prefilled and focused. */

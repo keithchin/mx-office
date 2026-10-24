@@ -85,7 +85,8 @@ function noteEl(id: string, c: CardsCtx): HTMLElement | '' {
   return h('div.aw-note-msg', { class: n.kind, role: 'status', 'data-note': n.kind }, n.kind === 'stale' ? h('p', {}, h('b', {}, STALE)) : '', h('p', {}, n.text), h('button.aw-link', { type: 'button', onclick: () => (notes.delete(id), c.redraw()) }, 'OK'));
 }
 
-function card(x: WorkspaceDecision, c: CardsCtx): HTMLElement {
+/** One decision's card (the docked chat draws each one inline, in the conversation). */
+export function decisionCard(x: WorkspaceDecision, c: CardsCtx): HTMLElement {
   const here = !!x.escalation && c.admin;
   const actions = here
     ? answerForm(x, c)
@@ -104,9 +105,13 @@ function card(x: WorkspaceDecision, c: CardsCtx): HTMLElement {
 
 /** The decision cards, most blocking first; the notes of cards that left the list (answered, or answered elsewhere) above them. */
 export function decisionCards(list: readonly WorkspaceDecision[], c: CardsCtx): HTMLElement {
+  return h('div', {}, ...leftNotes(list, c), list.length ? h('ul.aw-decisions', {}, ...list.map((x) => decisionCard(x, c))) : h('p.aw-none', {}, 'Nothing waits on you. When the team needs a decision from you, it shows here, most blocking first.'));
+}
+
+/** What the cards said after a send, for decisions that left the list (answered, here or elsewhere). */
+export function leftNotes(list: readonly WorkspaceDecision[], c: CardsCtx): HTMLElement[] {
   const gone = [...notes].filter(([id]) => !list.some((x) => x.id === id));
-  const left = gone.map(([id, n]) => h('div.aw-note-msg', { class: n.kind, role: 'status', 'data-note': n.kind, 'data-id': id }, n.kind === 'stale' ? h('p', {}, h('b', {}, STALE)) : '', h('p', {}, h('i', {}, n.question)), h('p', {}, n.text), h('button.aw-link', { type: 'button', onclick: () => (notes.delete(id), c.redraw()) }, 'OK')));
-  return h('div', {}, ...left, list.length ? h('ul.aw-decisions', {}, ...list.map((x) => card(x, c))) : h('p.aw-none', {}, 'Nothing waits on you. When the team needs a decision from you, it shows here, most blocking first.'));
+  return gone.map(([id, n]) => h('div.aw-note-msg', { class: n.kind, role: 'status', 'data-note': n.kind, 'data-id': id }, n.kind === 'stale' ? h('p', {}, h('b', {}, STALE)) : '', h('p', {}, h('i', {}, n.question)), h('p', {}, n.text), h('button.aw-link', { type: 'button', onclick: () => (notes.delete(id), c.redraw()) }, 'OK')));
 }
 
 /** For tests: forget the notes. */

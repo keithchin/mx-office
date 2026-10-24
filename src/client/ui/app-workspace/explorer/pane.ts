@@ -39,6 +39,8 @@ export interface PaneDeps {
   facts?(qn: string): Promise<PageFacts | undefined>;
   /** Request a change about the page shown, or the widget picked on it. */
   request?(c: PaneRequest): void;
+  /** What's shown or picked changed: the page's context (undefined for other items) and the item shown. */
+  selected?(c: ElementContext | undefined, n: ExplorerNode | undefined): void;
   /** For tests: the Model tab's requests. */
   api?: Pick<typeof modelApi, 'doc'>;
 }
@@ -117,6 +119,7 @@ export function docPane(deps: PaneDeps): Pane {
   function paintPick() {
     const page = pageOf(shown);
     const sel = preview.selected;
+    deps.selected?.(page ? element() : undefined, shown);
     pickBar.hidden = !page || preview.el.hidden;
     if (pickBar.hidden || !page) return void pickBar.replaceChildren();
     const c = element()!;
