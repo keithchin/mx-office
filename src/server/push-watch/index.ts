@@ -17,6 +17,7 @@ import { onOriginNews } from '../floor-sync/bus.js';
 import { localOnlyAt } from '../local-only.js';
 import { defaultBranch, fetchDefault } from '../wizard/gate-source.js';
 import { checkPushes, type PushLook } from '../review-gate/pushes.js';
+import { externalCheck } from '../data-impact/external.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 
@@ -146,7 +147,10 @@ export function machineWatchDeps(ctx: Pick<Ctx, 'floors' | 'cfg'>, found: WatchD
       return r.ok ? r.out.trim() || undefined : undefined;
     },
     fetch: (dir, branch) => fetchDefault(dir, branch, 0),
-    check: (floorId, dir, main, merges) => checkPushes(ctx.cfg.dataDir, floorId, dir, main, merges),
+    check: (floorId, dir, main, merges) => {
+      const floor = ctx.floors.get(floorId);
+      return checkPushes(ctx.cfg.dataDir, floorId, dir, main, merges, Date.now(), floor && 'accounts' in ctx ? externalCheck(ctx as Ctx, floor) : undefined);
+    },
     found,
     localOnly: (dir) => localOnlyAt(dir),
     now: Date.now,

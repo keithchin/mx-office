@@ -1,9 +1,11 @@
 // The Developer view's cards in the coordinator's conversation (./index.ts merges them in by time):
 //
 //   asked     what the person asked for, as their message, with the context it carried (the chip) and, under it,
-//             the receipt "→ DC-4 · Queued": the change's live state from the record (Queued and why, With the
-//             team, On candidate @C, Merged into main @M, In preview, Preview behind, Preview not running), the
-//             record's own line, a correction's link to the change it corrects, and Cancel while it hasn't started
+//             the receipt "→ DC-4 · Queued": where the work is (Queued and why, Working, Working · candidate @C,
+//             Implemented @M, Needs attention, Abandoned, Cancelled, Superseded), the record's own line, then the
+//             four facts apart (work, checks at that revision, preview availability or a data-impact hold, your
+//             review), a correction's link to the change it corrects, the dependency note, late results "not
+//             counted", related commits, and the actions the record allows (Cancel, Retry, Mark superseded)
 //   try       "Please try this" once a change's merge is in the live preview: Looks right (a scoped review of the
 //             version tried, kept with that version; never acceptance) or Something's wrong (what went wrong,
 //             sent as a correction linked to the change: a new DC), and Open the live preview
@@ -14,7 +16,7 @@
 
 import { h, timeAgo, toast } from '../../dom';
 import { CHANGE_TONE, refWords, type DevChangesView, type DevChangeView } from '../../../../shared/dev-changes';
-import { cancelButton } from '../../dev-changes/view';
+import { changeActions, factList, lifecycleLines } from '../../dev-changes/view';
 import { askedWords, receiptWords, reviewAt } from './logic';
 import type { MarkAsk, MarkSent } from '../validation-api';
 
@@ -39,10 +41,11 @@ export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView
     h(
       'div.dk-receipt',
       { 'data-state': c.state, class: CHANGE_TONE[c.state], role: 'status' },
-      h('div.dk-rhead', {}, h('b.dk-rid', {}, r.head), h('span.dc-grow'), c.mayCancel ? cancelButton(floor, c) : ''),
+      h('div.dk-rhead', {}, h('b.dk-rid', {}, r.head), h('span.dc-grow'), ...changeActions(floor, c)),
       r.line ? h('p.dk-rline', {}, r.line) : '',
       c.of ? h('p.dk-rline', {}, `A correction of ${c.of}.`) : '',
-      r.facts.length ? h('dl.dk-facts', {}, ...r.facts.flatMap((f) => [h('dt', {}, f.label), h('dd', { 'data-fact': f.key }, f.text)])) : '',
+      factList(floor, c),
+      ...lifecycleLines(floor, c),
     ),
   );
 }
@@ -96,7 +99,7 @@ export function tryCard(c: DevChangeView, deps: TryDeps): HTMLElement {
     { 'data-change': c.id, 'data-reviewed': done?.verdict ?? '' },
     h('p.pmc-card-h', {}, `Please try this · ${c.id}`),
     h('p.pmc-card-q', {}, `Try it: ${title}`),
-    h('p.dk-rline', {}, rev ? `It’s in the live preview (version ${short(rev)}, which contains its merge @${short(c.revision)}).` : 'It’s in the live preview.'),
+    h('p.dk-rline', {}, rev ? `It’s in the live preview (version ${short(rev)}, which contains its merge @${short(c.revision)}). Implemented isn’t accepted: your review below is about this version only.` : 'It’s in the live preview.'),
     done
       ? h('p.dk-done', { 'data-verdict': done.verdict }, done.verdict === 'works' ? `✓ Looks right · kept for version ${short(done.revision)} by ${done.by} ${timeAgo(done.at)}` : `Something’s wrong · sent as ${done.correction ?? 'a correction'} by ${done.by} ${timeAgo(done.at)}`)
       : '',

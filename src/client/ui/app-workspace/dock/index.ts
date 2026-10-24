@@ -116,7 +116,7 @@ export function createDock(deps: DockDeps): Dock {
     // Why the preview isn't showing the app, when it isn't (a failed build: its commit and reason).
     const off = d.appUrl ? undefined : previewOff(d.live);
     const offLine = off && off.kind !== 'checking' ? off : undefined;
-    const key = JSON.stringify([b?.label, b?.tone, b?.line, b?.unknown, d.dev?.strip, d.dev?.pause, session.map((c) => [c.id, c.state, c.revision]), offLine?.line]);
+    const key = JSON.stringify([b?.label, b?.tone, b?.line, b?.unknown, d.dev?.strip, d.dev?.pause, session.map((c) => [c.id, c.state, c.revision, c.facts.preview.status]), offLine?.line]);
     if (key === headKey) return;
     headKey = key;
     const s = sessionSummary(session);
@@ -147,7 +147,7 @@ export function createDock(deps: DockDeps): Dock {
     const cards: CardsCtx = { floor: d.floor, admin: d.admin, open: deps.open, answer: (x, a) => deps.source.answer(x, a), redraw: () => ((noteGen++), (noteAt = now()), draw(deps.source.get())) };
     const out: ChatExtra[] = [];
     for (const c of session) {
-      out.push({ id: `dc:${c.id}`, at: c.at, sig: JSON.stringify([c.state, c.words, c.detail, c.revision, c.mayCancel, c.position, c.checks?.line, c.text, c.reviews, pause, me]), draw: () => askedCard(floor, c, pause, me) });
+      out.push({ id: `dc:${c.id}`, at: c.at, sig: JSON.stringify([c.state, c.words, c.detail, c.revision, c.mayCancel, c.mayRetry, c.maySupersede, c.position, c.facts, c.late, c.depends, c.relatedView, c.text, c.reviews, pause, me]), draw: () => askedCard(floor, c, pause, me) });
       if (wantsTry(c)) out.push({ id: `try:${c.id}`, at: tryAt(c), sig: JSON.stringify([c.revision, served, c.reviews, !!mark]), draw: () => tryCard(c, { ...(served ? { served } : {}), ...(mark ? { mark } : {}), live: deps.live }) });
     }
     const list = d.decisions ?? [];
