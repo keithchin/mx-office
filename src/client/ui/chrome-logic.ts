@@ -23,8 +23,9 @@ export function newStandup(latest: string | undefined, seen: string | null | und
 }
 
 /** What waits on the Project Manager from the teams: approvals and open escalations that belong to a team. */
-export function teamAttention(v: Pick<RosterView, 'approvals' | 'escalations'> | undefined): number {
-  if (!v) return 0;
+export function teamAttention(v: (Pick<RosterView, 'approvals' | 'escalations'> & { admin?: boolean }) | undefined): number {
+  // A member isn't counted what only the Project Manager acts on (shared/needs-count.ts): no badge for them.
+  if (!v || v.admin === false) return 0;
   // An escalation that's also an approval item counts once.
   const asApproval = new Set(v.approvals.map((a) => a.escalationId).filter(Boolean));
   const approvals = v.approvals.filter((a) => a.team).length;

@@ -37,6 +37,8 @@ test("the team boards count the teams' approvals and open escalations, each once
     // a and c (approvals with a team), e2 (open, a team's, not already an approval).
     3,
   );
+  // A member isn't counted what only the Project Manager acts on.
+  assert.equal(teamAttention({ admin: false, approvals: [approval('a', { team: 'design' })], escalations: [esc('e2')] }), 0);
 });
 
 test('arrow keys walk a dropdown round, Home and End go to its ends', () => {

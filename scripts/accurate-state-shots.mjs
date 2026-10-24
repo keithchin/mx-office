@@ -1,6 +1,6 @@
 // Increment A's accurate-state items, smoke-tested on a throwaway TEST office (the performance guard's fixture,
-// fake agents, test mode, GH tokens removed and an empty GH_CONFIG_DIR, no Claude, a live-app mxcli that doesn't
-// exist so a start fails without building anything), in a real Chromium (new headless), Light, Dark and a phone:
+// fake agents, test mode, GH tokens removed and an empty GH_CONFIG_DIR, no Claude, an empty file as the live app's
+// mxcli so a start fails for real without building anything), in a real Chromium (new headless), Light, Dark, phone:
 //
 //   - the one Needs-you count: the bell, the navigation's Overview item, the Overview's Needs you card and the
 //     lead panel's banner say the same number at the same moment
@@ -75,7 +75,10 @@ async function main() {
   git(['init', '-b', 'main'], empty);
   floors.push({ id: 'empty-app', name: 'New app (no commits yet)', dir: empty, palette: floors.length, addedBy: 'the office', addedAt: Date.now() - 3_600_000 });
   fs.writeFileSync(floorsFile, JSON.stringify(floors));
-  const office = await startTestOffice({ home, env: { GH_CONFIG_DIR: ghEmpty, FAKE_RATE_MS: '800', AGENT_OFFICE_LIVE_MXCLI: path.join(root, 'no-such-mxcli.exe') } });
+  // An empty file as mxcli: the office finds it, so ▶ Start is offered, and the start fails for real (it can't run).
+  const fakeMxcli = path.join(root, 'fake-mxcli.exe');
+  fs.writeFileSync(fakeMxcli, '');
+  const office = await startTestOffice({ home, env: { GH_CONFIG_DIR: ghEmpty, FAKE_RATE_MS: '800', AGENT_OFFICE_LIVE_MXCLI: fakeMxcli } });
   log('test office up at', office.base);
   const browser = await chromium.launch({ headless: true, executablePath: findChrome(), args: ['--headless=new'] });
   try {
@@ -149,14 +152,34 @@ async function main() {
     await up.goto(`${office.base}/lite?floor=empty-app&tab=command`, { waitUntil: 'domcontentloaded' });
     await up.waitForTimeout(3000);
     await shoot(up, 'a-05-status-unknown-overview', { themes: ['portal-light'] });
+    // No commit to accept: the dialog says so, and Accept is disabled before it's pressed.
+    const pg2 = await up.$('.pg-label, .pg-accept, [data-open="acceptance"]');
+    if (pg2) {
+      await pg2.click();
+      await up.waitForSelector('.acc-modal footer .btn.primary', { timeout: 30000 }).catch(() => undefined);
+      const go2 = await up.$('.acc-modal footer .btn.primary');
+      if (go2) {
+        await go2.click();
+        await up.waitForSelector('.acc-modal .acc-gates', { timeout: 60000 }).catch(() => undefined);
+        await up.waitForTimeout(500);
+        const dis2 = await up.evaluate(() => document.querySelector('.acc-modal footer .btn.primary')?.disabled);
+        const foot2 = (await up.textContent('.acc-modal footer').catch(() => '')) ?? '';
+        check(dis2 === true && /refused until/.test(foot2), `no delivery commit: Accept disabled before pressing: ${foot2.replace(/\s+/g, ' ').slice(0, 160)}`);
+        await shoot(up, 'a-03b-accept-dialog-blocked');
+        await up.keyboard.press('Escape');
+      }
+    } else log('no progress bar on the empty project');
 
     // ---- 4. A failed live-app start in the Developer view: start it (the mxcli doesn't exist), then look.
     const dv = await newPage({ width: 1440, height: 900 });
     await dv.goto(`${office.base}/lite?floor=${encodeURIComponent(teamFloor.id)}&tab=live`, { waitUntil: 'domcontentloaded' });
     await dv.waitForTimeout(2500);
-    const start = await dv.$('button:has-text("Start")');
-    if (start) await start.click().catch(() => undefined);
-    await dv.waitForTimeout(3000);
+    const start = dv.locator('#liveapp-view button.btn.primary', { hasText: 'Start' }).first();
+    await start.waitFor({ state: 'visible', timeout: 30000 }).catch(() => undefined);
+    check(await start.isVisible().catch(() => false), 'the Live app page offers ▶ Start');
+    await start.click().catch((e) => log('start:', e.message));
+    await dv.waitForFunction(() => /failed|didn.t come up/i.test(document.querySelector('#liveapp-view')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => undefined);
+    await shoot(dv, 'a-06a-live-app-page-failed', { themes: ['portal-light'] });
     await dv.goto(`${office.base}/lite?floor=${encodeURIComponent(teamFloor.id)}&ws=dev`, { waitUntil: 'domcontentloaded' });
     await dv.waitForSelector('#lead-panel .dk-head', { timeout: 60000 });
     await dv.click('.aw-tab[data-view="live"]');
