@@ -5,7 +5,7 @@ weight: 35
 ---
 
 > [!NOTE]
-> Describes the Developer view's first useful release, part 1 (branch `feat/dev-changes`, on top of release 73 and the view switch), written 2026-10-24.
+> Describes release 74 (`c4c6a14` on `main`), where Developer changes were released. **Last checked against release 74 on 2026-10-24**; first written on the branch `feat/dev-changes` the same day.
 > **Verification scope:** the record, the queue, the state table, the strip and the check binding are covered by tests that were run (`dev-changes`, `dev-changes-dom`), with fake agents and a fake GitHub. A smoke test on a copy of a realistic project with the runtime stopped is recorded in the design notes. How often agents follow the branch convention was **not** observed: the office says *candidate not found* when they don't.
 
 A Developer change is one request made in the Developer view. The office follows it through the revisions it goes through, and says where it is in plain words. The design is in `docs/mockups/developer-view/p0-design.md` (outside the published docs); this page describes what is built.

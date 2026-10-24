@@ -5,7 +5,7 @@ weight: 50
 ---
 
 > [!NOTE]
-> Describes release 66 (commit `39d0083a`), assessed 2026-10-20, with the toolkit at the office's pinned commit and the public upstream release of 2026-10-19.
+> Describes release 74 (`c4c6a14` on `main`). **Last checked against release 74 on 2026-10-24** for starting a project from another app (release 68) and pin reproducibility; the rest was written against release 66 (`39d0083a`, 2026-10-20), with the toolkit at the office's pinned commit and the public upstream release of 2026-10-19, and the office side of it hasn't changed since.
 > **Verification scope:** the office side (clients, brain wiring, routing, context manifests, change detection, Playbooks, role skills) was read in code. A two-app demonstration on synthetic fixtures exercised the office's own modules and both toolkit versions' scripts (wiring, harvest, promotion, correction, withdrawal, non-isolation). Real agents were **not** run: how often a real session reads ROUTING.md, or applies a skill correctly, was not measured.
 
 ## Three scopes
@@ -53,6 +53,17 @@ Read these limits literally:
 - **Client grouping doesn't enforce filesystem isolation.** Agents on the machine can read any folder by path, including other clients' brains and projects and a brain's unreviewed inbox. *"Don't search other company folders"* is an instruction.
 - A change to `ROUTING.md` that keeps the same set of routed files (a reworded trigger, say) raises no card. A routed path that doesn't exist is listed as missing, but isn't a warning unless it was routed before.
 
+## Starting a project from another app
+
+Since release 68, a new project made for a client can **start from another of the client's apps** (admins: another client's app too, checked on the server). Each choice is carried out by the module that owns it; nothing is copied from the source's repository (`src/server/adopt-from/`, `src/server/wizard/adopt-step.ts`):
+
+- its design system's **exact version**, bound by the wizard's design step;
+- the **same toolkit pin** as the source, or the newest toolkit;
+- its **role skill selections**, set before the team is hired;
+- the client's **company brain**, wired as Connect a brain does.
+
+What the plan names is resolved again on the source when setup starts, not taken from the page. What was adopted, from which app and when, is recorded in `<data>/adopt-from/<project>.json` and the audit log (`floor.adopt-from`), and shown on the project's **⚙️ Settings › 🗂️ Client**, each item marked available to agents or not, and why. **Project knowledge is never copied**: decisions and lessons stay with the source; a lesson reaches other apps only through the brain's inbox. As with the brain's pointer, adopted material is *available* to agents; the office doesn't prove they read or apply it. See [Clients › Start from another app](../using-the-office/clients.md#start-from-another-app).
+
 ## Toolkit pinning vs company-brain snapshots
 
 | | Toolkit pin | Company-brain snapshot |
@@ -64,6 +75,7 @@ Read these limits literally:
 | Protection during a stage | Yes: the rules don't change under a stage | No: the change is live for the next read; a card offers Rehire or Dismiss |
 | Read-only | By convention and a detached HEAD; the office's edit check sees tracked files only | Writable by design (wiring appends `projects.tsv`; harvest writes the inbox) |
 | Rollback | Yes (an earlier commit) | No office rollback; revert in the brain by hand |
+| Reproducible on another machine | Only where the office's toolkit clone has the pinned commit: the pin is a commit of that clone, and the instruction files name its path on this machine (`src/server/toolkit-pin/instructions.ts`) | No: the manifest records hashes, not the content |
 | Compatibility | — | No link: a company skill can cite toolkit skills an older pin lacks |
 
 ## How a lesson becomes a shared skill today

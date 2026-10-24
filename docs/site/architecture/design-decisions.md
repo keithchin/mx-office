@@ -5,7 +5,7 @@ weight: 60
 ---
 
 > [!NOTE]
-> Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
+> Describes release 74 (`c4c6a14` on `main`). **Last checked against release 74 on 2026-10-24** for the current limitations below; the mechanisms table was written against release 66 (`39d0083a`, 2026-10-20), and the decisions of releases 67 to 74 (merge gate, security gate, business status, hot reload, the Developer view) are on their own pages, not yet in that table.
 > **Verification scope:** the *history* column comes from the published [Release notes](../release-notes.md) and is kept apart from current guarantees. The *mechanism* column was confirmed in code; the restart, dispatch, store-safety and desktop teardown mechanisms are also covered by tests that were run. Limitations are from code reading.
 
 History explains why something exists; it isn't a promise about what the code does now. For what the office guarantees today, see [State and sources of truth](state-and-truth.md) and [Trust and authority](trust-and-authority.md).
@@ -40,14 +40,14 @@ History explains why something exists; it isn't a promise about what the code do
 
 1. **The office blocks only its own Merge button.** Reviews are now bound to the reviewed revision and their verdict, and the PR window's Merge refuses a head without an independent approval ([merge gate](../using-the-office/review-gate.md#the-merge-gate)). An agent's own `gh pr merge` still goes around it unless the repository's branch protection requires the office's `mx-office/review` status, which a person sets up on GitHub. Reviewer identity is the office's record (the agent a comment names, the person signed in), not a GitHub account: all agents share one.
 2. **No process or filesystem isolation** between agents, projects or clients; hook tokens are readable by any agent.
-3. **The live app's running commit isn't persisted**, and a hung runtime keeps reading *running* (it isn't probed again once up).
+3. **The live app doesn't come back by itself after an office restart** (only the last served commit is kept, shown as *last ran*; **Keep warm** starts it with the office), a hung runtime keeps reading *running* (it isn't probed again once up), and a failed update has no fallback to the previous build: the runtime reuses one folder and one database, with no database backup.
 4. **Readiness** could read Ready with no journey evidence (fixed after release 66: such a milestone now reads *built, no journey evidence yet*), reads plan and journeys at main rather than the running commit, and relies on report files declaring their own revision. The toolkit's journey runner writes no commit.
-5. **Needs-you counts differ by surface**, and outcome-unknown and follow-through items are only on the Overview's card (see [Needs you](../using-the-office/needs-you.md)).
+5. **Needs-you counts differ by surface.** Since release 67 the tray, Home, Teams and phone pushes share one count (`src/shared/needs-actionable.ts`), and an answer whose delivery is unknown is in it; other surfaces (the project strip, the phone badge and Status tab) still count by their own rules, and follow-through items are only on the Overview's card (see [Needs you](../using-the-office/needs-you.md)).
 6. **Decision answers to a working agent are typed at once** (Claude Code queues them); the ready-or-busy question covers standups, quick questions and lead tells only.
 7. **Three ways of telling an agent**: your answers and tells are durable hand-offs; agent-to-agent tells go through delivery but aren't durable; the idle-lead console prompt skips delivery's checks.
-8. CI conclusions *cancelled*, *timed out*, *action required* and *startup failure* on main are read as *skipped* for verification; the PR list marks itself fresh even when a GitHub read failed; the tell limit resets on restart.
+8. **No CI from the product.** The office reads a project's CI (PR checks, the scorecard comment) but writes no workflow, so a new project has none until someone adds one ([CI pipeline](../integrations/ci-pipeline.md)), and required checks then read as missing. (Fixed in release 67: cancelled, timed-out and similar CI conclusions read as failed, a failed GitHub read is shown as such, and the tell limit survives a restart.)
 9. Several small stores replace atomically without fsync; walkthrough settings and manifests use a plain write; acceptance appends aren't fsync'd.
-10. Toolkit pins can fall well behind the public upstream, and the office's walkthrough planner doesn't read the upstream journey-ordering fields.
+10. Toolkit pins can fall well behind the public upstream, a pin can be reproduced only where the office's toolkit clone has that commit, mxcli isn't pinned at all, and the office's walkthrough planner doesn't read the upstream journey-ordering fields.
 
 ## Open questions
 
