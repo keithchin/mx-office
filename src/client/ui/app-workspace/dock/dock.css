@@ -39,3 +39,6 @@
 .dk-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 5px 0 0; }
 .dk-facts dt { color: var(--faint, var(--muted)); }
 .dk-facts dd { margin: 0; overflow-wrap: anywhere; }
+/* Docked in the Developer view the panel is a little narrower, so the canvas keeps a desktop-width Model preview at 1440 px. */
+body.lite.aw-on { --lp-w: 360px; }
+@media (min-width: 1700px) { body.lite.aw-on { --lp-w: 400px; } }

@@ -170,7 +170,7 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       const lp = (await box(page, '#lead-panel'))!;
       const main = (await box(page, '.aw-main'))!;
       const side = (await box(page, '.ax-side'))!;
-      assert.ok(lp.width >= 380 && Math.abs(lp.right - 1440) < 2, `docked right (${lp.left}–${lp.right})`);
+      assert.ok(lp.width >= 340 && Math.abs(lp.right - 1440) < 2, `docked right (${lp.left}–${lp.right})`);
       assert.ok(main.right <= lp.left + 1 && main.left >= side.right - 1, `explorer | canvas | chat (${side.right} ${main.left}–${main.right} ${lp.left})`);
       assert.match((await text(page, '#lead-panel .pmc-chat-list')) ?? '', /The visitor list is built/, 'the same conversation');
       assert.equal(await page.locator('.aw-side, [data-part="status"], .aw-tab[data-section]').count(), 0, 'no status panel, no section tabs');
@@ -188,6 +188,9 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       // A widget picked with Select element: its chip.
       await page.click('.ax-pane:not([hidden]) .pgp-pick');
       const fr = await preview(page);
+      // Desktop is drawn at the desktop breakpoint and zoomed to fit the canvas beside the chat (no stacked tablet layout).
+      const inner = await fr.evaluate(() => innerWidth);
+      assert.ok(inner >= 768, `the preview lays out at desktop width (${inner} px inside a ${Math.round((await box(page, '.ax-pane:not([hidden]) .pgp-stage'))!.width)} px stage)`);
       await fr.click('[data-mx-w="btnSave"]');
       await page.waitForFunction(() => /›/.test(document.querySelector('#lead-panel .lp-ctx-chip')?.textContent ?? ''));
       assert.match((await text(page, '#lead-panel .lp-ctx-chip')) ?? '', /Today’s visitors › Save button/);

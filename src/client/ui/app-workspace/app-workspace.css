@@ -27,7 +27,7 @@ html body.lite.aw-on .lite-main { margin: 0 var(--lp-space, 0px) 0 0 !important;
 
 /* The canvas (the explorer sits left of it, ./explorer/explorer.css; the chat is the docked panel). */
 .aw .aw-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
-.aw .aw-main { min-width: 0; padding: 16px 24px 24px; }
+.aw .aw-main { min-width: 0; padding: 12px 12px 20px; }
 .aw .aw-main > [hidden] { display: none !important; }
 .aw .aw-views { margin-left: auto; }
 .aw .aw-views .aw-tab[aria-selected='true'] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
