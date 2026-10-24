@@ -40,24 +40,55 @@ When nothing runs there is **no frame** at all, never an empty one: the canvas s
 
 ### The explorer
 
-On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words and **at the running version** (so it matches what you click through in the canvas):
+On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words. It reads the **project's repository at one revision**: by default **main's newest commit**. It never needs the app to be running, so stopping the app, a failed start or a slow restart doesn't change what you can explore.
+
+The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and where the live app is, as information only: *Live app runs 6a1f09c, 3 commits behind main*, or *Live app isn't running (last ran 6a1f09c, main's newest)*. When the live app is on another revision, the menu there lets you read that one instead.
 
 | Group | What's in it | Clicking an item |
 | --- | --- | --- |
-| **Pages** | The app's screens, by part of the app (the app's own parts first, ready-made Marketplace parts after) | A page with an address of its own opens **running in the canvas** at that address. A page that only opens from another page (it needs a record passed to it) shows a **preview with sample data** instead, with a note saying so |
-| **Data** | The kinds of records each part of the app keeps | The part's data diagram (records, their fields and how they relate), read-only, with the record picked |
-| **Logic** | What the app does when something happens, in plain names (*Visitor new edit*); the tooltip says whether it runs on the server or in the browser | Its step-by-step diagram, read-only |
-| **Documents**, **Process map**, **Design** | The project's documents from [Documents](deliverables.md); Process map and Design only when the project has them | The Documents viewer |
+| **Pages** | The app's screens by module, with the **folders of the model** inside each module. Each page shows its own **title** (*My inspections*), with its technical name (`Module.Page`) and folder in the tooltip and in the selected item's details line. Modules from the **Marketplace** are folded into one **Marketplace modules** group; a module counts as Marketplace when the model says it came from the Marketplace (its Marketplace flag, id or version), never because of its name | The page's **Model preview (from the model, not the running app)**: drawn from the model at the revision shown, with sample data. A page click never opens the live app |
+| **Data** | The kinds of records each module keeps; modules without any aren't listed | The module's data diagram, read-only, with the record picked |
+| **Logic** | What the app does when something happens, in plain names, by module and folder; the tooltip names it and says whether it runs on the server or in the browser | Its step-by-step diagram, read-only |
+| **Documents**, **Process map**, **Design** | The project's documents at the revision shown, Documents by team section, with how they relate (below); Process map and Design only when the project has them | The document's card |
 
-**Find…** filters the tree (a page in a part you haven't opened is found too). Select an item and its bar shows **Request a change**, which opens the usual [Request a change](#change-requests) with the item as its context (*About: Page: Visitor list*), and, for admins, **Change this** where the Model page offers it (pages, records, logic). Anything opened in the canvas's place has **← Back to the running app**; the running app isn't reloaded meanwhile.
+**Counts say what they count.** A group's number is the app's own content (pages, kinds of records, logic in the app's own modules); a muted **+15** next to it is what Marketplace modules add, and the tooltip says both and the total. Modules and folders without content of that kind are left out, so they never inflate a count.
 
-When the running version changes (a [hot reload](live-app.md) or a restart), the explorer reads the parts you have open again at the new version, without reloading the page, and marks what that update changed with a small dot. If the page on screen in the canvas changed, it's opened again on the new version, and only once that version answers. Nothing is polled.
+**Find…** searches the whole tree at once, folded Marketplace modules and folders you haven't opened included, by title or technical name, and documents by title or path. Select an item and its bar shows the details line, **Open in the live app** for a page with an address (only while the app runs: the one, explicit way to see a page running), **Request a change** with the item as its context (*About: Page: Visitor list*), and, for admins, **Change this** where the Model page offers it. Anything opened in the canvas's place has **← Close** (**← Back to the live app** while it runs); the live app isn't reloaded meanwhile.
+
+**When main moves.** Main's newest commit is checked when the project opens, when the live app's revision changes and when you come back to the window (nothing is polled). If it moved, the tree isn't swapped under you: a note says *Main moved to 9e1c2d3 since this was read (showing 7d3f0b1)* with **Show it**, which reads the new revision, keeps what you had open and marks what changed with a small dot.
+
+**When the model can't be read** at a revision (no Mendix project in that commit, a commit the repository doesn't have), the explorer says so specifically: *Couldn't read the model at abc1234: …*. That answer isn't kept, so the next look tries again.
+
+#### Documents and how they relate
+
+The documents come from git at the revision shown, never from the project folder on disk, and every card names that revision (*From the repository at 7d3f0b1*). Each file shows the **last commit that touched it at that revision**: date, author and commit. A file's time on disk is never used, because a checkout resets it.
+
+Every document is in one entry, and the card says how it relates to others:
+
+| Relationship | When | How it shows |
+| --- | --- | --- |
+| **Versions of the same document** | The same name in the same folder and of the same kind once a version, date or round is taken off (`brand-v1.md` and `brand-v2.md`, `gate-check-2026-10-16.md` and `-18.md`), files named only by a date (`standups/2026-10-23.md`), or a file git renamed | One entry with every version, listed by what the names say |
+| **Other representations** | The same document in two formats (`blueprint.md` and `blueprint.html`), and the storyboard frame, wireframe and prototype route of the same screen (by name and `PAGE-MAP.tsv`), the storyboard and the prototype of the whole app | Side by side, each labelled; none hides another |
+| **Supporting files** | Design tokens and stylesheets, the page map, and images and files a document links in its own text | Listed on the documents that use them, and still entries of their own |
+| **Related documents** | BRD source data and the BRD report, the knowledge base and its extraction report, a dated review report and that day's captures, documents that link each other | Links between the entries |
+| **Review rounds** | Screenshots in dated folders (`ui-reviews/shots/2026-10-18-r2/`) | One entry with every round, newest name first |
+| **No known relationship** | Anything else | Its own entry, findable like any other |
+
+**What's never inferred.** No document is called newer, older, outdated or replaced because of its date or its format. A prototype doesn't replace the wireframes, an HTML report doesn't hide its BRD source data, and design tokens stay listed.
+
+**Status** (*draft*, *approved*, *current*) is a badge that names its source, shown only where one exists:
+- the document's own front matter, Status line or status tag;
+- the toolkit's *DRAFT —* banner, or *draft* in the file name;
+- `PAGE-MAP.tsv`, which marks the wireframe a page is mapped to as current;
+- an acceptance record that cites the file.
+
+A newer date never makes a document approved.
 
 Drag the explorer's edge (or focus it and press ← →) to make it wider or narrower, and **«** hides it to a slim strip (**»** brings it back); both are remembered in your browser. On a phone it's a drawer: **☰ Browse the app** above the canvas opens it, and Esc or a tap beside it closes it. The tree works from the keyboard: ↑ ↓ move, → opens or goes in, ← closes or goes up, Enter opens, Home and End jump, and typing the start of a name moves to it.
 
 #### Show all files
 
-The **Show all files** switch (for builders and IT; remembered in your browser) swaps the business tree for the project's own files at the running version: folders and files, read-only, text and pictures shown in the canvas's place, big folders a few hundred rows at a time with **Show more**. File names are shown as they are.
+The **Show all files** switch (for builders and IT; remembered in your browser) swaps the business tree for the project's own files at the revision shown: folders and files, read-only, text and pictures shown in the canvas's place, big folders a few hundred rows at a time with **Show more**. File names are shown as they are. **Find…** then searches every file of that revision by path, not just the folders you opened.
 
 Some files are **never shown**, whatever the project contains: git's own folder (`.git`), the office's data folder (`.agent-office`), environment files (`.env`, `.env.*`), keys and certificates (`*.key`, `*.pem`, `*.pfx`, `*.p12`, …), anything named `credentials*` or `secret*`, every `config.json` (the office's own holds tokens), token files and tool settings that keep tokens (`.npmrc`, `.git-credentials`, `.claude/settings.local.json`, SSH keys), and everything the project's `.gitignore` matches. The office only reads the files from the project's history at that version, never from elsewhere on the computer, and refuses any path with `..` or an absolute path.
 

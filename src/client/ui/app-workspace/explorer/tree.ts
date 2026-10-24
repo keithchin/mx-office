@@ -34,7 +34,11 @@ export interface TreeModel {
   dots: Set<string>;
 }
 
-const matches = (n: ExplorerNode, q: string) => n.label.toLowerCase().includes(q);
+/** A row matches when every word is in its label or its details line (a page's technical name, a document's paths). */
+const matches = (n: ExplorerNode, q: string) => {
+  const hay = `${n.label} ${n.detail ?? ''} ${n.qn ?? ''}`.toLowerCase();
+  return q.split(/\s+/).every((w) => hay.includes(w));
+};
 
 /** The rows on screen, in order: open branches' children under them; with a search, only matches and their branches. */
 export function visibleRows(m: TreeModel, query: string): Row[] {
@@ -73,9 +77,9 @@ export function visibleRows(m: TreeModel, query: string): Row[] {
 
 const line = (n: ExplorerNode, depth: number, text: string): Row => ({ node: { id: `${n.id}#line`, label: text, kind: 'file' }, depth, parent: n.id, line: text });
 
-const ICON: Record<string, string> = { pages: '▭', data: '◫', logic: 'ƒ', documents: '≣', processmap: '⇢', design: '◐', module: '▪', page: '▭', entity: '◫', flow: 'ƒ', doc: '≣', folder: '▸', file: '·' };
+const ICON: Record<string, string> = { '@marketplace': '⊞', pages: '▭', data: '◫', logic: 'ƒ', documents: '≣', processmap: '⇢', design: '◐', module: '▪', page: '▭', entity: '◫', flow: 'ƒ', doc: '≣', folder: '▸', file: '·' };
 const groupOf = (n: ExplorerNode) => n.id.replace(/^docs:/, '');
-const iconOf = (n: ExplorerNode) => (n.kind === 'group' ? ICON[groupOf(n)] ?? '▪' : n.kind === 'file' && /\.(png|jpe?g|gif|svg|webp)$/i.test(n.label) ? '◩' : ICON[n.kind] ?? '·');
+const iconOf = (n: ExplorerNode) => (n.kind === 'group' ? ICON[groupOf(n)] ?? '▪' : n.id.endsWith('/@marketplace') ? ICON['@marketplace'] : n.kind === 'file' && /\.(png|jpe?g|gif|svg|webp)$/i.test(n.label) ? '◩' : ICON[n.kind] ?? '·');
 
 export interface TreeEvents {
   /** A branch was opened: fetch its rows if they aren't there. */
@@ -150,7 +154,8 @@ export class TreeView {
       h('span.ax-tw', { 'aria-hidden': 'true' }, n.folder ? (open ? '▾' : '▸') : ''),
       r.more ? '' : h('span.ax-ico', { 'aria-hidden': 'true', 'data-kind': n.kind === 'group' ? groupOf(n) : n.kind }, iconOf(n)),
       h('span.ax-label', {}, n.label),
-      n.count !== undefined && n.kind !== 'folder' ? h('span.ax-count', {}, String(n.count)) : '',
+      n.count !== undefined && !(n.kind === 'folder' && n.path) ? h('span.ax-count', {}, String(n.count)) : '',
+      n.addonCount ? h('span.ax-count.ax-count-addon', { title: `${n.addonCount} more in Marketplace modules` }, `+${n.addonCount}`) : '',
       this.m.dots.has(n.id) ? h('span.ax-dot', { title: 'Changed in the last update', 'aria-label': 'changed' }) : '',
     );
     return li;
