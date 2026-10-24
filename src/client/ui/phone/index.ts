@@ -127,6 +127,10 @@ export function installPhone(deps: PhoneDeps): Phone {
     return ownSetup.view;
   }
 
+  /** The count the badge last showed, so a snapshot that says the same paints nothing. */
+  let shownCount = '';
+  const countKey = (c: NeedsCount) => `${c.forYou}|${c.forPm}|${c.elsewhere}|${c.elsewhereProjects}`;
+
   /** The one count: the Needs-you strip's when it has one for this project (so the bell and the Overview agree at the same moment), else worked out the same way. */
   function countNow(): NeedsCount {
     const s = currentNeeds();
@@ -222,6 +226,7 @@ export function installPhone(deps: PhoneDeps): Phone {
     const m = model();
     // The one count (shared/needs-count.ts): this project's for you as the number; other projects' waiting agents only as a dot and in words.
     const c = countNow();
+    shownCount = countKey(c);
     const b = badgeOf(m.red, store.floors.reduce((n, f) => n + unreadFloor(f.id), 0) + m.agents.reduce((n, a) => n + unreadDm(a.workerId), 0) + c.elsewhere);
     frame.setBadge(b, b.kind === 'count' ? countWords(c) : b.kind === 'dot' ? (c.elsewhere ? countWords(c) : 'unread messages') : '');
     if (!frame.isOpen()) return;
@@ -412,8 +417,10 @@ export function installPhone(deps: PhoneDeps): Phone {
   // ---- Keeping up ----------------------------------------------------------------------------------------
   for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, draw);
   onNeedsFeeds(draw); // incidents, stuck items, surfaced asks, questions, the decision cards' Separate choices (ui/needsyou/input.ts)
-  // The strip worked out a new count: the badge says it at the same moment.
-  onNeeds(() => draw());
+  // The strip worked out a count the badge doesn't show yet: say it at the same moment (only then: a paint works out every channel).
+  onNeeds((s) => {
+    if (s.count && s.floor === (store.floor ?? undefined) && countKey(s.count) !== shownCount) draw();
+  });
   deps.net.onMessage(needsFeedsMessage);
   let lastFloor = store.floor;
   store.on('floor', () => {
