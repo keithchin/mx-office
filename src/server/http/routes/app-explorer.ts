@@ -10,6 +10,7 @@ import { explorerChanges, explorerIndex, explorerLevel } from '../../app-explore
 import { fileAt, folderAt, searchFiles } from '../../app-explorer/files.js';
 import { explorerHead } from '../../app-explorer/head.js';
 import { documentsAt } from '../../app-explorer/documents.js';
+import { pageFacts } from '../../app-explorer/page-facts.js';
 import { SHA_RE } from '../../../shared/app-explorer.js';
 import { send } from '../util.js';
 import { floorParam } from './files.js';
@@ -28,7 +29,8 @@ export const appExplorerRoutes = {
    * GET /api/app-explorer/tree?floor=<id>&rev=<commit>&at=<level>: one level of the business tree;
    * GET /api/app-explorer/files?floor=<id>&rev=<commit>&path=<folder>[&cursor=<n>]: one folder of the project's files, paged;
    * GET /api/app-explorer/file?floor=<id>&rev=<commit>&path=<file>: one file, read-only (text, a picture, or why not);
-   * GET /api/app-explorer/changes?floor=<id>&from=<commit>&rev=<commit>: what changed between two revisions.
+   * GET /api/app-explorer/changes?floor=<id>&from=<commit>&rev=<commit>: what changed between two revisions;
+   * GET /api/app-explorer/page-facts?floor=<id>&rev=<commit>&qn=<page>: a page's widgets ($Type, $ID), who shares its snippets, the theme's layout classes.
    */
   explorer: {
     method: 'GET',
@@ -71,6 +73,10 @@ export const appExplorerRoutes = {
         if (p === '/api/app-explorer/file') {
           const r = await fileAt(floor.dir, rev, q.get('path'));
           return 'error' in r ? send(res, r.status, { error: r.error }) : send(res, 200, r, { ...KEEP, 'x-content-type-options': 'nosniff' });
+        }
+        if (p === '/api/app-explorer/page-facts') {
+          const r = await pageFacts(ctx, floor, rev, q.get('qn') ?? '');
+          return 'error' in r ? send(res, r.status, { error: r.error }) : send(res, 200, r, keepUnless(r));
         }
         if (p === '/api/app-explorer/changes') {
           const from = q.get('from') ?? '';

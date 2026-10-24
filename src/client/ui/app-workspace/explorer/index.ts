@@ -35,6 +35,7 @@ import type { WorkspaceData } from '../data';
 import { explorerApi, type ExplorerApi } from './api';
 import { DOC_PREFIX, docGroups } from './docs';
 import { docPane, type Pane, type PaneDeps } from './pane';
+import type { ElementContext } from './element-ref';
 import { revisionLine } from './revision';
 import { TreeView, type TreeModel } from './tree';
 import './explorer.css';
@@ -68,8 +69,11 @@ export interface ExplorerDeps {
   where(): { path: string; moved: boolean } | undefined;
   /** Shows the pane (true) or the live app's canvas (false) in the canvas's place. */
   pane(on: boolean): void;
-  /** Request a change about an item ("Page: Visitor list"), with the page's path when it has one. */
-  request(about: string, page?: string): void;
+  /**
+   * Request a change about an item ("Page: Visitor list"), with the page's path when it has one, and for a page
+   * its model reference (the page, or the widget picked on its Model preview) and the revision viewed.
+   */
+  request(about: string, page?: string, at?: { element: ElementContext; rev: string; words?: string }): void;
   /** Tests: the requests, the documents viewer, Change this, the Model tab's requests. */
   api?: ExplorerApi;
   docs?(floor: string): Promise<DeliverablesView | undefined>;
@@ -134,7 +138,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   const model = () => (searching() ? found : prefs.all ? files : biz);
 
   const tree = new TreeView(model(), { expand: (n) => void expand(n), open: (n) => openNode(n), select: (n) => ((selected = n ?? undefined), drawBar()), more: (p, c) => void more(p, c), changed: () => draw() }, 'The app');
-  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), live: () => !!deps.data().appUrl, file: (p) => api.file(floor!, rev!, p), openEntry: (id) => openEntry(id), ...(deps.model ? { api: deps.model } : {}) });
+  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), live: () => !!deps.data().appUrl, file: (p) => api.file(floor!, rev!, p), openEntry: (id) => openEntry(id), ...(api.facts ? { facts: (qn: string) => (floor && rev ? api.facts!(floor, rev, qn) : Promise.resolve(undefined)) } : {}), request: (r) => askAbout(r.node, { element: r.element, rev: r.rev }), ...(deps.model ? { api: deps.model } : {}) });
   const revLine = revisionLine({ pick: (w) => pick(w), refresh: () => void toRev(head?.rev) });
 
   const search = h('input.ax-search', { type: 'search', placeholder: 'Find a page, record, logic, document…', 'aria-label': 'Find in the explorer' }) as HTMLInputElement;
@@ -419,7 +423,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     const f = floor;
     const kind = n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? '';
     const about = `${ABOUT[kind] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
-    const ask = h('button.aw-btn.ax-ask', { type: 'button', onclick: () => deps.request(about, n.type === 'page' ? n.url : undefined) }, 'Request a change');
+    const ask = h('button.aw-btn.ax-ask', { type: 'button', onclick: () => askAbout(n) }, 'Request a change');
     const d = deps.data();
     const live = n.type === 'page' && n.url
       ? h('button.aw-btn.ax-live-open', { type: 'button', disabled: !d.appUrl, title: d.appUrl ? `Opens ${n.url} in the running app` : 'The app isn’t running, so it can’t be opened live. The Model preview works without it.', onclick: () => openLive(n) }, 'Open in the live app')
@@ -438,6 +442,17 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
         }, 'Change this')
       : '';
     bar.replaceChildren(h('div.ax-bar-name', { title: n.hint ?? '' }, about), n.detail && n.kind !== 'doc' ? h('div.ax-bar-detail', {}, n.detail) : '', h('div.ax-bar-acts', {}, live, ask, change));
+  }
+
+  /** Request a change about a row: a page carries its model reference (the widget picked on its preview, when that page is open) and the revision viewed. */
+  function askAbout(n: ExplorerNode, at?: { element: ElementContext; rev: string }) {
+    const kind = n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? '';
+    const about = `${ABOUT[kind] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
+    const open = pane.node?.id === n.id && !pane.el.hidden ? pane.element() : undefined;
+    const element = at?.element ?? open ?? (n.type === 'page' && n.qn ? { ref: { docType: 'page' as const, docQn: n.qn, label: n.label }, chip: n.label, where: `page ${n.qn}` } : undefined);
+    const viewed = at?.rev || rev;
+    const words = viewed && viewed === head?.rev ? `main @${viewed.slice(0, 7)}` : viewed && viewed === served ? `the live app’s revision @${viewed.slice(0, 7)}` : viewed ? `revision @${viewed.slice(0, 7)}` : undefined;
+    deps.request(about, n.type === 'page' ? n.url : undefined, element && viewed ? { element, rev: viewed, ...(words ? { words } : {}) } : undefined);
   }
 
   function say(s: string) {

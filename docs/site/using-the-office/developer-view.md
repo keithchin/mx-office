@@ -53,7 +53,32 @@ The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and
 
 **Counts say what they count.** A group's number is the app's own content (pages, kinds of records, logic in the app's own modules); a muted **+15** next to it is what Marketplace modules add, and the tooltip says both and the total. Modules and folders without content of that kind are left out, so they never inflate a count.
 
-**Find…** searches the whole tree at once, folded Marketplace modules and folders you haven't opened included, by title or technical name, and documents by title or path. Select an item and its bar shows the details line, **Open in the live app** for a page with an address (only while the app runs: the one, explicit way to see a page running), **Request a change** with the item as its context (*About: Page: Visitor list*), and, for admins, **Change this** where the Model page offers it. Anything opened in the canvas's place has **← Close** (**← Back to the live app** while it runs); the live app isn't reloaded meanwhile.
+**Find…** searches the whole tree at once, folded Marketplace modules and folders you haven't opened included, by title or technical name, and documents by title or path. Select an item and its bar shows the details line, **Open in the live app** for a page with an address (only while the app runs: the one, explicit way to see a page running), **Request a change** with the item as its context (for a page: the page in the model, or the widget picked on its preview, and the revision shown; see [Select element](#select-element)), and, for admins, **Change this** where the Model page offers it. Anything opened in the canvas's place has **← Close** (**← Back to the live app** while it runs); the live app isn't reloaded meanwhile.
+
+#### The Model preview
+
+A page opens as its **Model preview**: the page drawn from the model at the revision the explorer reads, inside its layout, with its snippets, in a sandboxed frame. It needs neither the app nor the network, and it says plainly that it isn't the running app.
+
+What it shows, and how it stays honest:
+
+- **Sample data, clearly synthetic.** Values come from the attributes' names (*Jane Doe*, *24 Oct 2026*, *NLD-26-0042*); the bar says *sample data*.
+- **Lists are bounded.** A list's template is drawn once per sample row: 3 rows at the top level, 2 inside another list, 1 deeper, and the rest is said (*… 2 more rows (sample)*). A page has a widget budget too: past it, what's left is one box saying how many widgets weren't drawn. A page with five levels of nested lists stays a few screens long instead of tens of thousands of pixels.
+- **Layout as the app lays it out.** The layout grid's columns, Atlas's common classes (flex rows, alignment, spacing, cards, badges) and the **project's own layout classes**, read cheaply from its theme (`themesource/<module>/web/main.scss` of the app's own modules: display, grid and flex placement, gaps, padding and borders; colours stay the preview's own), so tiles, filter bars and card grids sit side by side. A gallery uses its desktop column count.
+- **Conditions are read, never worked out.** A part with `Visible:` gets a small *Shown when Status is Draft* tag. Siblings that pick between cases of one value (a status chip per status) are drawn once, the first case, tagged *+3 other cases* with the others named in its tooltip. Empty-state blocks say *Empty state · shown when …*.
+- **Nothing disappears silently.** A widget the preview can't draw is a labelled box with its type (*Not drawn · fileuploader*, *pluggable LanguageSelector*), its contents inside when it has any. The line under the bar lists what was left out or tagged.
+- **Pop-up pages** are drawn as a dialog with their title bar over a dimmed page.
+- **No claims about the running app**: not about behaviour, access rules, data or how it responds at other widths. The **Desktop / Tablet / Phone** switch only sets the frame's width.
+
+#### Select element
+
+**⌖ Select element** on the Model preview's bar lets you point at a widget:
+
+- Hovering outlines a widget (every copy of it in the sample rows) with its plain label (*Save button*, *Filter card*, *“Today’s visitors” heading*).
+- A click selects it. The chip above the preview shows *Today’s visitors › Check in button*, with ✕ to clear it, and **Request a change to this**. Without a selection the same place offers **Request a change to this page**.
+- By keyboard: **Tab** goes from widget to widget (each once), **Enter** or **Space** selects, **Esc** leaves picking and puts the focus back on the button.
+- A widget inside a snippet belongs to the snippet: when other pages show it too, the chip's line says *This is in snippet Header, used on 5 pages: a change to it changes all of them.*
+- The selection is kept by the widget's **name** on its page or snippet (names are unique there and survive edits; the internal id doesn't). When the preview is drawn again, at another revision or with the layout arriving, the same name is selected again; if it's gone, the chip says **no longer on this page** and a request asks about the page instead.
+- Only what's drawn can be picked: the other cases of a condition and rows past the sample aren't on screen.
 
 **When main moves.** Main's newest commit is checked when the project opens, when the live app's revision changes and when you come back to the window (nothing is polled). If it moved, the tree isn't swapped under you: a note says *Main moved to 9e1c2d3 since this was read (showing 7d3f0b1)* with **Show it**, which reads the new revision, keeps what you had open and marks what changed with a small dot.
 
@@ -113,6 +138,8 @@ A part that has nothing yet says what will appear in it. Nothing in the workspac
 - the **project**;
 - the **page** of the app the canvas shows (the address it last opened; if the app moved on to another page by itself, after a click inside it, the office can't read which, and says so);
 - the **version** running there.
+
+From the explorer (the selected item's bar, or the Model preview's **Request a change to this**) the request carries **what it points at in the model** instead of the live frame: the page, or the page and the widget picked on it (its name, its type and, as a hint only, its internal id), with the chip (*Today’s visitors › Check in button*), the **revision you were viewing** (*main @7d3f0b1*) and, for a widget in a shared snippet, how many pages show it. It works with the app stopped: the dialog says *Not running: not needed, the request points at the model*. The office checks that page and widget again by name when the change starts.
 
 **Send request** makes it a **Developer change**, numbered `DC-<n>`, kept by the office at once (it survives an office restart, and sending again after a dropped connection never makes a second one). The office also notes the **source revision**: main's head when you asked. Then:
 

@@ -110,11 +110,14 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
         go: (p) => canvas.go(p),
         where: () => canvas.where(),
         pane: paneOn,
-        request: (about, page) => {
+        request: (about, page, at) => {
           const d = deps.source.get();
           const revision = d.appUrl ? d.live?.served?.sha : undefined;
-          openRequestDialog({ ...(d.project ? { project: d.project } : {}), about, ...(page ? { page } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(sentWords(r)));
+          // From the explorer: the page or widget it points at in the model, and the revision viewed (never the live frame).
+          const model = at ? { element: at.element, source: at.rev, ...(at.words ? { sourceWords: at.words } : {}) } : {};
+          openRequestDialog({ ...(d.project ? { project: d.project } : {}), about, ...(page ? { page } : {}), ...(revision ? { revision } : {}), ...model }, (a) => deps.source.request(a), (r) => toast(sentWords(r)));
         },
+
         ...deps.explorer,
       });
       xslot.replaceChildren(explorer.el);

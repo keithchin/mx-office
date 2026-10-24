@@ -16,14 +16,17 @@ import { h, openModal, timeAgo } from '../dom';
 import { REQUEST_TONE, REQUEST_MAX, type ChangeRequestView } from '../../../shared/change-requests';
 import type { DevChange, ElementRef } from '../../../shared/dev-changes';
 import { draftKey } from '../dev-changes/feed';
+import type { ElementContext } from './explorer/element-ref';
 
 export interface RequestAsk {
   text: string;
   page?: string;
   pageMoved?: boolean;
   revision?: string;
-  /** What it points at in the model, when one was picked (part 2 picks elements). */
+  /** What it points at in the model: the page, or the widget picked on its Model preview. */
   ref?: ElementRef;
+  /** The revision viewed when it was asked (the explorer's: main's newest unless another was picked). */
+  source?: string;
   /** The dialog's idempotency key. */
   key?: string;
 }
@@ -144,6 +147,11 @@ export interface RequestContext {
   page?: string;
   pageMoved?: boolean;
   revision?: string;
+  /** From the Developer view's explorer: the page or widget it points at in the model, with its chip. */
+  element?: ElementContext;
+  /** The revision viewed (a full commit id), and how to say it ("main @abc1234"). */
+  source?: string;
+  sourceWords?: string;
 }
 
 /**
@@ -157,11 +165,16 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
   const err = h('p.aw-warn', { role: 'alert', hidden: true });
   const submit = h('button.btn.primary.aw-reqsend', { type: 'submit' }, 'Send request') as HTMLButtonElement;
   const cancel = h('button.btn', { type: 'button' }, 'Cancel');
-  const about = [
+  const el = c.element;
+  type Row = [string, string | HTMLElement];
+  const about: Row[] = [
     ['Project', c.project ?? 'This project'],
-    ...(c.about ? [['About', c.about]] : []),
-    ['Page', c.page ? `${c.page}${c.pageMoved ? ' (the app moved on from there by itself; this is where it was last opened)' : ''}` : 'No page: the app isn’t showing here'],
-    ['Version', c.revision ? `running ${short(c.revision)}` : 'No version running'],
+    ...(el ? ([['About', h('span.aw-chip', {}, el.chip)], ['In the model', el.where]] as Row[]) : c.about ? ([['About', c.about]] as Row[]) : []),
+    ...(el?.gone ? ([['Note', 'The widget you picked isn’t on this page at this revision, so this asks about the page.']] as Row[]) : []),
+    ...(el?.impact ? ([['Shared', el.impact]] as Row[]) : []),
+    ...(c.source ? ([['Viewing', c.sourceWords ?? `revision ${short(c.source)}`]] as Row[]) : []),
+    ...(el && !c.page ? [] : ([['Page', c.page ? `${c.page}${c.pageMoved ? ' (the app moved on from there by itself; this is where it was last opened)' : ''}` : 'No page: the app isn’t showing here']] as Row[])),
+    ['Version', c.revision ? `running ${short(c.revision)}` : el ? 'Not running: not needed, the request points at the model' : 'No version running'],
   ];
   const form = h(
     'form.modal.aw-reqdlg',
@@ -173,7 +186,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
       h('p', {}, 'Describe what should behave differently, in your own words. It becomes a request the team lead works on; you’ll see its state in the panel and under Decisions.'),
       box,
       h('dl.aw-about', {}, ...about.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
-      h('p.aw-small', {}, 'The page and version are taken from what’s on screen, so the team sees what you saw. One change is worked on at a time: if the team is busy, paused or asleep, it waits in the queue and says why.'),
+      h('p.aw-small', {}, el ? 'The page, the widget and the revision are taken from what’s on screen, so the team sees what you saw; the widget is checked again by name when the change starts. It doesn’t need the app running. One change is worked on at a time: if the team is busy, paused or asleep, it waits in the queue and says why.' : 'The page and version are taken from what’s on screen, so the team sees what you saw. One change is worked on at a time: if the team is busy, paused or asleep, it waits in the queue and says why.'),
       err,
     ),
     h('footer', {}, h('span.grow'), cancel, submit),
@@ -191,7 +204,8 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
       return;
     }
     submit.disabled = true;
-    void send({ text: c.about ? `${text}\n\nAbout: ${c.about}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}), key }).then((r) => {
+    const aboutWords = el ? `${el.chip} (${el.where})` : c.about;
+    void send({ text: aboutWords ? `${text}\n\nAbout: ${aboutWords}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}), ...(el ? { ref: el.ref } : {}), ...(c.source ? { source: c.source } : {}), key }).then((r) => {
       submit.disabled = false;
       if (!r.ok) {
         err.hidden = false;

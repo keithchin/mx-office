@@ -91,7 +91,7 @@ test('each widget written as the running app would show it', () => {
   assert.match(html, /<li class="active"><span>First<\/span><\/li><li><span>Second<\/span><\/li>/);
   assert.match(html, /One/);
   assert.doesNotMatch(html, />Two</, 'only the first tab page shows');
-  assert.match(html, /mx-unknown">unknownwidget uw/);
+  assert.match(html, /mx-unknown"><span class="mx-unknown-tag">Not drawn<\/span> unknownwidget · uw/, 'a widget it can’t draw: a labelled box with its type');
   assert.match(html, /<thead><tr><th>Order<\/th><th>Total<\/th><th>Action<\/th><\/tr><\/thead>/, 'data grid header');
   assert.equal(html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1].match(/<tr>/g)?.length, 3, 'three sample rows');
   assert.match(html, /<td>NLD-26-0042<\/td><td>1,250.00<\/td><td><button type="button" class="btn mx-button btn-default btn-sm">Open/);
@@ -128,7 +128,7 @@ test('isolation: everything escaped, no scripts, a frame that is sandboxed and f
   assert.match(doc, /<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">/);
   assert.doesNotMatch(PREVIEW_CSS, /url\(|@import/, 'the stylesheet fetches nothing');
   const frame = ui('page-frame.ts');
-  assert.match(frame, /h\('iframe\.pgp-frame', \{ sandbox: '',/, 'the frame is sandboxed with nothing allowed');
+  assert.match(frame, /h\('iframe\.pgp-frame', \{ sandbox: pick \? 'allow-scripts' : '',/, 'the frame is sandboxed: nothing allowed, or only scripts for Select element (preview-pick.ts)');
   assert.match(frame, /setDoc\(previewDocument\(/);
   assert.match(frame, /frame\.srcdoc = html;/, 'only ever srcdoc, into a sandboxed frame (a fresh one for each new document: page-frame-dom.test.ts)');
 });
