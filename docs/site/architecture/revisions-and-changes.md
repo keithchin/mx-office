@@ -35,7 +35,7 @@ It keeps **only what nothing else knows**:
 
 | Line | What it holds |
 |---|---|
-| `create` | `DC-<n>`, the person's words, who asked and when, the client's idempotency key, the **source revision**, the app page on screen and its served revision, the page/element reference |
+| `create` | `DC-<n>`, the person's words, who asked and when, the client's idempotency key, the **source revision**, the app page on screen and its served revision, the page/element reference, **which entry point asked** (`via`: chat, dialog, validation, try) and, for a correction, **the change it corrects** (`of`) |
 | `activated` | It was handed to the lead: the C4 request (`CR-<n>`), its task and execution id, the member, the delivery (held, sent, woke), main's head then |
 | `candidate` | A head seen: sha, branch, PR, how it was seen (`branch` or `pr`), when |
 | `clarify` | What it points at is gone at main's head (with that head): not started |
@@ -44,7 +44,7 @@ It keeps **only what nothing else knows**:
 
 Everything else, the state included, is **derived each time** from the task record, the members' tasks on the roster, the PR list the project already polls, the served revision and local git ancestry. When the derived view and a source disagree, the source wins.
 
-**The element reference** is the page (or snippet, layout) qualified name plus the widget name. The widget's `$ID` is kept as a hint only: a widget re-made under the same name gets a new `$ID`. In this release the reference is stored and checked; picking an element on the wireframe comes in part 2.
+**The element reference** is the page (or snippet, layout) qualified name plus the widget name. The widget's `$ID` is kept as a hint only: a widget re-made under the same name gets a new `$ID`. It comes from the explorer: the page open in the Model preview, or the widget picked on it with Select element.
 
 ## The queue: one active change per project
 
@@ -54,10 +54,25 @@ Only Developer-view changes queue here. Project Management's work, the task queu
 - **One active change.** The next queued change starts only when the active one is **merged** (its PR merged with a merge commit), **cancelled** (its task cancelled), **set aside** (its task superseded) or **finished with no candidate** (*candidate not found*). An open candidate whose task says done keeps the change active until it merges.
 - **The context is checked again when a change starts.** The page and widget it points at are looked up at main's head in the model's units straight from git (`server/dev-changes/recheck.ts`, no mxcli, no runtime). If either is gone, the change is flagged **Needs clarification** and not started; the next one goes. When the model can't be read there, nothing is claimed.
 - **The hand-over is C4's.** `server/change-requests/` mints the task id first, then types the task through the roster's delivery. The task names the change, its source revision and element, and asks the lead to work on branch `dev/DC-n` and keep the `Task:` line.
-- **No duplicates.** The client sends one idempotency key per dialog; the same key again (a retry, a reconnect, two sends at once) gives back the change already made.
+- **No duplicates.** The client sends one idempotency key per message (the docked composer's, or the dialog's); the same key again (a retry, a reconnect, two sends at once) gives back the change already made.
 - **Cancel** works on a queued or flagged change, by whoever asked for it or an admin, and is audited (`dev-change.cancelled`).
 
 The queue moves on events only: the PR list coming back, a project worker changing (debounced, only for a project with a waiting change), a change made or cancelled, the requests being read. It never merges, rebases or pushes, and the merge gate, autonomy and policy are read, not changed.
+
+## One record for every entry point
+
+Every way to ask for a change from the Developer view goes through the same intake (`DevChanges.intake`, reached by `POST /api/change-requests` or in-process) and makes the same record, so the queue, the receipts, Approvals and the audit log see one thing:
+
+| Entry point | Code | What it carries |
+|---|---|---|
+| The docked chat's **Request a change** | `client/ui/app-workspace/dock/` through `ui/lead-panel/dock.ts` | The chip's page or widget reference, the revision viewed as source, a key per message, `via: chat` |
+| The **Request a change** dialog (no chat on the page) | `client/ui/app-workspace/requests.ts` | The same, `via: dialog` |
+| A guided check's **Something's wrong** | `server/guided-validation/` (C5's book) | The check, the version marked as source, `via: validation`; the C5 mark keeps the DC id |
+| A **Please try this** card's **Something's wrong** | the same book, scenario `change:DC-n` | The version tried as source, the tried change's reference, `of: DC-n`, `via: try` |
+
+Before, a guided check's correction was a bare C4 request that refused when no lead was at work; now it queues like any other. A **Looks right** on a try card is a mark in C5's book for exactly the served revision (refused with a 409 for any other): a scoped review, read back on the change (`reviews`), never an acceptance. The Model page's **Change this** still has its own record (it reaches flows and data, which an element reference can't name yet), admins only, checked on the server.
+
+**The chat is the lead panel's.** The Developer view lends the panel a header, cards and context chips through a small seam (`client/ui/lead-panel/dock.ts`); the conversation, its history and the lead are the panel's own, so there is no second chat. A change sent from the chat reaches the lead as its task when it's activated; while it waits, the lead gets a note after its turn (through the team's `tell`), so it knows but doesn't start early. Receipts keep four facts apart, each from its source: where the work is (the record and the task), the checks on exactly that revision (`candidateChecks`), whether the live preview contains it (git ancestry against the served revision), and the person's review of a version. A merged change never reads as accepted or as ready to try.
 
 ## The states
 
@@ -104,7 +119,7 @@ sequenceDiagram
 
 ## The revision strip
 
-The Developer view's header shows one compact line: **main @M**, the **live preview @S** (*behind main by N*, counted with `git rev-list`, or *not running*), and, while a change is active, its **candidate @C**. There is no overlap analysis yet: *behind main* only. A chip that names a revision copies it on a click.
+The docked chat's header shows one compact line: **main @M**, the **live preview @S** (*behind main by N*, counted with `git rev-list`, or *not running*), and, while a change is active, its **candidate @C**. There is no overlap analysis yet: *behind main* only. A chip that names a revision copies it on a click.
 
 ## The Model preview's boundaries
 
@@ -132,7 +147,7 @@ flowchart LR
 
 ## Not in this release
 
-Reconciliation by overlap when main moves under a candidate, editing or reordering the queue, a candidate preview on an app instance, the docked coordinator chat, the Model tab's *Change this* in the same record, and Undo. Corrections made from guided validation still go straight through C4 and are listed under *Earlier requests and corrections*.
+Reconciliation by overlap when main moves under a candidate, editing or reordering the queue, cancelling a change that's with the team (it must stop or isolate the worker first), a candidate preview on an app instance, a hold on a merged change before it reaches the running app, the Model tab's *Change this* in the same record, and Undo.
 
 ## See also
 

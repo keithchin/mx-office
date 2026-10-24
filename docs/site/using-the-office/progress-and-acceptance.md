@@ -166,7 +166,7 @@ If the delivery branch has moved past the accepted commit, or the deliverables o
 ### Who can do what
 
 - Everyone signed in can see the bar and the record.
-- Only the Project Manager (an admin) can accept or reopen, here or from the Developer view's Release section. Through [Phone access](../administration/phone-access.md), these actions ask for the password again.
+- Only the Project Manager (an admin) can accept or reopen, here. (The Developer view's *Looks right* on a change is a review of one version, not an acceptance.) Through [Phone access](../administration/phone-access.md), these actions ask for the password again.
 
 ### Where it's kept
 
