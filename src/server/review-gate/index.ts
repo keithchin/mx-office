@@ -17,6 +17,7 @@ import { flaggedPulls, markTasks, pullItem, type JudgeLook } from './judge.js';
 import { lookPushes, pushItem } from './pushes.js';
 import { lookWaivers, waiverItem } from './waivers.js';
 import { countedReviewer, gateAsks } from '../merge-gate/index.js';
+import { protectionAsks } from '../merge-gate/protection-ask.js';
 
 /** Who the floor's agents are, and who works on a branch: its team members' names and its workers'. */
 export function judgeLookOf(ctx: Ctx, floor: Floor): JudgeLook {
@@ -66,5 +67,5 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
     lookWaivers(floor.dir, now).catch(() => []),
   ]);
   const waived = waiverItem(waivers, lead);
-  return [...gateAsks(ctx, floor.id), ...prs, ...pushes.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
+  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...pushes.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
 }

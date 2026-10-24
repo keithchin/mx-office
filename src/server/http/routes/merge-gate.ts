@@ -7,7 +7,9 @@ import type { Ctx } from '../../office/context.js';
 import { audit, human } from '../../audit/index.js';
 import { reauthOf, sessionTokenOf } from '../../mobile/reauth.js';
 import { asksAgain, clearReviewed, gateFloorOf, mergeGateOf } from '../../merge-gate/index.js';
-import { short } from '../../../shared/merge-gate.js';
+import { protectionOf, short } from '../../../shared/merge-gate.js';
+import { localOnlyAt } from '../../local-only.js';
+import { defaultBranch } from '../../wizard/gate-source.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
@@ -46,6 +48,22 @@ export const mergeGateRoutes = {
       } catch (err) {
         return send(res, 502, { error: (err as Error).message });
       }
+    },
+  },
+  /** GET /api/merge-gate/protection?floor=: the default branch's protection and its verdict (Enforced / Weak / None), read only, at most every 10 minutes. */
+  protection: {
+    method: 'GET',
+    path: '/api/merge-gate/protection',
+    auth: 'session',
+    async handle(ctx, { res, url }) {
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      if (localOnlyAt(floor.dir)) return send(res, 200, { localOnly: true });
+      const branch = (await defaultBranch(floor.dir).catch(() => undefined)) ?? 'main';
+      const protection = await mergeGateOf(ctx)
+        .protection({ id: floor.id, dir: floor.dir, look: { agents: [] }, personReviews: false }, branch)
+        .catch((err: Error) => protectionOf(branch, { error: err.message }));
+      return send(res, 200, { protection });
     },
   },
   /** POST /api/merge-gate/review {floor, pr, sha, verdict: approve|changes, note?}: your review of that exact head. */

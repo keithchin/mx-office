@@ -23,3 +23,7 @@
 .mg-pw { width: 100%; min-height: 36px; font-size: 15px; }
 .mg-note { width: 100%; font: inherit; resize: vertical; }
 .mg-err { margin: 0; color: var(--bad-ink); font-weight: 700; min-height: 1em; }
+.mg-verdict { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border: 2px solid var(--line); border-radius: 8px; line-height: 1.4; background: var(--neutral-soft); }
+.mg-verdict small { color: var(--muted); font-weight: 700; }
+.mg-verdict.enforced { background: var(--good-soft); }
+.mg-verdict.weak, .mg-verdict.none { background: var(--warn-soft); }
