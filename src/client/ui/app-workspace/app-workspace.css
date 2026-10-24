@@ -35,7 +35,7 @@ html body.lite.aw-on .lite-main { margin: 0 var(--lp-space, 0px) 0 0 !important;
 .aw .aw-livedot.on { background: var(--good); border-color: var(--good); }
 .aw .aw-livebox { display: flex; flex-direction: column; gap: 14px; }
 .aw .aw-modelnote { max-width: 640px; }
-.aw .ax-back { display: none; }
+.aw .ax-pane .ax-back { display: none; }
 :is(.aw, .lp) .aw-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-bottom: 6px; }
 :is(.aw, .lp) .aw-small, .aw .aw-hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
 :is(.aw, .lp) .aw-none, .aw .aw-muted { color: var(--muted); margin: 4px 0; }

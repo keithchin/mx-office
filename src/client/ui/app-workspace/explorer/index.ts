@@ -512,6 +512,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     loadDocs();
     await loadRoots();
     if (g !== gen) return;
+    if (wantFirst) void openFirst();
     await refreshOpen(prefs.all ? files : biz, true);
     if (g !== gen) return;
     if (search.value.trim()) await runSearch();
@@ -539,9 +540,11 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
 
   /** The app's first page in the Model preview, once per revision, while nothing is open. */
   let firstFor: string | undefined;
+  let wantFirst = false;
   async function openFirst() {
     const f = floor;
     const r = rev;
+    wantFirst = !r;
     if (!f || !r || pane.node || firstFor === r) return;
     firstFor = r;
     const ix = await api.index(f, r).catch(() => undefined);

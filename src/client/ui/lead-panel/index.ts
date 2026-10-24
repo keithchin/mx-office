@@ -134,9 +134,8 @@ export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
   addEventListener(SHOW_EVENT, reshow);
   addEventListener('storage', (e) => e.key === PANEL_SHOW_KEY && reshow());
   onPanelDock(() => {
-    const was = shown;
     shown = setting || !!panelDock();
-    if (was !== shown) apply();
+    apply();
   });
 
   /** Lays the frame out for where it is now, and attaches or lets go of the terminal to match. */

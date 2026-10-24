@@ -94,7 +94,6 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   let pendingGo: string | undefined;
 
   function setView(v: CanvasView, user = false) {
-    if (view === v && !user) return;
     view = v;
     if (v === 'model' && explorer && !explorer.pane.node) explorer.openFirst();
     draw();

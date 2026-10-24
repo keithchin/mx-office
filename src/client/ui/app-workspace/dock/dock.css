@@ -11,7 +11,7 @@
 .dk-pause { margin: 2px 0 0; padding: 6px 9px; border: 1px solid var(--warn); border-radius: 4px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; }
 
 /* The person's request as their message, and its receipt under it. */
-.dk-asked { flex-direction: column; align-items: flex-end; gap: 4px; }
+.pmc-msg.dk-asked { flex-direction: column; align-items: flex-end; gap: 4px; }
 .dk-chip { display: inline-block; max-width: 100%; margin: 2px 0 4px; padding: 1px 8px; border: 1px solid var(--info-line, var(--line)); border-radius: 10px; background: var(--card); color: var(--ink-2); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dk-receipt { width: min(92%, 340px); padding: 6px 10px; border: 1px solid var(--line); border-left: 3px solid var(--faint); border-radius: 4px; background: var(--card); font-size: 12px; color: var(--ink-2); }
 .dk-receipt.busy { border-left-color: var(--accent); }
@@ -24,9 +24,9 @@
 .dk-receipt .dc-cancel { font-size: 11.5px; }
 
 /* Please try this, and decisions. */
-.dk-try, .dk-dec { margin: 8px 0; background: var(--card); align-items: stretch; }
-.dk-try { border-left: 3px solid var(--good); }
-.dk-dec { border-left: 3px solid var(--purple, var(--accent)); }
+.lp .dk-try, .lp .dk-dec { margin: 8px 0; background: var(--card); align-items: stretch; }
+.lp .dk-try { border-left: 3px solid var(--good); }
+.lp .dk-dec { border-left: 3px solid var(--purple, var(--accent)); }
 .dk-dec .aw-decisions { list-style: none; margin: 6px 0 0; padding: 0; }
 .lp .aw-decision.with-artifact { grid-template-columns: 1fr; }
 .dk-also { margin-top: 6px; }

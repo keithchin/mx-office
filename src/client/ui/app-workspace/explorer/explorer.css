@@ -1,7 +1,7 @@
 /* The App Workspace's explorer (./index.ts): a sidebar left of the canvas, resizable and collapsible, a
    drawer at a phone's width. In the color tokens, so Portal Light and Dark only change their values. */
 
-.aw .aw-body.ax-has { grid-template-columns: auto minmax(0, 1fr) 340px; }
+.aw .aw-body.ax-has { grid-template-columns: auto minmax(0, 1fr); }
 .aw .aw-xslot { min-width: 0; min-height: 0; }
 .aw .aw-xslot[hidden] { display: none; }
 
@@ -115,11 +115,6 @@
 .aw .ax-docshow .ax-text { max-height: 50vh; border: 1px solid var(--line); border-radius: 6px; white-space: pre-wrap; }
 .aw .ax-docframe { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .aw .ax-docfoot { margin: 0; }
-
-@media (max-width: 1000px) {
-  .aw .aw-body.ax-has { grid-template-columns: auto minmax(0, 1fr); }
-  .aw .aw-body.ax-has > .aw-side { grid-column: 1 / -1; }
-}
 
 /* A phone: a drawer from the left, opened by a button above the canvas. */
 @media (max-width: 760px) {
