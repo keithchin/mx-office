@@ -1,4 +1,4 @@
-// Seams for the two other places the guard applies, not wired yet (their modules belong to other work):
+// Seams for the two other places the guard applies, wired in Increment B (dev-changes/wire.ts, external.ts):
 //
 // - A Developer change's candidate (server/dev-changes/, Increment B): before a DC may settle as
 //   implemented, `checkCandidate` with the DC's base and candidate commits; a hold means the DC shows

@@ -138,11 +138,11 @@ Confirming that the work looks right is not the same as accepting that data may 
 - **Who:** office admins by default, plus accounts the office policy names (`<data>/data-impact/policy.json`, admins only, audited). Owning or running a project grants nothing. The check is on the server (`http/routes/data-impact.ts`); the page only hides the button.
 - **The approval** needs the approver, a recovery step (a `pg_dump` of the live preview's database taken by the office and checked with `pg_restore --list`, with its path, size and sha256, or the approver's explicit "no data to keep") and a reason. It is bound to the environment, the starting baseline, the target and the recovery evidence; a change to any of them (a new commit, a different baseline, a dump file changed or gone) voids it, and the change is assessed again.
 - **Evidence:** every hold, dump, approval, void and release is a hash-chained audit event with all four bound values.
+- **Developer change candidates** (`feat/lifecycle-b`): `server/dev-changes/` calls `checkCandidate` (env `candidate:DC-n`) on the active change's newest candidate, and a held merge doesn't settle as implemented or free the slot until approved ([Revisions and Developer changes](revisions-and-changes.md#four-facts-kept-apart)). Approving it takes the same permission, bound to that environment.
+- **External commits on main** (`feat/lifecycle-b`): the push check (`review-gate/pushes.ts`, from the persisted baseline) calls `checkExternal` (env `external:<branch>`) for commits that skipped a PR; a finding is its own Needs-you card and holds nothing else.
 
 **Planned, not built:**
 
-- **Developer change candidates** (Increment B): `checkCandidate` in `data-impact/seams.ts` is the seam; `server/dev-changes/` doesn't call it yet, so a DC can still settle as implemented over a change that would be held.
-- **External commits on main**: `checkExternal` is the seam for `review-gate/pushes.ts` with the persisted push baseline; today such a commit is caught only when the live app follows main.
 - **mxcli's own warnings** are carried in the assessment (`warnings`) but the office doesn't capture the output of the agents' mxcli runs, so the list is empty.
 - **Restore**: the office takes and checks dumps but doesn't restore them; a restore loses records made after the dump and needs its own authorization.
 - **Policy by change class:** every finding kind holds; the policy can't yet exempt a class.
