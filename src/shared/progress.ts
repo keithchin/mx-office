@@ -7,7 +7,7 @@
 // server (server/progress/) both import it, and derivePhases is what the tests pin.
 
 import type { EntryMode } from './wizard.js';
-import { MANUAL_LATER_TEXT, manualInPlay, signedOff, signedOffIn } from './gate-play.js';
+import { MANUAL_LATER_TEXT, manualInPlay, signedOff, signedOffIn, waiverRow } from './gate-play.js';
 import { buildMeasures, buildSummary, buildUnderWay, type BuildEvidence } from './build-progress.js';
 import type { StageEvidence } from './stage-derive.js';
 import type { BusinessSummary } from './business-status.js';
@@ -206,7 +206,11 @@ function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined, 
 }
 
 function gateMilestone(stage: ToolkitStage, v: VerdictIn | undefined, rows: readonly { decision: string; status: string }[]): Milestone {
-  const signed = rows.find((r) => confirmed(r.status));
+  const s0 = v?.status.toUpperCase();
+  // An artifact waiver is no sign-off; and while gate-check says the gate still waits on a person, only a row that says it
+  // was signed off counts (a scope answer CONFIRMED at Stage 0 read "✋ confirmed" next to the panel's NEEDS SIGN-OFF).
+  const waiting = s0 === 'FAIL' && waitsOnPerson(v?.detail);
+  const signed = rows.find((r) => confirmed(r.status) && !waiverRow(r) && (!waiting || signedOff([{ stage: stage.id, ...r }], stage.id)));
   const label = `✋ Stage ${stage.id} sign-off`;
   if (signed) return { kind: 'gate', label, status: 'passed', at: dateIn(signed.status), detail: signed.decision };
   const s = v?.status.toUpperCase();
