@@ -13,6 +13,7 @@ import { RESTART_EXIT_CODE } from '../shared/project-run.js';
 import { dropTestCredentials } from './testcreds.js';
 import { wireDesktop } from './desktop/ipc.js';
 import { findMxcli } from './model/mxcli.js';
+import { installExitTrace } from './exit-trace.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -36,6 +37,8 @@ if (argv[0] === 'tunnel') {
   process.exit(await tunnelCommand(argv.slice(1)));
 }
 
+// A line in the log on every exit the office can see (exit-trace.ts): no silent ends.
+installExitTrace();
 const cfg = loadConfig(argv);
 // A test office drops every GitHub credential before anything can start gh or git with one (testcreds.ts).
 dropTestCredentials({ testMode: cfg.testMode, dir: cfg.dir });

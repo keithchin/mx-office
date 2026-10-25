@@ -34,6 +34,25 @@ export function freePort() {
   });
 }
 
+const norm = (s) => s.toLowerCase().replaceAll('\\', '/').replace(/\/{2,}/g, '/');
+
+/**
+ * Whether a process's command line names `root` itself or something inside it: the root as a whole path, never a
+ * sibling that merely starts with the same letters. `scratch/test-offices/real-b` matches
+ * `--home scratch\test-offices\real-b\office`, never `--home scratch\test-offices\real-build\home` (that plain
+ * substring match is what killed another test office twice during a real build test, with no log line).
+ */
+export function namesRoot(commandLine, root) {
+  const line = norm(commandLine ?? '');
+  const r = norm(path.resolve(root)).replace(/\/+$/, '');
+  if (!r) return false;
+  for (let i = line.indexOf(r); i >= 0; i = line.indexOf(r, i + 1)) {
+    const next = line[i + r.length];
+    if (next === undefined || /[/"'\s;,|]/.test(next)) return true;
+  }
+  return false;
+}
+
 /** Kills a process and everything it started. */
 export function killTree(pid) {
   if (!pid) return;
@@ -54,8 +73,7 @@ export function realAgentsUnder(root) {
   try {
     const ps = `Get-CimInstance Win32_Process -Filter "Name='claude.exe' OR Name='codex.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.ExecutablePath)|$($_.CommandLine)" }`;
     const outp = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 20000, windowsHide: true });
-    const r = path.resolve(root).toLowerCase().replaceAll('\\', '/');
-    return outp.split(/\r?\n/).filter((l) => l.trim() && l.toLowerCase().replaceAll('\\', '/').includes(r));
+    return outp.split(/\r?\n/).filter((l) => l.trim() && namesRoot(l.split('|').slice(1).join('|'), root));
   } catch {
     return [];
   }
@@ -230,11 +248,13 @@ export async function cleanupTestDir(dir, { attempts = 6, delayMs = 1000, remove
 /**
  * Kills every process whose command line names `root` (the workers' terminal host the office leaves
  * running for the next one, fake agents started in its checkouts), and everything they started. For a
- * test office's folder only. Returns how many it killed.
+ * test office's folder only, and only that folder: `namesRoot` matches the root as a whole path, never a
+ * sibling office whose name starts the same (`real-b` never takes `real-build` with it), and the shared
+ * test-offices parent itself is refused. Returns how many it killed.
  */
 export function killProcessesUnder(root) {
   assertTestDir(root);
-  const r = path.resolve(root).toLowerCase().replaceAll('\\', '/');
+  if (/^test-offices?$/i.test(path.basename(path.resolve(root)))) throw new Error(`refused: ${root} is the folder every test office shares; name the one office to clean up`);
   let lines = [];
   try {
     if (process.platform === 'win32') {
@@ -249,7 +269,7 @@ export function killProcessesUnder(root) {
   let n = 0;
   for (const l of lines) {
     const [pid, ...rest] = l.split('|');
-    if (!pid || Number(pid) === process.pid || !rest.join('|').toLowerCase().replaceAll('\\', '/').includes(r)) continue;
+    if (!pid || Number(pid) === process.pid || !namesRoot(rest.join('|'), root)) continue;
     killTree(Number(pid));
     n++;
   }
