@@ -21,10 +21,47 @@ import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import type { SwitchesView } from '../../../shared/testing/switches.js';
 import { floorParam } from './files.js';
+import { audit, human } from '../../audit/index.js';
+import { fixPrereq, testPrereqs } from '../../testing/prereqs.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 export const testingRoutes = {
+  /** GET /api/testing/prereqs?floor=<id>: what the project's tests need on this machine (testing/prereqs.ts). */
+  prereqs: {
+    method: 'GET',
+    path: '/api/testing/prereqs',
+    auth: 'session',
+    async handle(ctx, { res, url, session }) {
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      return send(res, 200, { ...(await testPrereqs(floor.dir, { dataDir: ctx.cfg.dataDir })), admin: ctx.meOf(session.account?.id).admin });
+    },
+  },
+  /** POST /api/testing/prereqs {floor, what: 'test-db' | 'playwright'}: runs that prerequisite's fix. Admins only, audited. */
+  fixPrereq: {
+    method: 'POST',
+    path: '/api/testing/prereqs',
+    auth: 'session',
+    async handle(ctx, { req, res, session }) {
+      if (!fromUs(req, ctx)) return send(res, 403, { error: 'Forbidden' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only an admin can prepare the test prerequisites' });
+      let body: Record<string, unknown>;
+      try {
+        body = JSON.parse((await readBody(req, 4 * 1024)) || '{}');
+      } catch {
+        return send(res, 400, { error: 'Send JSON' });
+      }
+      const floor = ctx.floors.get(String(body.floor ?? ''));
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      const what = body.what === 'playwright' ? 'playwright' : body.what === 'test-db' ? 'test-db' : undefined;
+      if (!what) return send(res, 400, { error: 'Which prerequisite?' });
+      const err = await fixPrereq(floor.dir, what, { dataDir: ctx.cfg.dataDir });
+      audit.record({ floor: floor.id, actor: human(session.account?.name ?? 'The Project Manager', session.account?.id), action: 'testing.prereq', target: { kind: 'setting', id: what, label: what === 'test-db' ? 'Test database' : 'Playwright' }, summary: err ? `Couldn't prepare ${what}: ${err}` : `Prepared ${what === 'test-db' ? 'the test database' : 'Playwright'}`, severity: 'notice' });
+      if (err) return send(res, 409, { error: err });
+      return send(res, 200, await testPrereqs(floor.dir, { dataDir: ctx.cfg.dataDir }));
+    },
+  },
   /** GET /api/testing?floor=<id>[&part=plan|verification|quality]: the TestingView (or the test plan's text, the Verification panel, the Quality header). */
   view: {
     method: 'GET',
