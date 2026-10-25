@@ -10,7 +10,8 @@ import path from 'node:path';
 
 const { namesRoot, killProcessesUnder } = (await import('../scripts/perf/office.mjs')) as { namesRoot: (line: string, root: string) => boolean; killProcessesUnder: (root: string) => number };
 
-const PARENT = path.resolve('C:\\work\\scratch\\test-offices');
+// A path of this platform's shape (under the drive root on Windows, under / on macOS and Linux), so the sweep's own checks see a real test-offices folder.
+const PARENT = path.join(path.parse(process.cwd()).root, 'work', 'scratch', 'test-offices');
 const MINE = path.join(PARENT, 'real-b');
 const node = (home: string) => `"C:\\Program Files\\nodejs\\node.exe" C:\\work\\office\\bin\\agent-office.js --home ${home} --port 4731 --test-mode`;
 
