@@ -14,11 +14,10 @@
 // psql is found on PATH, else under Program Files\PostgreSQL\<version>\bin (AGENT_OFFICE_PSQL wins). Every
 // command runs off the event loop with a time limit; the password goes in PGPASSWORD, never on a command line.
 
-import { existsSync, readdirSync } from 'node:fs';
+import { access, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { liveAppConfig } from '../liveapp/config.js';
-import { findMpr } from '../liveapp/checkout.js';
 import { runCommand, type RunResult } from '../wizard/run.js';
 import type { TestPrereq, TestPrereqs } from '../../shared/testing/prereqs.js';
 
@@ -36,33 +35,36 @@ export interface PrereqDeps {
   playwright?: boolean;
 }
 
-/** The test database's name as `mxcli test --local` derives it: the app's (.mpr) name and "_test". */
-export function testDbName(floorDir: string): string | undefined {
-  const mpr = findMpr(floorDir);
+const there = (p: string) => access(p).then(
+  () => true,
+  () => false,
+);
+const list = (p: string) => readdir(p).catch(() => [] as string[]);
+
+/** The test database's name as `mxcli test --local` derives it: the app's (.mpr) name (at the top, else one folder down) and "_test". */
+export async function testDbName(floorDir: string): Promise<string | undefined> {
+  const isMpr = (f: string) => f.toLowerCase().endsWith('.mpr');
+  let mpr = (await list(floorDir)).find(isMpr);
+  if (!mpr) for (const d of ['app', 'src']) if ((mpr = (await list(path.join(floorDir, d))).find(isMpr))) break;
   return mpr ? `${path.basename(mpr, path.extname(mpr))}_test`.slice(0, 63) : undefined;
 }
 
 /** psql on this machine, or null. */
-export function findPsql(env: NodeJS.ProcessEnv = process.env): string | null {
+export async function findPsql(env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
   if (env.AGENT_OFFICE_PSQL) return env.AGENT_OFFICE_PSQL;
   const exe = process.platform === 'win32' ? 'psql.exe' : 'psql';
-  for (const dir of (env.PATH ?? '').split(path.delimiter)) if (dir && existsSync(path.join(dir, exe))) return path.join(dir, exe);
+  for (const dir of (env.PATH ?? '').split(path.delimiter)) if (dir && (await there(path.join(dir, exe)))) return path.join(dir, exe);
   if (process.platform === 'win32') {
     const root = path.join(env.ProgramFiles || 'C:\\Program Files', 'PostgreSQL');
-    const versions = existsSync(root) ? readdirSync(root).sort((a, b) => Number(b) - Number(a)) : [];
-    for (const v of versions) if (existsSync(path.join(root, v, 'bin', exe))) return path.join(root, v, 'bin', exe);
+    for (const v of (await list(root)).sort((a, b) => Number(b) - Number(a))) if (await there(path.join(root, v, 'bin', exe))) return path.join(root, v, 'bin', exe);
   }
   return null;
 }
 
 /** Whether Playwright's Chromium is installed for this user (PLAYWRIGHT_BROWSERS_PATH, else its default cache). */
-export function playwrightInstalled(env: NodeJS.ProcessEnv = process.env): boolean {
+export async function playwrightInstalled(env: NodeJS.ProcessEnv = process.env): Promise<boolean> {
   const base = env.PLAYWRIGHT_BROWSERS_PATH || (process.platform === 'win32' ? path.join(env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'ms-playwright') : process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright') : path.join(os.homedir(), '.cache', 'ms-playwright'));
-  try {
-    return readdirSync(base).some((d) => /^chromium/i.test(d));
-  } catch {
-    return false;
-  }
+  return (await list(base)).some((d) => /^chromium/i.test(d));
 }
 
 const loopback = (host: string) => /^(127\.\d+\.\d+\.\d+|localhost|::1)$/i.test(host);
@@ -87,8 +89,8 @@ export async function testPrereqs(floorDir: string, d: PrereqDeps): Promise<Test
   const env = d.env ?? process.env;
   const run = d.run ?? realRun;
   const cfg = liveAppConfig(d.dataDir, env);
-  const name = testDbName(floorDir);
-  const psql = d.psql === undefined ? findPsql(env) : d.psql;
+  const name = await testDbName(floorDir);
+  const psql = d.psql === undefined ? await findPsql(env) : d.psql;
   let db: TestPrereq;
   if (!name) db = { id: 'test-db', title: 'Test database', state: 'unknown', text: 'No Mendix app (.mpr) in the project yet' };
   else if (!loopback(cfg.db.host)) db = { id: 'test-db', title: 'Test database', state: 'missing', text: `The database server (${cfg.db.host}) isn't on this machine: ask its administrator for a database ${name} owned by a login role "mendix" (password "mendix"). No superuser is needed by anyone.` };
@@ -102,7 +104,7 @@ export async function testPrereqs(floorDir: string, d: PrereqDeps): Promise<Test
     else if (role && base) db = { id: 'test-db', title: 'Test database', state: 'ready', text: `${name} owned by "mendix" on ${cfg.db.host}:${cfg.db.port}: microflow tests can run` };
     else db = { id: 'test-db', title: 'Test database', state: 'missing', text: `Microflow tests (mxcli test --local) need the database ${name} and the login role "mendix"${role ? ' (the role is there)' : ''}. The office makes them with its own database user: never a superuser for an agent.`, fix: 'Prepare the test database', sql: [sql.role, sql.create] };
   }
-  const pwOk = d.playwright ?? playwrightInstalled(env);
+  const pwOk = d.playwright ?? (await playwrightInstalled(env));
   const pwr: TestPrereq = pwOk
     ? { id: 'playwright', title: 'Playwright (e2e journeys)', state: 'ready', text: 'Its Chromium is installed: e2e journeys can run' }
     : { id: 'playwright', title: 'Playwright (e2e journeys)', state: 'missing', text: "Playwright's browser isn't installed, so the team's e2e journeys can't run (they don't fail: they never start).", fix: 'Install Playwright', command: 'npx playwright install chromium' };
@@ -118,10 +120,10 @@ export async function fixPrereq(floorDir: string, what: 'test-db' | 'playwright'
     return r.code === 0 ? undefined : `Playwright's install failed: ${r.tail.slice(-2).join(' ').slice(0, 300)}`;
   }
   const cfg = liveAppConfig(d.dataDir, env);
-  const name = testDbName(floorDir);
+  const name = await testDbName(floorDir);
   if (!name) return 'There is no Mendix app (.mpr) in the project yet';
   if (!loopback(cfg.db.host)) return `The database server (${cfg.db.host}) isn't on this machine: ask its administrator for it`;
-  const psql = d.psql === undefined ? findPsql(env) : d.psql;
+  const psql = d.psql === undefined ? await findPsql(env) : d.psql;
   if (!psql) return "psql isn't on this machine (install PostgreSQL's command-line tools, or set AGENT_OFFICE_PSQL)";
   const pw = { PGPASSWORD: cfg.db.password };
   const sql = testDbSql(name);

@@ -35,7 +35,7 @@ test('the test database: made by the office with its own user, the role "mendix"
   const dir = mkdtempSync(path.join(tmpdir(), 'rb-prereqs-'));
   try {
     writeFileSync(path.join(dir, 'EquipmentLoans.mpr'), '');
-    assert.equal(testDbName(dir), 'EquipmentLoans_test');
+    assert.equal(await testDbName(dir), 'EquipmentLoans_test');
     const sql = testDbSql('EquipmentLoans_test');
     assert.match(sql.role, /CREATE ROLE mendix LOGIN PASSWORD 'mendix' NOSUPERUSER NOCREATEDB NOCREATEROLE/);
     assert.equal(sql.create, 'CREATE DATABASE "EquipmentLoans_test" OWNER mendix');
