@@ -238,7 +238,8 @@ export class Composer {
     this.turn.hidden = !mid;
     if (mid) this.turnText.textContent = `⏳ ${midTurnText(this.view.name, this.view.midTurn!)}`;
     // Docked, the mode is said before sending, every time (the real-build test's question went as a change unseen).
-    this.cbar.textContent = change ? 'Sends as a change request (DC) · it queues if the team is busy' : mid ? `${this.docked ? 'Sends as a question (Ask) · ' : ''}Enter sends after their turn · Shift+Enter for a new line` : this.docked ? 'Sends as a question (Ask): nothing is changed · Shift+Enter for a new line' : 'Enter to send · Shift+Enter for a new line · ↑ for history';
+    this.cbar.textContent = change ? 'Sends as a change request (DC)' : mid ? `${this.docked ? 'Sends as a question (Ask) · ' : ''}Enter sends after their turn · Shift+Enter for a new line` : this.docked ? 'Sends as a question (Ask)' : 'Enter to send · Shift+Enter for a new line · ↑ for history';
+    this.cbar.title = change ? 'Enter sends it as a change request (DC-n): it queues if the team is busy' : this.docked ? 'Enter sends it as a question for the lead: nothing is changed or queued. Shift+Enter for a new line' : '';
     this.cbar.dataset.sendsAs = this.docked ? (change ? 'change' : 'ask') : '';
     // The box grows with what's in it (measuring forces a layout: only when what's in it changed).
     if (this.box.value !== this.sized) {
