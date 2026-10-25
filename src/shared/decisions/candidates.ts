@@ -12,7 +12,7 @@ import { STUCK_ICON, stuckConsequence, stuckTitle, type StuckView } from '../stu
 import { askNeeds, type AsksNeed } from '../asks.js';
 import { needsWords, questionsNeedParts, type QuestionBrief, type QuestionsNeed } from '../questions.js';
 import type { NeedItem } from '../needsyou.js';
-import { isJourneyId, refsFromTitle } from './ids.js';
+import { explicitIds, isJourneyId, refsFromTitle } from './ids.js';
 import { withoutArtifactLine } from './artifact.js';
 import type { DecisionCard, DecisionKind, DecisionSource } from './types.js';
 import { escalationKind } from './words.js';
@@ -40,10 +40,28 @@ const para = (s: string) => {
 };
 
 /** An escalation's grouping keys: only what it names explicitly (refs); a record from before refs groups on nothing. */
-export function escalationKeys(e: Pick<Escalation, 'refs' | 'title'>): string[] {
+export function escalationKeys(e: Pick<Escalation, 'refs' | 'title'> & Partial<Pick<Escalation, 'group' | 'details'>>): string[] {
   // A record from before refs: read from its title with the same rule as at raise time (one id of a kind only), never written back.
   const r = e.refs ?? refsFromTitle(e.title);
-  return [r.questionKey && `q:${r.questionKey}`, r.decisionId && `id:${r.decisionId}`, r.pr && `pr:${r.pr}`, r.stageId && `stage:${r.stageId}`, r.stuckId && `stuck:${r.stuckId}`, r.journeyId && `id:${r.journeyId}`].filter((k): k is string => !!k);
+  return [r.questionKey && `q:${r.questionKey}`, r.decisionId && `id:${r.decisionId}`, r.pr && `pr:${r.pr}`, r.stageId && `stage:${r.stageId}`, r.stuckId && `stuck:${r.stuckId}`, r.journeyId && `id:${r.journeyId}`, e.group && `grp:${e.group}`, ...gateIds(e).map((id) => `id:${id}`)].filter((k): k is string => !!k);
+}
+
+/**
+ * The question ids a stage gate's escalation asks you to confirm, when it names them (real-build fix): "Stage 2 gate: BRD
+ * drafted, 11 positions to confirm" with "Q-01..Q-11" (or each listed) in its words. Those questions' own cards then fold
+ * under the gate: one card, one count, instead of the gate plus 11 cards. Only a gate's (its title says so), only ids it names.
+ */
+export function gateIds(e: Pick<Escalation, 'title'> & Partial<Pick<Escalation, 'details'>>): string[] {
+  if (!/\bgate\b/i.test(e.title)) return [];
+  const text = `${e.title}\n${e.details ?? ''}`;
+  const out = new Set<string>();
+  for (const m of text.matchAll(/\b(Q|OQ)-(\d{1,3})\s*(?:\.\.\.?|–|—|to|through)\s*(?:(?:Q|OQ)-)?(\d{1,3})\b/g)) {
+    const [from, to] = [Number(m[2]), Number(m[3])];
+    if (to < from || to - from > 50) continue;
+    for (let n = from; n <= to; n++) out.add(`${m[1]}-${String(n).padStart(m[2].length, '0')}`);
+  }
+  for (const id of explicitIds(text).ids) if (/^(Q|OQ)-\d+$/.test(id)) out.add(id);
+  return [...out];
 }
 
 /** A source's small print: filed as FYI, recorded before decision cards, and "id read from the title" when its refs were derived. */
@@ -86,7 +104,8 @@ export function escalationCandidates(r: RosterView): Candidate[] {
       source: { id: `esc:${e.id}`, type: 'escalation', label, text: e.title, target: need.target, escalation: e.id, ...(kind === 'fyi' ? { fyi: true } : {}), ...(sourceNote(e, filedAsFyi) ? { note: sourceNote(e, filedAsFyi) } : {}) },
       keys: escalationKeys(e),
       kind,
-      prio: kind === 'fyi' ? 7 : 1,
+      // A gate that names its questions, or the agent's own escalation a reply's items came with, leads its group.
+      prio: kind === 'fyi' ? 7 : gateIds(e).length || (e.group && e.from?.kind !== 'reply-ask') ? -1 : 1,
       body: {
         question: e.title,
         ...(para(withoutArtifactLine(e.details)) ? { detail: para(withoutArtifactLine(e.details)) } : {}),
