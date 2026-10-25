@@ -11,6 +11,7 @@ import { usd } from '../../shared/budget/money.js';
 import { totalOf } from './ledger.js';
 import { pauseFloorForBudget, pausedForBudget, resumeFloorFromBudget } from './pause.js';
 import { buildModules, projectShape } from './plan-source.js';
+import { LEVEL_BY_ID } from '../../shared/budget/levels.js';
 import type { BudgetService, FloorRef } from './service.js';
 
 export interface ControlDeps {
@@ -38,12 +39,20 @@ function history(b: BudgetService): HistoryRun[] {
   return b.deps.runs().map((r) => ({ types: r.types ?? [], cost: r.cost ?? 0 }));
 }
 
+/** What a plan was made from: the project's tier, entry mode and team, and whether the project said them (planOf remakes it when this moves). */
+export const shapeKeyOf = (s: ReturnType<typeof projectShape>, level?: string) => `${s.tier}|${s.entry}|${s.team ?? 'enterprise'}|${s.known ? 'known' : 'assumed'}|${level ?? 'balanced'}`;
+
 /** A fresh plan for the floor from its shape, modules and the office's history. */
 export function makePlan(b: BudgetService, floor: FloorRef): BudgetPlan {
   const f = b.file(floor);
   const shape = projectShape(floor.dir);
   const days = Object.keys(f.ledger.days).sort();
-  return generatePlan({ tier: shape.tier, entry: shape.entry, modules: buildModules(floor.dir), history: history(b), start: days[0] ?? b.today, now: b.deps.now(), ...(shape.team ? { shape: shape.team } : {}) });
+  const plan = generatePlan({ tier: shape.tier, entry: shape.entry, modules: buildModules(floor.dir), history: history(b), start: days[0] ?? b.today, now: b.deps.now(), ...(shape.team ? { shape: shape.team } : {}) });
+  // The plan's rates are Balanced's: the chosen level's cost factor scales them (Lean ×0.65, Fast ×1.6).
+  const lvl = f.settings.level && f.settings.level !== 'manual' ? LEVEL_BY_ID.get(f.settings.level) : undefined;
+  const k = lvl?.costFactor ?? 1;
+  const lines = k === 1 ? plan.lines : plan.lines.map((l) => ({ ...l, usd: r2(l.usd * k) }));
+  return { ...plan, lines, ...(k !== 1 ? { basis: `${plan.basis}, at ${lvl!.label} (×${k})` } : {}), shapeKey: shapeKeyOf(shape, f.settings.level) };
 }
 
 /**
@@ -58,6 +67,18 @@ export function planOf(b: BudgetService, floor: FloorRef): BudgetPlan {
     return f.plan;
   }
   if (!f.plan.edited) {
+    // Made before the setup recorded the project's tier, mode and team (the real-build test's plan was a standard
+    // Enterprise project's $905 against a small Solo one), or the team changed since: made again from what it is now.
+    // A plan saved before plans kept what they were made from is taken as it is (stamped, never remade on an upgrade).
+    const key = shapeKeyOf(projectShape(floor.dir), f.settings.level);
+    if (f.plan.shapeKey === undefined) {
+      f.plan.shapeKey = key;
+      b.store.changed(floor.id);
+    } else if (f.plan.shapeKey !== key) {
+      f.plan = { ...makePlan(b, floor), start: f.plan.start };
+      b.store.changed(floor.id);
+      return f.plan;
+    }
     const mods = buildModules(floor.dir);
     const now = f.plan.lines.filter((l) => l.stage === '5' && !l.label.endsWith('(assumed)')).length;
     if (mods && mods.length !== now) {
@@ -178,8 +199,8 @@ export function setSettings(b: BudgetService, floor: FloorRef, raw: unknown, by:
   next.updatedBy = by;
   next.updatedAt = b.deps.now();
   f.settings = next;
-  if (next.total !== was.total) f.alerts = afterBudgetChange(f.alerts, next.total);
   const spent = totalOf(f.ledger);
+  if (next.total !== was.total) f.alerts = afterBudgetChange(f.alerts, next.total, spent);
   if (f.pausedAt && (!next.total || spent < next.total || !next.autoPause)) {
     f.pausedAt = undefined;
     resumeFloorFromBudget(floor.id, by);
