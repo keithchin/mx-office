@@ -7,7 +7,6 @@
 
 import { CREDENTIAL_META } from '../../shared/connections.js';
 import { cleanBaseUrl, decisionPending, decisionText, failureText, isClaudeAuthMode, sourceWords, type ClaudeAuthMode, type ClaudeAuthView } from '../../shared/claude-auth.js';
-import { maskTail } from '../../shared/connections.js';
 import { audit, human, office } from '../audit/index.js';
 import { connectionsVault, updateOfficeSettings } from '../connections/store.js';
 import { notedTranscript } from '../convo/index.js';
@@ -70,18 +69,21 @@ export function noteTurnOk(at: number) {
   audit.record({ actor: ACTOR, action: 'claude-auth.cleared', target, summary: 'Claude accepts the agents’ credentials again (an agent’s turn worked)', severity: 'info' });
 }
 
-/** What the page shows (an admin sees the tails; nobody sees a value). */
+/**
+ * What the page shows. Nobody sees any part of a key (not a tail, not a prefix): names and sources only. The
+ * one-time decision is an admin's, in Settings › Connections: a member's view never has it.
+ */
 export function claudeAuthView(admin: boolean, d: SourceDeps = sourceDeps()): ClaudeAuthView {
   const s = claudeAuthState(d);
-  const saved = { key: s.key ? maskTail(s.key) : undefined, gatewayKey: s.gatewayKey ? maskTail(s.gatewayKey) : undefined, baseUrl: s.setting?.baseUrl };
+  const saved = { key: s.key ? true : undefined, gatewayKey: s.gatewayKey ? true : undefined, baseUrl: s.setting?.baseUrl };
   const words = sourceWords(s.mode, s.chosen, s.env, saved);
   return {
     mode: s.mode,
     chosen: s.chosen,
     ...words,
-    env: admin ? s.env : { ...s.env, keys: s.env.keys.map((k) => ({ name: k.name })) },
+    env: s.env,
     saved: admin ? saved : { baseUrl: saved.baseUrl },
-    ...(decisionPending(s.setting, !!s.key, s.env) ? { decision: { text: decisionText(s.env) } } : {}),
+    ...(admin && decisionPending(s.setting, !!s.key, s.env) ? { decision: { text: decisionText(s.env) } } : {}),
     ...(failure ? { failure: { at: failure.at, text: failure.text, workers: [...failure.workers.values()], incident: failure.incident } } : {}),
     admin,
   };

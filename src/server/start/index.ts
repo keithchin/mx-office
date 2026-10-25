@@ -73,7 +73,8 @@ export function floorActivity(ctx: Ctx, floor: Floor): StartActivity[] {
 
 function claudeHealth(): StartView['health']['claude'] {
   try {
-    const v = claudeAuthView(false);
+    // The office-level note (Home's health strip): the page shows 'decision' to admins only (shared/start.ts).
+    const v = claudeAuthView(true);
     return v.failure ? 'failing' : v.decision ? 'decision' : 'ok';
   } catch {
     return 'ok';

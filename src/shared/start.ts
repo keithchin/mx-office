@@ -171,16 +171,20 @@ export interface HealthItem {
   href?: string;
 }
 
-/** The office's health: agents running, today's spend, the agents' Claude credentials, an update ready. */
-export function healthItems(h: { working: number; today?: number; dailyBudget?: number; claude?: StartView['health']['claude']; update?: StartView['health']['update'] }, usd: (n: number) => string): HealthItem[] {
+/**
+ * The office's health: agents running, today's spend, the agents' Claude credentials, an update ready. The
+ * Claude access choice is an office admin's: one note here for admins (to Settings › Connections), nothing for
+ * a member.
+ */
+export function healthItems(h: { working: number; today?: number; dailyBudget?: number; claude?: StartView['health']['claude']; update?: StartView['health']['update']; admin?: boolean }, usd: (n: number) => string): HealthItem[] {
   const out: HealthItem[] = [{ id: 'agents', text: `${h.working} agent${h.working === 1 ? '' : 's'} working`, ok: true }];
   if (h.today !== undefined) {
     const over = h.dailyBudget !== undefined && h.today >= h.dailyBudget;
     out.push({ id: 'spend', text: `${usd(h.today)} spent today${h.dailyBudget !== undefined ? ` of ${usd(h.dailyBudget)}` : ''}`, ok: !over });
   }
   if (h.claude === 'failing') out.push({ id: 'claude', text: 'Claude is rejecting the agents’ credentials', ok: false, href: settingsHref('connections') });
-  else if (h.claude === 'decision') out.push({ id: 'claude', text: 'Claude credentials: a choice is waiting', ok: false, href: settingsHref('connections') });
-  else if (h.claude === 'ok') out.push({ id: 'claude', text: 'Credentials OK', ok: true });
+  else if (h.claude === 'decision' && h.admin) out.push({ id: 'claude', text: 'Agents use the Claude access this office was started with: confirm it in Settings › Connections', ok: false, href: settingsHref('connections') });
+  else if (h.claude === 'ok' || h.claude === 'decision') out.push({ id: 'claude', text: 'Credentials OK', ok: true });
   if (h.update) out.push({ id: 'update', text: `Update ready${h.update.release ? `: release ${h.update.release}` : ` (${h.update.sha})`}`, ok: false });
   return out;
 }
