@@ -2,7 +2,9 @@
 // already polls (a PR from dev/DC-n, or one whose title or description carries the change's Task: line) and the
 // branch's head as fetched into the project folder (origin/dev/DC-n, else the local branch a member's worktree
 // made). No polling of its own: asked when the PR list comes back and when the requests are read. A head seen
-// once is appended to the change's record and never moved; a newer head is a new candidate.
+// once is appended to the change's record and never moved; a newer head is a new candidate. A head that is still
+// the revision the change started from (main's head when it was handed over, or the revision it was asked on) is
+// a fresh branch with nothing of its own: no candidate (else it would read as merged at once, being on main).
 
 import { changeBranch, type Candidate, type DevChange } from '../../shared/dev-changes.js';
 import { taskIdsIn } from '../../shared/tasks.js';
@@ -43,6 +45,8 @@ export function newCandidates(c: DevChange, pulls: readonly ChangePull[], branch
   if (!c.activated) return [];
   const branch = changeBranch(c.id);
   const seen = new Set(c.candidates.map((x) => x.sha));
+  // Where it started: a branch still there has nothing of its own yet.
+  for (const s of [c.activated.main, c.source.sha]) if (s) seen.add(s.toLowerCase());
   const out: Candidate[] = [];
   const add = (x: Candidate) => {
     if (!/^[0-9a-f]{40}$/i.test(x.sha) || seen.has(x.sha)) return;
