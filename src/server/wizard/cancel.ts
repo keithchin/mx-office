@@ -18,7 +18,7 @@ import { existsSync } from 'node:fs';
 import { readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { normalizeRepo } from '../../shared/floors.js';
-import { CANCEL_STEPS, cancelConfirmed, cleanCancelRequest, madeBySetup, type CancelJobView, type CancelPlan, type CancelStepId } from '../../shared/setup-cancel.js';
+import { CANCEL_STEPS, cancelConfirmed, cleanCancelRequest, localBareMade, madeBySetup, type CancelJobView, type CancelPlan, type CancelStepId } from '../../shared/setup-cancel.js';
 import { SETUP_STEPS, type StepId, type StepStatus } from '../../shared/wizard.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import type { DeleteJobView, DeletePlan } from '../../shared/project-delete.js';
@@ -255,6 +255,7 @@ export class SetupCancels {
     }
     const did = s.steps.filter((x) => x.status === 'done' || x.status === 'skipped').map((x) => `${SETUP_STEPS.find((d) => d.id === x.id)?.label ?? x.id}${x.detail ? `: ${x.detail}` : ''}${x.status === 'skipped' ? ' (nothing to do)' : ''}`);
     const blocked = this.blocked(s);
+    const bare = localBareMade(s.steps);
     return {
       id: s.id,
       repo: s.repo,
@@ -272,6 +273,7 @@ export class SetupCancels {
         ...(folderAuth && !folderAuth.ok ? { why: folderAuth.why } : !exists ? { why: 'it isn’t there' } : {}),
       },
       repoDelete,
+      ...(bare ? { localBare: { path: bare, exists: existsSync(path.join(bare, 'HEAD')) } } : {}),
       mendix: { mpr: exists && (await hasMpr(s.dir)) },
       ...(blocked ? { blocked } : {}),
       ...(old && old.status !== 'done' ? { unfinished: view(old) } : {}),
@@ -407,6 +409,14 @@ export class SetupCancels {
       }
       case 'repo': {
         if (rec.deleteRepo && legacyVia) return { detail: `deleted ${s.repo} (with the project)` };
+        // A local-only project's own bare repository (its origin on this machine) goes with the folder, when this setup made it.
+        const bare = localBareMade(s.steps);
+        if (bare) {
+          if (!rec.deleteFolder) return { detail: `kept the local repository ${bare} (it goes only with the folder)`, skipped: true };
+          if (!existsSync(path.join(bare, 'HEAD'))) return { detail: `the local repository ${bare} was already gone` };
+          await removeTree(bare);
+          return { detail: `deleted the local repository ${bare} (nothing was on GitHub)` };
+        }
         if (!rec.deleteRepo) return { detail: madeBySetup(s.steps).offline ? 'a local repository: nothing on GitHub' : `kept ${s.repo}`, skipped: true };
         if (d.testMode() && !d.ghIsFake()) throw new Error('test mode never deletes a real GitHub repository');
         // A delete an earlier try sent whose answer was lost: settled by a look first, never sent twice on a guess.

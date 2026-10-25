@@ -86,7 +86,7 @@ export function openCancelDialog(id: string, repo: string, opts: { done?: () => 
           ? h(
               'div.pd-choices',
               {},
-              choice(folder, `Also delete the local folder ${plan.dir}`, folderNote),
+              choice(folder, `Also delete the local folder ${plan.dir}${plan.localBare?.exists ? `, and its local repository ${plan.localBare.path}` : ''}`, folderNote),
               plan.repoDelete.offline ? null : choice(repoBox, `Also delete the GitHub repository ${plan.repo}`, repoNote),
             )
           : null,

@@ -91,6 +91,9 @@ export function testModeAnswer(): TestModeView {
 /** An executable that's plainly a stand-in: it lives in a test office's folder, or says it's a fake. */
 const looksFake = (p: string) => isTestPath(p) || /fake|mock|stub/i.test(nameOf(p));
 
+/** Whether a tool the office would run (Studio Pro's mx, mxcli) is a stand-in: in a test office's folder, or named as a fake. A real one in a test office isn't. */
+export const isStandInTool = (p: string): boolean => looksFake(p) || /[\\/](fake|mock|stub)[^\\/]*[\\/]/i.test(p);
+
 /** Whether what would start is a real agent CLI: by the file it was found at, else by the command's name. A fake named "claude" in a test office's folder isn't one. */
 export function isRealAgentCli(command: string, commandPath: string | null | undefined): boolean {
   const target = commandPath || command;

@@ -24,8 +24,8 @@ import { officeSettings, toolkitDir } from '../connections/store.js';
 import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, type JobState } from './job.js';
-import { appDirTooLong, mprVersion } from './mendix-app.js';
-import { testModeOf } from '../testmode.js';
+import { appDirTooLong, holdsToPathLimit, mprVersion } from './mendix-app.js';
+import { isStandInTool, testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
@@ -217,8 +217,10 @@ export class Wizard {
     if (plan.kind === 'new' && !plan.localOnly && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
-    // A test office's Studio Pro is a stand-in whose folders are deep under scratch: only a real office is held to mx's limit.
-    if (plan.kind === 'new' && !had && !testModeOf().on) {
+    // Held to mx's path limit whenever a real Studio Pro mx will make the app: a real office, or a test office with the real
+    // tools (the real-build test hit PathTooLongException after the repository and clone were made). Only a test office's
+    // stand-in Studio Pro, whose folders are deep under scratch, is let through.
+    if (plan.kind === 'new' && !had && holdsToPathLimit(testModeOf().on, this.cfg, plan.mendix, isStandInTool)) {
       const tooLong = appDirTooLong(path.join(this.ctx.building.projectsDir, plan.owner, plan.name), plan.name);
       if (tooLong) return tooLong;
     }

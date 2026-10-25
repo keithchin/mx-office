@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { cancelConfirmed, cancelConsequences, cleanCancelRequest, madeBySetup, type CancelJobView, type CancelPlan } from '../src/shared/setup-cancel.js';
+import { cancelConfirmed, cancelConsequences, cleanCancelRequest, localBareMade, madeBySetup, type CancelJobView, type CancelPlan } from '../src/shared/setup-cancel.js';
 import { SETUP_STEPS, type ProjectPlan, type StepId } from '../src/shared/wizard.js';
 import { ProjectDeletes } from '../src/server/project-delete/index.js';
 import { forgetScopes } from '../src/server/project-delete/repo.js';
@@ -510,4 +510,42 @@ test('the server refuses on its own: a stopped cancel that asked for the folder 
   assert.match(j?.steps.find((s) => s.id === 'repo')?.detail ?? '', /kept acme\/shop: not deleted, because this setup’s log says it created the repository/);
   assert.deepEqual(deleted(w), [], 'GitHub untouched');
   assert.ok(existsSync(w.dir), 'the folder kept');
+});
+
+test('real-build fix: Cancel & undo of a local-only project lists the local bare repository the setup made and removes it with the folder', async (t) => {
+  // The project's own origin on this machine, as the repo step makes it (<projects home>/.local-git/<owner>/<name>.git).
+  let bare = '';
+  const w = world(t, {
+    provenance: (dir) => proofOf(dir, ['folder']),
+    steps: { ...CREATED, repo: { status: 'done', detail: 'local only, nothing on GitHub: a local bare repository at PLACEHOLDER' } },
+  });
+  bare = path.join(w.home, '.local-git', 'acme', 'shop.git');
+  mkdirSync(path.dirname(bare), { recursive: true });
+  git(w.root, 'init', '-q', '--bare', '-b', 'main', bare);
+  w.job.steps.repo = { status: 'done', detail: `local only, nothing on GitHub: a local bare repository at ${bare}` };
+  w.book.save(w.job);
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.equal(p.repoDelete.offline, true);
+  assert.deepEqual(p.localBare, { path: bare, exists: true });
+  const req = asTicked(p);
+  assert.equal(req.deleteFolder, true);
+  assert.ok(cancelConsequences(p, req).some((l) => l.includes(`local repository ${bare}`) && /deleted/.test(l)), 'listed among what it undoes');
+  assert.ok(cancelConsequences(p, { ...req, deleteFolder: false }).some((l) => l.includes(bare) && /kept/.test(l)));
+  const r = await w.svc.start(w.job.id, req, { name: 'Keith' });
+  assert.ok(typeof r === 'object', String(r));
+  await w.svc.settled(w.job.id);
+  const j = (await w.svc.job(w.job.id))!;
+  assert.equal(j.status, 'done', j.error);
+  assert.ok(!existsSync(bare), 'the bare remote is gone');
+  assert.ok(!existsSync(w.dir));
+  assert.match(j.steps.find((s) => s.id === 'repo')?.detail ?? '', /deleted the local repository/);
+  assert.deepEqual(deleted(w), [], 'GitHub was never asked');
+});
+
+test('real-build fix: only a bare repository this setup made under .local-git is ever the undo’s', () => {
+  const steps = (detail: string, status: 'done' | 'skipped' = 'done') => [{ id: 'repo' as StepId, status, detail }];
+  assert.equal(localBareMade(steps('local only, nothing on GitHub: a local bare repository at C:/p/.local-git/o/n.git')), 'C:/p/.local-git/o/n.git');
+  assert.equal(localBareMade(steps('already there (local only, nothing on GitHub: C:/p/.local-git/o/n.git)', 'skipped')), undefined);
+  assert.equal(localBareMade(steps('local only, nothing on GitHub: a local bare repository at C:/Users/me')), undefined);
+  assert.equal(localBareMade(steps('offline: a local bare repository at C:/x/o/n.git')), undefined);
 });
