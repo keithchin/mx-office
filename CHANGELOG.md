@@ -8,6 +8,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 Nothing waiting yet.
 
+## 2026-10-25 · release 76 (`7ae0275`)
+
+- **CI is green on macOS and Linux again.** Release 75's new test for the test-office clean-up built a Windows-style path, so on macOS and Linux it never reached the refusal it checks. The test now uses a path of each platform's own shape; the clean-up itself was already right everywhere. No change to how the office behaves.
+
 ## 2026-10-25 · release 75 (`ac941c0`)
 
 - **No Developer item in the left navigation.** The Developer view is reached only by the **Developer | Project Management** switch at the top right of every project page (the item under General, and the 🧭 button in the classic themes, are gone). Links with `&ws=dev` or `?tab=app` still open it.
