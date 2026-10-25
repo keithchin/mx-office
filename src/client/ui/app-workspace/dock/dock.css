@@ -43,3 +43,5 @@
 .dk-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 5px 0 0; }
 .dk-facts dt { color: var(--faint, var(--muted)); }
 .dk-facts dd { margin: 0; overflow-wrap: anywhere; }
+/* The mode a change went as, on its message (real-build fix). */
+.dk-mode { display: block; font-size: 11px; color: var(--faint); margin: 2px 0; }

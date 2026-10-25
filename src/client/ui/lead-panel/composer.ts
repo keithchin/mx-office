@@ -73,6 +73,8 @@ export class Composer {
   private readonly modeRow: HTMLElement;
   private readonly modeBtns: HTMLButtonElement[];
   private readonly foot: HTMLElement;
+  /** What the last message went as (docked): Ask or Request a change. */
+  private readonly sentEl: HTMLElement;
 
   constructor(private readonly deps: ComposerDeps) {
     this.chips = QUICK.map((q) =>
@@ -100,6 +102,7 @@ export class Composer {
     this.modeBtns.forEach((b) => b.addEventListener('click', () => this.setMode(b.dataset.mode as ComposerMode, true)));
     this.modeRow = h('div.lp-modes', { role: 'radiogroup', 'aria-label': 'Send as', hidden: true }, ...this.modeBtns);
     this.foot = h('p.lp-foot', { hidden: true });
+    this.sentEl = h('p.lp-sent', { hidden: true, role: 'status', 'aria-live': 'polite' });
     this.el = h(
       'footer.lp-comp',
       {},
@@ -107,10 +110,11 @@ export class Composer {
       this.hintEl,
       this.turn,
       h('div.lp-composer', {}, this.ctxRow, this.box, h('div.lp-cbar', {}, this.modeRow, this.cbar, this.sendBtn)),
+      this.sentEl,
       this.foot,
     );
     this.sendBtn.addEventListener('click', () => void this.submit('enter'));
-    this.box.addEventListener('input', () => this.typed());
+    this.box.addEventListener('input', () => ((this.sentEl.hidden = true), this.typed()));
     this.box.addEventListener('keydown', (e) => this.key(e));
   }
 
@@ -138,12 +142,16 @@ export class Composer {
     this.paint();
   }
 
-  /** The chip (undefined: none). A new chip makes Request a change the mode, unless the person picks Ask. */
+  /**
+   * The chip (undefined: none). Ask stays the mode for a page merely selected in the explorer (the real-build test turned a
+   * process question into DC-1 that way); an element picked with Select element makes Request a change the mode, unless the
+   * person picks Ask. "Request a change to this" picks it explicitly (focusWith).
+   */
   setChip(c: ContextChip | undefined, explicit = false) {
     if (!this.docked) return;
     if (c?.key === this.chip?.key && !explicit) return;
     this.chip = c;
-    if (c) ((this.mode = 'change'), (this.picked = false));
+    if (c?.kind === 'widget') ((this.mode = 'change'), (this.picked = false));
     else if (!this.picked) this.mode = this.view.canPrompt ? 'ask' : 'change';
     this.drawCtx();
     this.paint();
@@ -214,9 +222,9 @@ export class Composer {
     this.hintEl.hidden = !v.hint;
     this.hintEl.classList.toggle('bad', !!v.bad);
     for (const b of this.chips) b.disabled = b.dataset.q === 'standup' ? !v.team : !v.canPrompt;
-    // Docked: no chip and not picked by the person, Ask when the lead can take it; a lead that can't, Request a change.
+    // Docked: no element picked and not picked by the person, Ask when the lead can take it; a lead that can't, Request a change.
     if (this.docked && !v.canPrompt && this.mode === 'ask') this.mode = 'change';
-    else if (this.docked && v.canPrompt && !this.chip && !this.picked) this.mode = 'ask';
+    else if (this.docked && v.canPrompt && this.chip?.kind !== 'widget' && !this.picked) this.mode = 'ask';
     this.paint();
   }
 
@@ -229,7 +237,9 @@ export class Composer {
     const mid = filled && !!this.view.midTurn && this.view.canPrompt && !change;
     this.turn.hidden = !mid;
     if (mid) this.turnText.textContent = `⏳ ${midTurnText(this.view.name, this.view.midTurn!)}`;
-    this.cbar.textContent = change ? 'Enter sends it as a change · it queues if the team is busy' : mid ? 'Enter sends after their turn · Shift+Enter for a new line' : this.docked ? 'Enter to send · Shift+Enter for a new line' : 'Enter to send · Shift+Enter for a new line · ↑ for history';
+    // Docked, the mode is said before sending, every time (the real-build test's question went as a change unseen).
+    this.cbar.textContent = change ? 'Sends as a change request (DC) · it queues if the team is busy' : mid ? `${this.docked ? 'Sends as a question (Ask) · ' : ''}Enter sends after their turn · Shift+Enter for a new line` : this.docked ? 'Sends as a question (Ask): nothing is changed · Shift+Enter for a new line' : 'Enter to send · Shift+Enter for a new line · ↑ for history';
+    this.cbar.dataset.sendsAs = this.docked ? (change ? 'change' : 'ask') : '';
     // The box grows with what's in it (measuring forces a layout: only when what's in it changed).
     if (this.box.value !== this.sized) {
       this.sized = this.box.value;
@@ -248,6 +258,8 @@ export class Composer {
     const ok = change ? await this.deps.request!(text, this.chip) : await this.deps.send(`${about}${text}`, sendPlan(!!this.view.midTurn, choice));
     if (change) this.typed(false);
     if (!ok) return;
+    // The receipt says which mode it went as: a question changes nothing; a change is kept as DC-n (its card follows).
+    if (this.docked) this.receipt(change);
     this.history.add(text);
     this.recalled = undefined;
     if (this.box.value.trim() === text) this.set('');
@@ -275,6 +287,13 @@ export class Composer {
     this.set(step);
     box.setSelectionRange(step.length, step.length);
     this.deps.draft(step);
+  }
+
+  /** "Sent as a question (Ask)…" / "Sent as a change request…", under the box until the next message is typed. */
+  private receipt(change: boolean) {
+    this.sentEl.dataset.sentAs = change ? 'change' : 'ask';
+    this.sentEl.textContent = change ? `✓ Sent as a change request: kept as a DC and handed to the team (its receipt is in the conversation)` : `✓ Sent to ${this.view.name} as a question (Ask): nothing was changed or queued`;
+    this.sentEl.hidden = false;
   }
 
   /** Remembers a quick question as sent (↑ brings it back). */
