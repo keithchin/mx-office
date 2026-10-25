@@ -92,6 +92,8 @@ export interface Phase {
   spend?: PhaseSpend;
   /** What a click on it opens. */
   open: PhaseOpen;
+  /** The team's working branch has more for this stage than main (not merged): what, and the branch. */
+  onBranch?: { branch: string; text: string };
 }
 
 /** What the bar says about acceptance (server/acceptance/). */
@@ -162,6 +164,8 @@ export interface ProgressInput {
   stage?: string;
   /** What the office sees of the build (shared/build-progress.ts): a MANUAL Build with some shows in progress, never done. */
   build?: BuildEvidence;
+  /** What the team's working branch has that main hasn't (server/wizard/branch-gates.ts). */
+  teamBranch?: { branch: string; sha: string; stages: readonly { id: string; text: string }[] };
 }
 
 const SETTLED: readonly PhaseStatus[] = ['done', 'waived'];
@@ -260,6 +264,8 @@ export function derivePhases(input: ProgressInput): Phase[] {
       measures.push(`${d.present} of ${d.expected} document${d.expected === 1 ? '' : 's'} on main${extra ? ` (+${extra})` : ''}`);
     } else if (input.deliverables) measures.push('No documents expected at this stage');
     if (st.id === '2' && input.brds !== undefined) measures.push(`${input.brds} BRD${input.brds === 1 ? '' : 's'} on main (how many are planned isn't recorded)`);
+    const tb = input.teamBranch?.stages.find((x) => x.id === st.id);
+    if (tb) measures.push(`On the team's branch (not merged): ${tb.text} (${input.teamBranch!.branch} @${input.teamBranch!.sha.slice(0, 7)})`);
     const sp = input.spend?.[st.id];
     const milestones = [...(st.hand ? [gateMilestone(st, v, rows)] : []), ...decisionMilestones(rows, st.hand)];
     phases.push({
@@ -275,6 +281,7 @@ export function derivePhases(input: ProgressInput): Phase[] {
       ...(sp && (sp.first || sp.last) ? { dates: { first: sp.first, last: sp.last } } : {}),
       ...(sp ? { spend: { ...(sp.planned !== undefined ? { planned: sp.planned } : {}), actual: sp.actual, ...(sp.partial ? { partial: true } : {}) } } : {}),
       open: ['5', '6', '7'].includes(st.id) || input.setupShown === false ? 'deliverables' : 'setup',
+      ...(tb ? { onBranch: { branch: input.teamBranch!.branch, text: tb.text } } : {}),
     });
   }
   if (!stages.length) {

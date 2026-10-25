@@ -27,6 +27,7 @@ import { JobBook, jobId, newJob, type JobState } from './job.js';
 import { appDirTooLong, holdsToPathLimit, mprVersion } from './mendix-app.js';
 import { isStandInTool, testModeOf } from '../testmode.js';
 import { withFirstTask } from './first-task.js';
+import { teamBranchGates } from './branch-gates.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
@@ -335,9 +336,12 @@ export class Wizard {
     // The stage as the office derived it from its own check, how fresh that is, and what doesn't add up (stage-evidence.ts).
     const stage = stageEvidence(view, g.files['PROJECT.md'], g.check, seen);
     rememberEvidence(floor.dir, stage, view.verdicts);
+    // The gates on the team's working branch, next to main's (branch-gates.ts): not merged, never instead of main's.
+    const teamBranch = view.toolkit && info.sha ? await teamBranchGates(floor.dir, info.def, info.sha, g.files).catch(() => undefined) : undefined;
     return {
       ...view,
       ...(stage ? { stage } : {}),
+      ...(teamBranch ? { teamBranch } : {}),
       job,
       checking: g.regenerating,
       checkedAt: g.renderedAt,

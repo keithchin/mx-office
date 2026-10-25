@@ -344,8 +344,19 @@ export interface SetupView {
   localOnly?: boolean;
   /** Where the project is, as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
   stage?: StageEvidence;
+  /** What the team's working branch has that main hasn't, per stage: shown as "on the team's branch (not merged)" next to main's (server/wizard/branch-gates.ts). */
+  teamBranch?: TeamBranchGates;
   /** The team waits for its first task: the setup didn't hand the Discovery task on (server/wizard/first-task.ts). */
   firstTask?: { role: RoleId; name: string; task: 'Discovery' };
+}
+
+/** The gates on the team's working branch, ahead of main and not merged (server/wizard/branch-gates.ts). */
+export interface TeamBranchGates {
+  branch: string;
+  sha: string;
+  ahead: number;
+  /** Per stage, what the branch has that main hasn't ("every intake question answered", "confirmed: …"). */
+  stages: { id: string; text: string }[];
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

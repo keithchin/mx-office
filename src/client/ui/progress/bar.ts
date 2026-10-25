@@ -44,6 +44,8 @@ const shortDay = (d: string) => ((m) => (m ? `${Number(m[3])} ${MONTHS[Number(m[
 export function segmentDetail(ph: Phase, next = false): string {
   const gate = ph.milestones.find((m) => m.kind === 'gate');
   if (gate?.status === 'passed') return `✋ confirmed${gate.at ? ` ${shortDay(gate.at)}` : ''}`;
+  // Main still says otherwise, but the team's working branch has it: said as such, next to main's state.
+  if (ph.onBranch && ph.status !== 'done' && ph.status !== 'waived') return `on the team's branch (not merged) · main: ${STATUS_WORD[ph.status]}`;
   if (gate?.status === 'waiting') return '✋ needs your sign-off';
   if (gate?.status === 'failed') return '✋ failing';
   if (ph.signedOff) return 'signed off';
