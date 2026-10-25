@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-25 · release 77 (`4909977`)
+
 - **New projects: the path check runs whenever a real Studio Pro makes the app.** A test office with the real tools is held to Studio Pro's 77-character folder limit too, before anything is created, with a suggested shorter folder (for example `C:\mx-projects`) and *Nothing was created*. **Cancel & undo** of a local-only project lists the bare repository it made in `.local-git` and deletes it with the folder.
 - **The team starts on its own.** **Hand it to the … now** is ticked by default for a new project, and says what happens when unticked. If you untick it, Needs you shows *The team is waiting for its first task: Start Discovery*, and **Start Discovery** hands the task over.
 - **The docked chat asks by default.** In the Developer view, **Ask** is the default; **Request a change** becomes it only when you pick an element with Select element or press **Request a change to this**, not when a page is merely selected. The mode is said before you send, and after (*Sent … as a question (Ask)* / *Sent as: Request a change*).
