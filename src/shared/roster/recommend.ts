@@ -70,7 +70,12 @@ export function integrationsOf(raw: string): Integrations {
   const q5 = norm(raw);
   if (!q5) return 'unknown';
   if (/^(none|nothing|n\/?a|no(ne)?\.?|-)$|\bno integrations?\b|nothing (external|must stay)|stand-?alone|greenfield/.test(q5)) return 'none';
-  const hits = q5.match(/\b(api|rest|soap|odata|sap|salesforce|integration|interface|feed|export|import|sso|ldap|active directory|azure ad|entra|database|db|contract|url|report|scheduled|batch|job|queue|kafka|file drop|sftp|email)s?\b/g) ?? [];
+  // Only what isn't ruled out in its own sentence counts.
+  const kept = q5
+    .split(/(?<=[.;!?])\s+|\n/)
+    .filter((s) => !RULED_OUT.test(s))
+    .join(' ');
+  const hits = kept.match(/\b(api|rest|soap|odata|sap|salesforce|integration|interface|feed|export|import|sso|ldap|active directory|azure ad|entra|database|db|contract|url|report|scheduled|batch|job|queue|kafka|file drop|sftp|email)s?\b/g) ?? [];
   if (!hits.length) return 'unknown';
   // Distinct integration words, not list items: three constraints that name one integration between them are still "some".
   return new Set(hits.map((w) => w.replace(/s$/, ''))).size >= 3 ? 'many' : 'some';
@@ -85,6 +90,22 @@ export function smeOf(raw: string): Sme {
   if (/daily|weekly|same day|next day|available|on call|any ?time|\bhours?\b|\byes\b/.test(q7)) return 'available';
   return 'unknown';
 }
+
+/**
+ * The recommendation's input from the person's own words only (real-build fix): their description, what they said in the
+ * brief's chat, and any kickoff answer they typed. The drafted brief's prose varies from one draft to the next for the
+ * same description (the real-build test got Solo · Lean $60, then Startup · Balanced $140), so it never steers the team:
+ * the same words give the same recommendation. Their words stand in for Q2, Q4, Q5 and Q7 (each read for its own
+ * signals); an answer they typed for one of those wins.
+ */
+export function personIntake(prompt: string, said: readonly string[], typed: readonly IntakeAnswer[] = []): IntakeAnswer[] {
+  const words = [prompt, ...said].map((s) => s.trim()).filter(Boolean).join('\n');
+  const own = (n: number): IntakeAnswer => typed.find((a) => a.n === n && a.text.trim()) ?? { n, kind: 'answered', text: words };
+  return [own(2), own(4), own(5), own(7)];
+}
+
+/** A sentence that rules something out ("email reminders are out", "no SSO", "without an API") names no integration. */
+const RULED_OUT = /\b(no|not|without|none|out of scope|are out|is out|excluded|isn'?t needed|aren'?t needed)\b/;
 
 export function signalsOf(intake: readonly IntakeAnswer[]): Signals {
   const q2 = text(intake, 2);
