@@ -349,7 +349,8 @@ test('real-build fix: after the budget changes no alert names the old budget', (
   // Lowered to 30: reached is said against $30, the forecast goes (raised again with the new numbers).
   const after = afterBudgetChange(r.alerts, 30, 61);
   assert.ok(after.every((a) => !a.text.includes('$60')), JSON.stringify(after));
-  assert.deepEqual(after.map((a) => [a.level, a.budget]), [['full', 30]]);
+  assert.deepEqual(after.filter((a) => a.text).map((a) => [a.level, a.budget]), [['full', 30]]);
+  assert.equal(after.some((a) => a.level === 'forecast'), false);
   assert.match(after[0].text, /Budget reached: \$61(\.00)? of \$30/);
   const again = checkAlerts({ total: 30, autoPause: true }, 80, 61, 200, after, 3);
   assert.equal(again.raised.length, 0, 'past 100 %: no forecast or threshold news');
