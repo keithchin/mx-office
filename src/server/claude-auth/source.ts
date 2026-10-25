@@ -1,5 +1,5 @@
 // Where the agents' Claude Code gets its credentials (shared/claude-auth.ts has the rules): what the office's
-// environment had of the set when it started (names and tails only), the admin's choice in 🔌 Connections, and
+// environment had of the set when it started (names only), the admin's choice in 🔌 Connections, and
 // the keys saved there. withClaudeAuth puts the result into every worker's environment (connections/env.ts):
 // the office's own set only when that is the source, else none of it, with the saved key (and gateway address)
 // in its place. A test office never passes the environment's set on.
@@ -15,7 +15,7 @@ import {
   type ClaudeAuthSetting,
   type ClaudeEnvSeen,
 } from '../../shared/claude-auth.js';
-import { maskTail, type CredentialId } from '../../shared/connections.js';
+import type { CredentialId } from '../../shared/connections.js';
 import { officeSettings, storedSecret } from '../connections/store.js';
 import { claudeGatewayAllowed, tokensWithheld } from '../testcreds.js';
 
@@ -36,11 +36,11 @@ export const sourceDeps = (): SourceDeps => ({ started: STARTED_CLAUDE, setting:
 
 const on = (v: string | undefined) => !!v && v !== '0' && v.toLowerCase() !== 'false';
 
-/** What the environment has of the set: names, a key's last 4, whether the desktop app held some back. */
+/** What the environment has of the set: names only (never a character of a value), whether the desktop app held some back. */
 export function envSeen(started: Readonly<Record<string, string | undefined>>): ClaudeEnvSeen {
   const val = (k: string) => started[k]?.trim() || undefined;
   return {
-    keys: CLAUDE_KEY_VARS.filter((k) => val(k)).map((name) => ({ name, tail: maskTail(val(name)!) })),
+    keys: CLAUDE_KEY_VARS.filter((k) => val(k)).map((name) => ({ name })),
     baseUrl: !!val(CLAUDE_BASE_VAR),
     cloud: CLAUDE_CLOUD_VARS.filter((k) => on(val(k))),
     withheld: (val(CLAUDE_WITHHELD_ENV) ?? '')

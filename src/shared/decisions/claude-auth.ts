@@ -1,6 +1,8 @@
 // 🔑 Claude for agents in Needs you (server/claude-auth/): the office-wide alert when Claude rejects the
-// agents' credentials (red: nothing works until it's fixed) and the one-time decision about a key the
-// office's environment had that nobody confirmed. Office-wide, so the same on every project. Pure.
+// agents' credentials (red: nothing works until it's fixed). Office-wide, so the same on every project. Pure.
+// The one-time choice about the Claude access the office was started with is NOT here: it's an office admin's
+// setting (Settings › Connections › Claude for agents, plus one note on Home for admins), never a project's
+// Needs you, the phone, Teams or a push. No item ever carries any part of a key.
 
 import type { ClaudeAuthView } from '../claude-auth.js';
 import type { NeedItem } from '../needsyou.js';
@@ -24,16 +26,6 @@ export function claudeAuthNeeds(v: ClaudeAuthView | undefined): NeedItem[] {
       since: f.at,
       level: 'block',
       ...(v.admin ? (switched ? { action: 'Restart all agents', target: { to: 'claude-auth', act: 'restart' }, alt: help } : { action: 'Use the agents’ Claude login instead', target: { to: 'claude-auth', act: 'login' }, alt: help }) : help),
-    });
-  }
-  if (v.decision && !f) {
-    out.push({
-      key: 'claude-auth-decision',
-      kind: 'claude',
-      icon: '🔑',
-      text: v.decision.text,
-      level: 'warn',
-      ...(v.admin ? { action: 'Keep using it', target: { to: 'claude-auth', act: 'keep' }, alt: { action: 'Use the agents’ Claude login instead', target: { to: 'claude-auth', act: 'login' } } } : { action: 'How to fix', target: { to: 'claude-auth', act: 'help' } }),
     });
   }
   return out;

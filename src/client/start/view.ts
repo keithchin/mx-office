@@ -101,7 +101,7 @@ export function startView(root: HTMLElement, deps: StartDeps) {
 
   function drawHealth() {
     const working = store.floors.reduce((n, f) => n + f.busy, 0);
-    const items = healthItems({ working, today: data.budget?.today, dailyBudget: data.budget?.dailyBudget, claude: data.start?.health.claude, update: data.start?.health.update }, usd);
+    const items = healthItems({ working, today: data.budget?.today, dailyBudget: data.budget?.dailyBudget, claude: data.start?.health.claude, update: data.start?.health.update, admin: store.me.admin }, usd);
     health.replaceChildren(...healthStrip(items));
     health.classList.toggle('warn', items.some((i) => !i.ok));
   }
@@ -150,7 +150,10 @@ export function startView(root: HTMLElement, deps: StartDeps) {
     drawActions();
   });
   store.on('floors', onFloors);
-  store.on('me', () => drawActions());
+  store.on('me', () => {
+    drawActions();
+    drawHealth();
+  });
 
   /** How many wait on someone across every project: when it moves, Needs you is asked again. */
   let waitingWas = -1;

@@ -48,7 +48,7 @@ test('the source: none → their Claude login; an inherited key without a base U
   const none = envSeen({});
   assert.deepEqual(claudeAuthMode(undefined, false, none), { mode: 'login', chosen: false });
   const bare = envSeen({ ANTHROPIC_API_KEY: FAKE_KEY });
-  assert.deepEqual(bare.keys, [{ name: 'ANTHROPIC_API_KEY', tail: '••••wxyz' }], 'a name and the last 4, never the value');
+  assert.deepEqual(bare.keys, [{ name: 'ANTHROPIC_API_KEY' }], 'a name only: never the value, not even its last characters');
   assert.equal(claudeAuthMode(undefined, false, bare).mode, 'login', 'a key without its base URL may be a gateway’s: not passed by default');
   const gw = envSeen({ ANTHROPIC_API_KEY: FAKE_KEY, ANTHROPIC_BASE_URL: 'https://gw.example' });
   assert.equal(gw.baseUrl, true);
@@ -111,13 +111,16 @@ test('the view says where the credentials come from, warns about an inherited ke
   const v = claudeAuthView(true, d);
   assert.equal(v.mode, 'login');
   assert.match(v.source, /Claude login \(no key passed\)/);
-  assert.match(v.warning ?? '', /ANTHROPIC_API_KEY \(••••wxyz\) found in the office’s environment without ANTHROPIC_BASE_URL — not passed to agents; it may belong to a gateway/);
-  assert.ok(v.decision, 'the one-time decision');
-  assert.ok(!JSON.stringify(v).includes(FAKE_KEY), 'never the value');
-  assert.equal(claudeAuthView(false, d).env.keys[0].tail, undefined, 'not even the tail for a non-admin');
+  assert.match(v.warning ?? '', /ANTHROPIC_API_KEY found in the office’s environment without ANTHROPIC_BASE_URL — not passed to agents; it may belong to a gateway/);
+  assert.ok(v.decision, 'the one-time decision, for an admin');
+  assert.equal(claudeAuthView(false, d).decision, undefined, 'a member never sees the choice');
+  for (const view of [v, claudeAuthView(false, d)]) {
+    const all = JSON.stringify(view);
+    assert.ok(!all.includes(FAKE_KEY) && !all.includes('wxyz') && !all.includes(FAKE_KEY.slice(0, 8)), 'no part of the key: not the value, its tail or its prefix');
+  }
   updateOfficeSettings({ claudeAuth: { mode: 'env' } });
   const env = claudeAuthView(true, d);
-  assert.match(env.source, /ANTHROPIC_API_KEY \(••••wxyz\) without a base URL from the office’s environment \(started with it — e.g. a Windows user variable\)/);
+  assert.match(env.source, /The Claude access this office was started with: ANTHROPIC_API_KEY without a base URL from the office’s environment/);
   assert.match(env.warning ?? '', /Invalid API key/);
   assert.equal(env.decision, undefined);
   const line = sourceLogLine(claudeAuthState(d));
@@ -184,7 +187,7 @@ test('an authentication failure is one red item and one incident for the office,
     noteAuthFailure({ id: 'w2', name: 'Leslie', floor: 'other' }, T + 1000, d);
     const v = claudeAuthView(true, d);
     assert.equal(v.failure?.workers.length, 2);
-    assert.match(v.failure!.text, /Claude rejected the API key agents use \(source: ANTHROPIC_API_KEY \(••••wxyz\) from the office’s environment\)\. A key from the office’s environment was passed without a base URL; it may be a gateway key\. Agents can’t work until it’s fixed\./);
+    assert.match(v.failure!.text, /Claude rejected the API key agents use \(source: ANTHROPIC_API_KEY from the office’s environment\)\. A key from the office’s environment was passed without a base URL; it may be a gateway key\. Agents can’t work until it’s fixed\./);
     const needs = claudeAuthNeeds(v);
     assert.equal(needs.length, 1, 'one item for the office, not one per agent (and no decision beside it)');
     assert.equal(needs[0].key, CLAUDE_FAILED_KEY);

@@ -4,7 +4,7 @@
 // ANTHROPIC_BASE_URL, or a Bedrock / Vertex / Foundry flag). A key and the base URL it belongs to are one
 // set: an inherited key without a base URL is never passed by default (it may be a gateway's, and sent to
 // api.anthropic.com every agent fails with "Invalid API key"). Pure, no Node imports: the page, the server
-// and the desktop app's launcher all use it. No value ever goes in a view: names, and at most a key's last 4.
+// and the desktop app's launcher all use it. No value ever goes in a view, not even a key's last characters: names and sources only.
 
 /** The variables that carry a Claude key. */
 export const CLAUDE_KEY_VARS = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'] as const;
@@ -30,9 +30,9 @@ export interface ClaudeAuthSetting {
   by?: string;
 }
 
-/** What the office's environment has of the set, without a value: names, a key's tail, whether the desktop app held them back. */
+/** What the office's environment has of the set, without a value: names only, and whether the desktop app held them back. */
 export interface ClaudeEnvSeen {
-  keys: { name: string; tail?: string }[];
+  keys: { name: string }[];
   baseUrl: boolean;
   cloud: string[];
   /** Variables the desktop app didn't pass to the office (they're in the Windows environment, not the office's). */
@@ -54,9 +54,9 @@ export function claudeAuthMode(setting: ClaudeAuthSetting | undefined, storedKey
 export const decisionPending = (setting: ClaudeAuthSetting | undefined, storedKey: boolean, env: ClaudeEnvSeen): boolean =>
   !setting?.mode && !storedKey && (env.keys.length > 0 || env.withheld.some((n) => (CLAUDE_KEY_VARS as readonly string[]).includes(n)));
 
-/** "ANTHROPIC_API_KEY (••••ab12)": names and tails only. */
+/** "ANTHROPIC_API_KEY": variable names only, never a character of a value. */
 const keyNames = (env: ClaudeEnvSeen) => {
-  const named = env.keys.map((k) => (k.tail ? `${k.name} (${k.tail})` : k.name));
+  const named = env.keys.map((k) => k.name);
   for (const n of env.withheld) if ((CLAUDE_KEY_VARS as readonly string[]).includes(n) && !env.keys.some((k) => k.name === n)) named.push(n);
   return named.join(' and ') || 'ANTHROPIC_API_KEY';
 };
@@ -69,8 +69,9 @@ export interface ClaudeAuthView {
   source: string;
   warning?: string;
   env: ClaudeEnvSeen;
-  saved: { key?: string; gatewayKey?: string; baseUrl?: string };
-  /** The one-time decision, while it's open. */
+  /** What Connections has saved: whether there's a key (never any of it), and the gateway's address. */
+  saved: { key?: boolean; gatewayKey?: boolean; baseUrl?: string };
+  /** The one-time decision, while it's open: an admin's, shown only in Settings › Connections (and one note on Home), never on a project. */
   decision?: { text: string };
   /** Claude rejected the agents' credentials, office-wide (cleared by the next turn that works). */
   failure?: { at: number; text: string; workers: { id: string; name: string; floor?: string }[]; incident?: string };
@@ -94,14 +95,14 @@ export function sourceWords(mode: ClaudeAuthMode, chosen: boolean, env: ClaudeEn
       return { source };
     }
     case 'key':
-      return saved.key ? { source: `API key saved in Connections (${saved.key}), sent to Anthropic’s API.` } : { source: 'API key saved in Connections — but none is saved, so agents get no key.', warning: 'Save the API key below, or switch to the agents’ Claude login.' };
+      return saved.key ? { source: 'API key saved in Connections, sent to Anthropic’s API.' } : { source: 'API key saved in Connections — but none is saved, so agents get no key.', warning: 'Save the API key below, or switch to the agents’ Claude login.' };
     case 'gateway':
-      return saved.baseUrl && saved.gatewayKey ? { source: `Gateway saved in Connections: ${saved.baseUrl} with its key (${saved.gatewayKey}).` } : { source: 'Gateway saved in Connections — but its address or key is missing, so agents get neither.', warning: 'Fill in the gateway’s base URL and key below, or switch to the agents’ Claude login.' };
+      return saved.baseUrl && saved.gatewayKey ? { source: `Gateway saved in Connections: ${saved.baseUrl} with its key.` } : { source: 'Gateway saved in Connections — but its address or key is missing, so agents get neither.', warning: 'Fill in the gateway’s base URL and key below, or switch to the agents’ Claude login.' };
     case 'env': {
       if (!hasKey && env.cloud.length) return { source: `${env.cloud.join(', ')} from the office’s environment: Claude Code on that cloud provider, with its own credentials.` };
       if (!hasKey && held) return { source: `${keyNames(env)} from the office’s environment — held back by the desktop app until the office restarts.`, warning: 'Restart the office (🔁 Restart safely) so the desktop app passes it on.' };
       const base = env.baseUrl ? ` with ${CLAUDE_BASE_VAR}` : ' without a base URL';
-      const source = `${keyNames(env)}${base} from the office’s environment (started with it — e.g. a Windows user variable).`;
+      const source = `The Claude access this office was started with: ${keyNames(env)}${base} from the office’s environment (e.g. a Windows user variable).`;
       if (!env.baseUrl) return { source, warning: `The office’s environment has ${keyNames(env)} but no ${CLAUDE_BASE_VAR}: agents will send this key to Anthropic directly (api.anthropic.com). If it’s a gateway’s key, every agent fails with “Invalid API key” — choose A gateway instead and save its base URL with the key.` };
       return { source, warning: `Agents use a key the office inherited from its environment${env.baseUrl ? '' : ', sent to api.anthropic.com'}. If it’s wrong, or belongs to a gateway whose address isn’t set, every agent fails with “Invalid API key”.` };
     }
@@ -111,7 +112,7 @@ export function sourceWords(mode: ClaudeAuthMode, chosen: boolean, env: ClaudeEn
 /** The decision's words. */
 export function decisionText(env: ClaudeEnvSeen): string {
   const names = keyNames(env);
-  if (env.keys.length && env.baseUrl) return `Agents are using ${names} from the office’s environment (with ${CLAUDE_BASE_VAR}). Keep using it, or use the agents’ Claude login instead?`;
+  if (env.keys.length && env.baseUrl) return `Agents use the Claude access this office was started with (${names} with ${CLAUDE_BASE_VAR}). Keep it, or use the agents’ Claude login instead?`;
   if (env.keys.length) return `${names} is in the office’s environment without ${CLAUDE_BASE_VAR}, so it isn’t passed to agents (it may belong to a gateway). Keep using it anyway, or use the agents’ Claude login?`;
   return `${names} is in the Windows environment; the desktop app didn’t pass it to the office. Keep using it (after a restart), or use the agents’ Claude login?`;
 }

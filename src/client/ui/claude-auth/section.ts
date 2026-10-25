@@ -1,5 +1,5 @@
 // 🔑 Claude for agents, the card on 🔌 Connections: where the agents' Claude Code gets its credentials (never
-// a value: a source line and at most a key's last 4), the alert when Claude refused them, and the choice:
+// any part of a key: a source line with variable names), the alert when Claude refused them, and the choice:
 // their Claude login, an API key saved here, a gateway (its base URL with its key) or the office's environment.
 // While the office's environment is the source, a switch stops passing its key on (it isn't shown for any other
 // source: there it would only switch to the environment by mistake). 🔁 Restart all agents (after a confirm,
@@ -49,9 +49,9 @@ export function claudeAuthSection(): HTMLElement {
     const mode = picked ?? v.mode;
     const unsaved = picked !== undefined && picked !== v.mode;
     const envHas = v.env.keys.length > 0 || v.env.cloud.length > 0 || v.env.withheld.length > 0;
-    const keyIn = input({ type: 'password', placeholder: v.saved.key ? `Replace ${v.saved.key}` : 'sk-ant-api…', 'aria-label': 'Anthropic API key' });
+    const keyIn = input({ type: 'password', placeholder: v.saved.key ? 'Replace the saved key' : 'Paste an Anthropic API key', 'aria-label': 'Anthropic API key' });
     const baseIn = input({ type: 'text', placeholder: 'https://llm-gateway.example.com', value: v.saved.baseUrl ?? '', 'aria-label': 'Gateway base URL' });
-    const gwKeyIn = input({ type: 'password', placeholder: v.saved.gatewayKey ? `Replace ${v.saved.gatewayKey}` : 'The gateway’s key', 'aria-label': 'Gateway key' });
+    const gwKeyIn = input({ type: 'password', placeholder: v.saved.gatewayKey ? 'Replace the gateway’s saved key' : 'The gateway’s key', 'aria-label': 'Gateway key' });
     const radios = CHOICES.filter((c) => c.mode !== 'env' || envHas || v.mode === 'env').map((c) => {
       const r = h('input', { type: 'radio', name: 'cx-claude-mode', value: c.mode }) as HTMLInputElement;
       r.checked = c.mode === mode;

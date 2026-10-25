@@ -32,7 +32,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
-import { FAKE_AGENT, FAKEBIN, PASSWORD, REPO, assertTestDir, freePort, killProcessesUnder, killTree, login, markSetupDone, removeTestDir, startTestOffice } from '../../scripts/perf/office.mjs';
+import { FAKE_AGENT, FAKEBIN, PASSWORD, REPO, assertTestDir, freePort, killProcessesUnder, killTree, login, markSetupDone, namesRoot, removeTestDir, startTestOffice } from '../../scripts/perf/office.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REAL_PORT = 4600;
@@ -98,11 +98,10 @@ async function healthy(port) {
 }
 /** Office processes (bin/agent-office.js) on `home`'s data or on `port` (the app passes the port, the home by environment). */
 function officesOn(home, port) {
-  const h = path.resolve(home).toLowerCase().replaceAll('\\', '/');
   const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine } | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
   const all = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30_000, windowsHide: true }).split(/\r?\n/);
   const onPort = port ? new RegExp(`--port[ =]"?${port}\\b`) : undefined;
-  return all.filter((l) => /agent-office\.js/i.test(l) && (l.toLowerCase().replaceAll('\\', '/').includes(h) || onPort?.test(l))).map((l) => Number(l.split('|')[0]));
+  return all.filter((l) => /agent-office\.js/i.test(l) && (namesRoot(l.split('|').slice(1).join('|'), home) || onPort?.test(l))).map((l) => Number(l.split('|')[0]));
 }
 
 // ---- the environment: test mode, fake agents only, no tokens
