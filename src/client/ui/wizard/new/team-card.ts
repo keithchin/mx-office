@@ -8,7 +8,7 @@ import { usd } from '../../../../shared/budget/money';
 import type { LevelCard } from '../../../../shared/budget/levels';
 import type { ShapeCard } from '../../../../shared/budget/shape-cards';
 import { SHAPES, shapeForRoles, TEAM_SHAPES, type TeamShape } from '../../../../shared/roster/coverage';
-import { recommendShape, type Recommendation } from '../../../../shared/roster/recommend';
+import { personIntake, recommendShape, type Recommendation } from '../../../../shared/roster/recommend';
 import { ROLE_BY_ID } from '../../../../shared/roster/roles';
 import { SHAPE_LEAVES_YOU, shapeModels } from '../../../../shared/roster/shape-words';
 import { withoutAutonomyLine } from '../../../../shared/roster/autonomy-step';
@@ -76,7 +76,10 @@ export function teamCard(flow: Flow) {
 
   async function load() {
     const key = `tier=${flow.plan.tier}&entry=${flow.plan.entry}`;
-    rec = recommendShape({ tier: flow.plan.tier, entry: flow.plan.entry, intake: answersFor(flow) });
+    // From the person's own words (the description, what they said in the chat, answers they typed), never the drafted
+    // brief's prose: the same words give the same recommendation (shared/roster/recommend.ts personIntake).
+    const d = flow.draft;
+    rec = recommendShape({ tier: flow.plan.tier, entry: flow.plan.entry, intake: d ? personIntake(d.prompt, d.chat.filter((m) => m.who === 'you').map((m) => m.text), flow.plan.intake) : answersFor(flow) });
     if (key !== estKey) {
       estKey = key;
       est = cache.get(key) ?? (await fetchEstimate(key));
@@ -114,7 +117,7 @@ export function teamCard(flow: Flow) {
         h('div.nw-roles-line', {}, names),
         d.budget?.settings ? h('div.nw-roles-line.nw-models', {}, shapeModels(shape, d.budget.settings)) : null,
         h('div.nw-roles-line.nw-leaves', {}, SHAPE_LEAVES_YOU[shape]),
-        isRec && rec.why.length ? h('div.nw-roles-line', {}, `Why: ${rec.why.join('; ')}`) : null,
+        isRec && rec.why.length ? h('div.nw-roles-line', { 'data-why': 'recommendation' }, `Why: ${rec.why.join('; ')}${flow.draft ? ' (from your description and answers, so the same words give the same team)' : ''}`) : null,
       ),
       change,
     );

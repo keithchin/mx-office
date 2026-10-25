@@ -192,3 +192,7 @@ body.lp-docked .lp-qa { display: none; }
 .lp-docked .lp-cbar-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-foot { margin: 6px 2px 0; font-size: 11px; color: var(--faint); }
 .lp-foot[hidden] { display: none; }
+/* What the last docked message went as (real-build fix): Ask or Request a change. */
+.lp-sent { margin: 6px 2px 0; font-size: 11px; color: var(--muted, var(--faint)); }
+.lp-sent[hidden] { display: none; }
+.lp-sent[data-sent-as='change'] { color: var(--accent, inherit); }

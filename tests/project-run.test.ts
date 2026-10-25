@@ -10,7 +10,8 @@ import os from 'node:os';
 import path from 'node:path';
 import type { GhIssue, GhPull, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 import type { Escalation } from '../src/shared/roster/escalation.js';
-import { chosen, cleanPacing, estimateLine, PAUSED_HIRES, pauseLine } from '../src/shared/project-run.js';
+import { chosen, cleanPacing, estimateLine, PAUSE_SETTLE_MS, PAUSED_HIRES, pauseLine } from '../src/shared/project-run.js';
+import { runWords } from '../src/shared/mobile.js';
 import { floorLedger } from '../src/server/roster/pause.js';
 import type { Ledger } from '../src/server/usage.js';
 import { Roster } from '../src/server/roster/index.js';
@@ -473,4 +474,32 @@ test('the Coordinator hears what the outbox held for it in its resume brief: one
   assert.match(w.floor.wakes[0].text ?? '', /Relayed while you were asleep:[\s\S]*“CI secret”[\s\S]*Ada benched subagent tester/);
   assert.deepEqual([d.outbox.escalations, d.outbox.news], [[], []]);
   assert.equal(w.floor.prompts.length, 0, 'no second message');
+});
+
+test('real-build fix: Pause settles within its bound: a turn that never ends is stopped (session kept), spend stops, the progress says when', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  const ids = await team(w, ['pm']);
+  // The lead is mid-build and its turn never ends on its own (the real-build test's "Pausing 0/1" for 8 minutes).
+  w.floor.set(ids.pm, 'working');
+  const start = w.clock.now;
+  assert.ok(typeof w.runs.pause(w.floor.id, 'Keith') !== 'string');
+  await until(() => w.runs.view(w.floor.id, true).run?.agents[0]?.status === 'finishing', 'it is finishing its turn');
+  const run = w.runs.view(w.floor.id, true).run!;
+  const a = run.agents[0];
+  assert.ok(a.until && a.until >= start, 'a bound is set');
+  assert.ok(a.until! - start <= PAUSE_SETTLE_MS + 2 * SEC);
+  // Said honestly while it waits: who, and by when it is stopped at the latest.
+  assert.match(runWords(run), /^Pausing 0 of 1 · .+ finishing its turn \(stopped by \d\d:\d\d at the latest\)$/);
+  await until(() => w.runs.latest(w.floor.id)?.status === 'done', 'the pause settles', 20_000);
+  const took = w.clock.now - start;
+  assert.ok(took <= PAUSE_SETTLE_MS + 5 * SEC, `settled after ${Math.round(took / SEC)} s`);
+  assert.deepEqual(w.floor.slept, [ids.pm], 'stopped (put to sleep, its session kept)');
+  const done = w.runs.view(w.floor.id, true).run!;
+  assert.equal(done.agents[0].status, 'asleep');
+  assert.equal(done.agents[0].forced, true);
+  assert.match(done.agents[0].note ?? '', /Stopped after 5 min: its turn hadn't ended\. Its session is kept/);
+  assert.match(runWords(done), /⏸ Paused: 1 of 1/);
+  // Nothing runs after it settles: its process is gone, so no turn adds spend.
+  assert.equal(w.floor.worker(ids.pm)?.status, 'exited');
 });

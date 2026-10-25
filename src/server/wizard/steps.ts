@@ -14,7 +14,7 @@ import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-to
 import { DISCOVERY_TITLE, discoveryBrief } from './brief.js';
 import { discoveryTask, localBareOf, withLocalOnly } from './local-only.js';
 import { withSourceFolder } from './source-step.js';
-import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
+import { mendixVersions, mxbuildPath, officeGitEnv, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import { writeBriefFiles } from './brief-files.js';
 import { briefAssumptions, briefDecisionRows, briefOpenQuestions, intakeFromBrief } from '../../shared/brief-map.js';
@@ -111,7 +111,7 @@ const asChange = (job: JobState) => ({ change: !!job.existingProject });
 export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   const { cfg } = deps;
   const env = () => toolkitEnv(cfg, deps.env ?? process.env);
-  const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false) => runCommand('git', args, { cwd: dir, env: env(), timeoutMs, onLine: said(io), allowFail });
+  const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false) => runCommand('git', args, { cwd: dir, env: { ...env(), ...officeGitEnv() }, timeoutMs, onLine: said(io), allowFail }); // commits as the office, never the machine user
   // The toolkit's scripts run with the project's toolkit.env over the office's environment, as everything
   // the office starts for a floor does (toolkit-env.ts), and with the picked Studio Pro's mxbuild even
   // before the env step has written it there.
@@ -195,7 +195,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(seed, ['clone', at, '.'], io, 2 * MIN, true);
           writeFileSync(path.join(seed, 'README.md'), `# ${job.plan.name}\n\n${job.plan.description}\n`);
           await git(seed, ['add', 'README.md'], io);
-          await git(seed, ['-c', 'user.name=agent-office', '-c', 'user.email=agent-office@localhost', 'commit', '-m', 'Initial commit'], io);
+          await git(seed, ['commit', '-m', 'Initial commit'], io);
           await git(seed, ['push', 'origin', 'HEAD:main'], io);
         } finally {
           await rm(seed, { recursive: true, force: true }).catch(() => undefined);

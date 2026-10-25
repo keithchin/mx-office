@@ -35,6 +35,7 @@ export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView
       'div.pmc-bubble',
       {},
       h('span.pmc-by', {}, `${who} asked for a change${via}`, when(c.at)),
+      h('span.dk-mode', { 'data-sent-as': 'change' }, 'Sent as: Request a change'),
       c.ref ? h('span.dk-chip', { title: refWords(c.ref) }, c.ref.widgetName ? '⌖ ' : '📄 ', c.ref.label ?? c.ref.widgetName ?? c.ref.docQn) : '',
       h('div.pmc-text', {}, askedWords(c.text)),
     ),

@@ -99,6 +99,11 @@ export interface Escalation {
   from?: { kind: 'awaiting'; key: string } | { kind: 'proposal'; key: string } | { kind: 'reply-ask'; key: string; message?: string; thread?: string };
   /** The explicit ids it is about. Missing on records from before decision cards (release 45): those show ungrouped. */
   refs?: EscalationRefs;
+  /**
+   * The one reply it came with (roster/reply-asks.ts, real-build fix): the items a turn-ending reply lists, and the agent's
+   * own escalation raised in that turn, share it, so Needs you shows them as one card with one count, never five.
+   */
+  group?: string;
   /** What to look at to answer it, named explicitly by the raiser (shared/decisions/artifact.ts): never guessed. */
   artifact?: DecisionArtifact;
   /** The AWAITING-PM line it was filed from is gone from the newest entry: not settled; the person says (decision cards). */

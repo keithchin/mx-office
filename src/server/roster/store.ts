@@ -47,6 +47,11 @@ export interface MemberRecord {
   task?: Assignment;
   /** Its last few tasks before this one, newest last: a cache only (the task record, server/tasks/, is the history). */
   prevTasks?: Assignment[];
+  /**
+   * The open task a change request or a model change note came in on top of (real-build fix): a note to a working lead is
+   * informational, so this one isn't put aside. Once the note's task is done the member is sent back to it (back-to-work.ts).
+   */
+  ongoing?: Assignment;
 }
 
 /**

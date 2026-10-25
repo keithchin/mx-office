@@ -152,9 +152,11 @@ export function deriveStage(verdicts: readonly VerdictRow[], decisions?: readonl
   const rows = stageRows(verdicts);
   if (!rows.length) return undefined;
   const signed = new Set(signedOffStages(decisions));
+  // A WAIVED stage (a small tier's Stages 1–4) is no evidence the work got that far: only a PASS or a sign-off moves the
+  // position on. Counting waivers put a project still at Kickoff at "Stage 5 · Build" (the real-build test).
   let reached = -1;
   rows.forEach((v, i) => {
-    if (settled(v.status) || signed.has(norm(v.id))) reached = i;
+    if (/^PASS$/i.test(v.status) || signed.has(norm(v.id))) reached = i;
   });
   if (reached < 0) return toolkitPosition(verdicts);
   const next = rows.slice(reached + 1).find((v) => !settled(v.status) && !signed.has(norm(v.id)));

@@ -24,8 +24,10 @@ import { officeSettings, toolkitDir } from '../connections/store.js';
 import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, type JobState } from './job.js';
-import { appDirTooLong, mprVersion } from './mendix-app.js';
-import { testModeOf } from '../testmode.js';
+import { appDirTooLong, holdsToPathLimit, mprVersion } from './mendix-app.js';
+import { isStandInTool, testModeOf } from '../testmode.js';
+import { withFirstTask } from './first-task.js';
+import { teamBranchGates } from './branch-gates.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
@@ -217,8 +219,10 @@ export class Wizard {
     if (plan.kind === 'new' && !plan.localOnly && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
-    // A test office's Studio Pro is a stand-in whose folders are deep under scratch: only a real office is held to mx's limit.
-    if (plan.kind === 'new' && !had && !testModeOf().on) {
+    // Held to mx's path limit whenever a real Studio Pro mx will make the app: a real office, or a test office with the real
+    // tools (the real-build test hit PathTooLongException after the repository and clone were made). Only a test office's
+    // stand-in Studio Pro, whose folders are deep under scratch, is let through.
+    if (plan.kind === 'new' && !had && holdsToPathLimit(testModeOf().on, this.cfg, plan.mendix, isStandInTool)) {
       const tooLong = appDirTooLong(path.join(this.ctx.building.projectsDir, plan.owner, plan.name), plan.name);
       if (tooLong) return tooLong;
     }
@@ -290,7 +294,8 @@ export class Wizard {
   setup(floor: Floor, now = Date.now()): Promise<SetupView> {
     // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
     // So are the sign-offs given in the office and not yet recorded (server/signoff/): a small file kept in memory.
-    return this.sharedSetup(floor, now).then((v) => withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
+    // And whether the team still waits for its first task (first-task.ts): read now, never shared from before.
+    return this.sharedSetup(floor, now).then((v) => withFirstTask(this.ctx, floor, this.jobForFloor(floor), withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v)));
   }
 
   private sharedSetup(floor: Floor, now: number): Promise<SetupView> {
@@ -331,9 +336,12 @@ export class Wizard {
     // The stage as the office derived it from its own check, how fresh that is, and what doesn't add up (stage-evidence.ts).
     const stage = stageEvidence(view, g.files['PROJECT.md'], g.check, seen);
     rememberEvidence(floor.dir, stage, view.verdicts);
+    // The gates on the team's working branch, next to main's (branch-gates.ts): not merged, never instead of main's.
+    const teamBranch = view.toolkit && info.sha ? await teamBranchGates(floor.dir, info.def, info.sha, g.files).catch(() => undefined) : undefined;
     return {
       ...view,
       ...(stage ? { stage } : {}),
+      ...(teamBranch ? { teamBranch } : {}),
       job,
       checking: g.regenerating,
       checkedAt: g.renderedAt,

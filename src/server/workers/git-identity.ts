@@ -27,6 +27,16 @@ export function officeCommitter(office: { name: string; email: string } | undefi
   return office?.name && office.email ? office : { name: 'Mx Office', email: `office@${AGENT_EMAIL_DOMAIN}` };
 }
 
+/**
+ * The office's own commits (the new-project setup's scaffold, a local-only project's merge): author and committer the
+ * office's commit identity (🔌 Connections), else "Mx Office" (real-build fix: the setup commit carried the machine
+ * user's personal name and email). Never the person's git config unless they set it as the office's identity.
+ */
+export function officeGitEnv(office?: { name: string; email: string }): { GIT_AUTHOR_NAME: string; GIT_AUTHOR_EMAIL: string; GIT_COMMITTER_NAME: string; GIT_COMMITTER_EMAIL: string } {
+  const c = officeCommitter(office ?? officeSettings().gitIdentity);
+  return { GIT_AUTHOR_NAME: c.name, GIT_AUTHOR_EMAIL: c.email, GIT_COMMITTER_NAME: c.name, GIT_COMMITTER_EMAIL: c.email };
+}
+
 /** The author an agent's commits get: its seat's name and role, else the worker's own name. */
 export function agentAuthor(info: Pick<WorkerInfo, 'id' | 'name'>, seat?: AgentSeat): { name: string; email: string } {
   const name = clean(seat?.name || info.name.replace(/ 🐚$/, '')) || 'Agent';

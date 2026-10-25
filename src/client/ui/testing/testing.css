@@ -108,3 +108,9 @@
 .tst-wsel { max-width: 100%; font-size: 12px; }
 .tst-vwaivers summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-2); }
 .tst-vwaivers ul { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-2); }
+/* The test prerequisites (./prereqs.ts, real-build fix). */
+.tst-prereqs { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--line, #ccc); border-radius: 8px; }
+.tst-prereqs h3 { margin: 0 0 6px; font-size: 14px; }
+.tst-prereqs ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.tst-prereqs code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.tst-prereq-ok { margin: 6px 0 10px; font-size: 12px; color: var(--muted, inherit); }

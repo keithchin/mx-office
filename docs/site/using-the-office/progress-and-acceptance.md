@@ -73,6 +73,10 @@ Under the bar, a line says how fresh that is:
 
 The same line, with the stage, is on the Overview's summary, the setup panel, the phone's project status and the Teams daily digest.
 
+Two rules keep the stage honest. A **WAIVED** stage (a small tier's Stages 1 to 4) is no evidence the work got that far: only a PASS or a sign-off moves the position on, so a small greenfield project at kickoff reads *Stage P · Kickoff*, not *Stage 5 · Build*. And a CONFIRMED row that only waives an artifact (*Waived artifact improvement-register-html: small tier*) is no sign-off: Build reads *in progress* until its real sign-off, never *done* at row 5 of 29. A ✋ gate whose verdict still waits on a sign-off reads *✋ needs your sign-off* even when a scope answer for that stage is CONFIRMED.
+
+**On the team's branch (not merged).** The gates are read from main, while a lead often works on its own branch for a while. When the team's newest branch ahead of main has more for a stage than main (every intake question answered, or a sign-off or decision CONFIRMED in its `PROJECT.md`), that stage's line on the Progress card says *on the team's branch (not merged) · main: …*, and its tooltip names the branch and commit. Main's own state stays beside it, never replaced.
+
 ### When the register and gate-check disagree
 
 The office also says when things don't add up, as an ℹ️ note under the bar and an info card in Needs you (shown, not counted as waiting on you):

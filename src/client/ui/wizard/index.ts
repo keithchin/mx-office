@@ -9,7 +9,7 @@ import './wizard.css';
  */
 import type { Net } from '../../net';
 import { loadProfile } from '../../state/persist';
-import { interviewModeOf, type JobView, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
+import { interviewModeOf, newProjectDiscovery, type JobView, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
 import { h, openModal, toast } from '../dom';
 import { wizardApi } from './api';
 import { entryPage, intakePage, PAGES, pageProblem, projectPage, reviewPage, teamPage, type PageCtx } from './forms';
@@ -49,7 +49,7 @@ function blankPlan(info: WizardInfo): ProjectPlan {
     clients: [],
     operators: me ? [me] : [],
     roles: ['pm', 'lead-designer', 'lead-developer', 'lead-tester', 'chief-analyst'],
-    discovery: { issue: true, queue: false, model: 'opus' },
+    discovery: newProjectDiscovery(),
     createdByHand: false,
   };
 }

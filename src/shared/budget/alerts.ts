@@ -24,10 +24,16 @@ export const isSeeable = (l: unknown): l is 'forecast' | 'threshold' => SEEABLE_
 
 const unseen = ({ seenAt: _a, seenBy: _b, seenForecast: _c, ...a }: BudgetAlert): BudgetAlert => a;
 
-/** The alerts after a budget change: a raised budget clears them; a lowered one keeps them (no repeats), no longer seen. */
-export function afterBudgetChange(alerts: BudgetAlert[], total: number | undefined): BudgetAlert[] {
+/**
+ * The alerts after a budget change: a raised budget clears them. A lowered one keeps "reached" (said again against the new
+ * budget, with `spent` now) and the threshold (no repeat, said again), and drops the forecast, so the next check says it with the new numbers: an
+ * alert never names a budget that's no longer the budget (real-build fix: "$905 against $60" stood after a change to $30).
+ */
+export function afterBudgetChange(alerts: BudgetAlert[], total: number | undefined, spent?: number): BudgetAlert[] {
   if (!total) return [];
-  return alerts.filter((a) => a.budget >= total).map(unseen);
+  const pct = spent !== undefined ? Math.round((spent / total) * 100) : 0;
+  const words = (a: BudgetAlert) => (a.level === 'full' ? `Budget reached: ${usd(spent!)} of ${usd(total)} (${pct} %)` : `Budget at ${pct} %: ${usd(spent!)} of ${usd(total)}`);
+  return alerts.filter((a) => a.budget >= total && a.level !== 'forecast').map((a) => ({ ...unseen(a), budget: total, ...(a.text && spent !== undefined ? { text: words(a) } : {}) }));
 }
 
 /** Marks a standing forecast or threshold alert as seen by `by`; the alerts after, or why not. */

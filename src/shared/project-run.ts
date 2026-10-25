@@ -98,7 +98,14 @@ export interface RunAgent {
   action: ResumeAction | 'pause';
   status: 'pending' | 'starting' | 'woken' | 'finishing' | 'handoff' | 'asleep' | 'waiting-on-you' | 'skipped' | 'failed' | 'sent-home';
   note?: string;
+  /** Pause: when it is stopped at the latest if its turn hasn't ended by then (PAUSE_SETTLE_MS, real-build fix). */
+  until?: number;
+  /** Pause: it was stopped at that bound, mid-turn, its session kept. */
+  forced?: boolean;
 }
+
+/** How long Pause waits for an agent's turn (or its handoff turn) to end before it stops it, its session kept: spend stops then. */
+export const PAUSE_SETTLE_MS = 5 * 60_000;
 
 export interface RunProgress {
   runId: string;

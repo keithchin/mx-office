@@ -6,6 +6,7 @@
 // Deterministic, no LLM. This looks after the merge; before it, the office's own Merge button asks the merge
 // gate (server/merge-gate/), and only GitHub branch protection requiring its status can stop an agent's gh.
 
+import { localMergeCommits } from '../local-merge/index.js';
 import type { AskItem } from '../../shared/asks.js';
 import type { GhPull } from '../../shared/protocol.js';
 import { ROLES } from '../../shared/roster/roles.js';
@@ -65,7 +66,8 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
   const pulls = floor.github.pulls.items;
   const prs = flaggedPulls(pulls, judgeLookOf(ctx, floor), now).map(({ pull, j }) => pullItem(pull, j, lead));
   const [pushes, waivers] = await Promise.all([
-    main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, mergesOf(pulls), now, externalCheck(ctx, floor)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
+    // A local-only project's merges made through the office's reviewed merge (local-merge/) came through review, not around it.
+    main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, new Set([...mergesOf(pulls), ...localMergeCommits(ctx.cfg.dataDir, floor.id)]), now, externalCheck(ctx, floor)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
     lookWaivers(floor.dir, now).catch(() => []),
   ]);
   const waived = waiverItem(waivers, lead);

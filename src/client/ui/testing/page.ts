@@ -12,6 +12,8 @@ import { qualityPanel } from './quality';
 import type { QualityPart } from '../../../shared/testing/quality';
 import type { VerificationView } from '../../../shared/testing/verify';
 import './testing.css';
+import { prereqsPanel } from './prereqs';
+import type { TestPrereqs } from '../../../shared/testing/prereqs';
 
 const AGAIN_MS = 20_000;
 
@@ -36,6 +38,18 @@ export function testingTab(root: HTMLElement) {
   const vslot = h('div.tst-vslot');
   /** The Quality header (release 1b): fetched on its own, and again every few seconds while one of the office's mxcli runs is under way. */
   const qslot = h('div.tst-qslot');
+  /** What the tests need on this machine (real-build fix): the test database and Playwright, with their fixes. */
+  const pslot = h('div.tst-pslot');
+  async function loadPrereqs() {
+    const f = floor;
+    if (!f) return;
+    try {
+      const v = await get<TestPrereqs & { admin?: boolean }>(`/api/testing/prereqs?floor=${encodeURIComponent(f)}`);
+      if (f === store.floor) pslot.replaceChildren(prereqsPanel(v, f, () => void loadPrereqs()));
+    } catch {
+      if (f === store.floor) pslot.replaceChildren();
+    }
+  }
   let qtimer: ReturnType<typeof setTimeout> | undefined;
   let wasRunning = false;
   const askRun = async (what: 'tests' | 'quality'): Promise<string | undefined> => {
@@ -86,7 +100,7 @@ export function testingTab(root: HTMLElement) {
     if (v.cacheKey === key && body.childElementCount) return;
     key = v.cacheKey;
     const f = floor;
-    body.replaceChildren(header(v), qslot, vslot, planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
+    body.replaceChildren(header(v), pslot, qslot, vslot, planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
   };
 
   async function load(force = false) {
@@ -101,6 +115,7 @@ export function testingTab(root: HTMLElement) {
       body.replaceChildren();
       vslot.replaceChildren();
       qslot.replaceChildren();
+      pslot.replaceChildren();
       wasRunning = false;
     }
     floor = f;
@@ -114,6 +129,7 @@ export function testingTab(root: HTMLElement) {
       draw(v);
       void loadVerification();
       void loadQuality();
+      void loadPrereqs();
     } catch (err) {
       if (n !== asked) return;
       status.textContent = `Couldn’t load the testing view: ${(err as Error).message}`;

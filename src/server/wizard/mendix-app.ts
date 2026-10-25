@@ -22,12 +22,30 @@ export const cleanAppId = (v: unknown): string | undefined => (typeof v === 'str
 /** The longest folder path Studio Pro's mx create-project can make an app in (78 and over: PathTooLongException while it extracts the Blank template; measured with Studio Pro 11.12, 2026-10-12). */
 export const APP_DIR_MAX = 77;
 
+/** A short projects folder to suggest when the folder is too deep: one at the root of the same drive. */
+export function shorterProjectsFolder(dir: string): string {
+  const win = /^[A-Za-z]:[\\/]/.test(dir) || dir.includes('\\');
+  const p = win ? path.win32 : path.posix;
+  return p.join(p.parse(dir).root || (win ? 'C:\\' : '/'), 'mx-projects');
+}
+
 /** Why a new app can't be made at `dir` (its path is too long for mx create-project), said before anything is created; undefined when it fits. */
 export function appDirTooLong(dir: string, name: string): string | undefined {
   if (dir.length <= APP_DIR_MAX) return undefined;
   const room = APP_DIR_MAX - (dir.length - name.length);
-  const fix = room >= 3 ? `use a repository name of at most ${room} characters` : 'move the office’s projects folder to a shorter path';
-  return `The project’s folder would be ${dir} (${dir.length} characters), and Studio Pro can’t create an app in a folder path longer than ${APP_DIR_MAX}: ${fix}`;
+  const short = shorterProjectsFolder(dir);
+  const move = `move the projects folder to a shorter path, for example ${short} (New project › Add project › Change folder)`;
+  const fix = room >= 3 ? `use a repository name of at most ${room} characters, or ${move}` : move;
+  return `The project’s folder would be ${dir} (${dir.length} characters), and Studio Pro can’t create an app in a folder path longer than ${APP_DIR_MAX}: ${fix}. Nothing was created.`;
+}
+
+/** Whether a new project is held to mx's path limit before anything is made: always in a real office, and in a test office whenever its mx is a real one. */
+export const holdsToPathLimit = (testMode: boolean, cfg: WizardConfig, version: string, standIn: (p: string) => boolean): boolean => !testMode || usesRealMx(cfg, version, standIn);
+
+/** Whether making a new app would run a real Studio Pro mx (not a test office's stand-in): then its path limit applies, test mode or not. */
+export function usesRealMx(cfg: WizardConfig, version: string, standIn: (p: string) => boolean): boolean {
+  const mx = mxPath(cfg, version);
+  return existsSync(mx) && !standIn(mx) && !standIn(cfg.mendixDir);
 }
 
 /** The app's name from the repository's: "travel-approval" → "TravelApproval" (an .mpr name Studio Pro shows as is). */

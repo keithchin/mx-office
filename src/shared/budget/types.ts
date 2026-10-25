@@ -170,6 +170,8 @@ export interface BudgetPlan {
   generatedAt: number;
   /** Edited by a person since it was generated. */
   edited?: boolean;
+  /** What it was made from (the project's tier, entry mode, team, and whether the project said them): a plan nobody edited follows it. */
+  shapeKey?: string;
 }
 
 /** One point of the variance chart's curves. */

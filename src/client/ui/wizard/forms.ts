@@ -4,7 +4,7 @@
 // one draft plan in place and asks for a re-render when something it shows depends on what changed.
 import type { Net } from '../../net';
 import { store } from '../../state';
-import { ENTRY_MODE_INFO, ENTRY_MODES, INTERVIEW_MODE_INFO, INTERVIEW_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type InterviewMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
+import { DISCOVERY_UNTICKED_TEXT, ENTRY_MODE_INFO, ENTRY_MODES, INTERVIEW_MODE_INFO, INTERVIEW_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type InterviewMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
 import { wizardApi } from './api';
 import { h, toast } from '../dom';
 import { connectionsApi } from '../connections/api';
@@ -285,6 +285,7 @@ export function teamPage(c: PageCtx): HTMLElement {
     h('h3.wz-h', {}, 'Discovery'),
     h('label.wz-check', {}, issue, ` Open a “Discovery” issue for the ${who} (Stages P → 4, stopping at every ✋ gate)`),
     h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ` Hand it to the ${who} now, as its first task` : ' Queue it now for an agent'), analyst ? null : model),
+    d.discovery.issue && !d.discovery.queue ? h('p.setting-note.wz-indent', { 'data-hint': 'discovery-unticked' }, DISCOVERY_UNTICKED_TEXT) : null,
     handed ? h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, `${who}’s model for Discovery `, model)) : null,
     analyst && d.discovery.issue
       ? h('p.setting-note.wz-indent', {}, handed ? `The ${who} is hired on this model to work the issue; its role’s own model (Team tab) is for its later hires.` : `The ${who} is on the team, so it works the issue itself, on its role’s model.`)

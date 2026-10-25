@@ -3,7 +3,7 @@
 // description; or the existing app's repository), the admin token or "I created it myself", the Mendix
 // version, the size tier, exec approval, the client and operators, the Discovery issue and who works it, the
 // kickoff questions the brief doesn't answer, and the toolkit line. Problems show next to their field.
-import { INTERVIEW_MODE_INFO, ownerProblem, slugProblem, slugify, type AnswerKind, type ProjectPlan } from '../../../../shared/wizard';
+import { DISCOVERY_UNTICKED_TEXT, INTERVIEW_MODE_INFO, ownerProblem, slugProblem, slugify, type AnswerKind, type ProjectPlan } from '../../../../shared/wizard';
 import { SHAPES, shapeForRoles } from '../../../../shared/roster/coverage';
 import { ROLE_BY_ID } from '../../../../shared/roster/roles';
 import { store } from '../../../state';
@@ -198,6 +198,7 @@ function clientAndDiscovery(flow: Flow, d: ProjectPlan, redraw: () => void, text
     h('div.nw-adv', {}, h('div.nw-field', {}, h('label', { for: 'nw-a-clients' }, 'Client name(s)'), clients, h('span.nw-hint', {}, 'Comma-separated; kept in agent-office.project.json for the client portal.')), h('div.nw-field', {}, h('label', { for: 'nw-a-ops' }, 'Operator(s)'), ops, h('span.nw-hint', {}, 'The people who speak for the client and answer the Chief Analyst.'))),
     h('label.nw-check', {}, issue, h('span', {}, d.localOnly ? ` Write the Discovery brief for the ${title} (docs/discovery-brief.md: local only, no GitHub issue)` : ` Open a “Discovery” issue for the ${title} (Stages P → 4, stopping at every ✋ gate)`)),
     h('label.nw-check.nw-indent', {}, queue, h('span', {}, onTeam ? ` Hand it to the ${title} now, as its first task` : ' Queue it now for an agent')),
+    d.discovery.issue && !d.discovery.queue ? h('p.nw-hint.nw-indent', { 'data-hint': 'discovery-unticked' }, DISCOVERY_UNTICKED_TEXT) : null,
     h('div.nw-row.nw-indent', {}, h('span.nw-hint', {}, onTeam && d.discovery.queue ? `The ${title} is hired on this model for Discovery:` : 'Model for Discovery:'), model),
     flow.info.offline ? h('p.nw-hint', {}, '🧪 Offline test office: the issue is written to a file.') : null,
   );

@@ -10,6 +10,7 @@ import { aheadLine, reviewWords } from '../../../shared/branch-ahead';
 import { store } from '../../state';
 import { h, toast } from '../dom';
 import './banner.css';
+import { localMergePanel } from '../local-merge/panel';
 
 export interface AheadBanner {
   readonly el: HTMLElement;
@@ -28,6 +29,9 @@ export interface AheadOptions {
 
 export function aheadBanner(where: 'model' | 'live', o: AheadOptions): AheadBanner {
   const el = h('div.ba', { role: 'status', hidden: true });
+  // A local-only project's merges, decided by the PM (ui/local-merge/): beside the banner, shown on its own.
+  const merges = localMergePanel();
+  const wrap = h('div.ba-wrap', {}, el, merges.el);
   let view: AheadView | null = null;
   let asking: AbortController | null = null;
   let pending = 0;
@@ -74,10 +78,11 @@ export function aheadBanner(where: 'model' | 'live', o: AheadOptions): AheadBann
   }
 
   return {
-    el,
+    el: wrap,
     refresh() {
       const floor = store.floor;
       if (!floor) return;
+      merges.refresh();
       asking?.abort();
       const mine = ++pending;
       const ctl = (asking = new AbortController());

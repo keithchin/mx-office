@@ -6,7 +6,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **New projects: the path check runs whenever a real Studio Pro makes the app.** A test office with the real tools is held to Studio Pro's 77-character folder limit too, before anything is created, with a suggested shorter folder (for example `C:\mx-projects`) and *Nothing was created*. **Cancel & undo** of a local-only project lists the bare repository it made in `.local-git` and deletes it with the folder.
+- **The team starts on its own.** **Hand it to the … now** is ticked by default for a new project, and says what happens when unticked. If you untick it, Needs you shows *The team is waiting for its first task: Start Discovery*, and **Start Discovery** hands the task over.
+- **The docked chat asks by default.** In the Developer view, **Ask** is the default; **Request a change** becomes it only when you pick an element with Select element or press **Request a change to this**, not when a page is merely selected. The mode is said before you send, and after (*Sent … as a question (Ask)* / *Sent as: Request a change*).
+- **A change note never stops a working lead.** A change request reaching a lead mid-task is a note on top of its work: the lead carries on, and once it says *task done* for the note the office's nudge sends it back to the task it was on.
+- **Merge a local-only project's work yourself.** Under the *main is behind the work* banner (Live app and Model tabs), each team branch has **Approve at @sha** (a review bound to that head), **Ask for changes** and **Merge into main**: `--no-ff` into the local main, as the office, never forced, recorded and audited, no GitHub. The review gate counts it as reviewed.
+- **The stage is the toolkit's real one.** Waived stages no longer move the position (a small project at kickoff reads Stage P, not Stage 5), an artifact waiver is no Build sign-off (no *Build done* at row 5), and Progress shows a stage's state *on the team's branch (not merged)* next to main's.
+- **Tests that can run.** A test office running the real tools (`AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1`, or the real-agent switch) runs its own mx check and microflow tests with the real mxcli. The Testing page lists its prerequisites: **Prepare the test database** makes `<App>_test` and a LOGIN-only `mendix` role with the live apps' database user (never a superuser), and **Install Playwright** when it's missing.
+- **Pause settles.** A turn that hasn't ended 5 minutes into a pause is stopped (its session kept, so Resume carries it on), the progress says by when, and spend stops once every agent is asleep.
+- **One card per gate or blocker.** A stage gate that names its questions folds their cards under it, and the items read from an agent's reply join the escalation it raised in that turn: one card, one count.
+- **The budget plan follows the project.** A plan nobody edited is made again once the setup records the tier, mode and team, and scales with the budget level (Lean ×0.65); a lowered budget re-says its alerts against the new budget.
+- **The same words, the same team.** The wizard's team recommendation reads your description and answers, not the drafted brief's wording, so it doesn't change between drafts; the **Why** line says what counted.
+- **The office commits as itself.** The setup's commits (and local-only merges) use the office's commit identity (🔌 Connections, *Mx Office* by default), never the machine user's own git name and email.
 
 ## 2026-10-25 · release 76 (`7ae0275`)
 

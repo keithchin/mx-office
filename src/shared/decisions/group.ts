@@ -43,7 +43,9 @@ function primaryOf(entries: readonly Entry[], g: readonly number[]): number {
   return [...g].sort((a, b) => {
     const ca = entries[a].cand;
     const cb = entries[b].cand;
-    return Number(ca?.prio !== 0) - Number(cb?.prio !== 0) || KIND_RANK[ca?.kind ?? 'status'] - KIND_RANK[cb?.kind ?? 'status'] || (ca?.prio ?? 9) - (cb?.prio ?? 9) || a - b;
+    // A gate naming its questions, or the escalation a reply's items came with (prio below 0), leads; then a question.
+    const lead = (c: Candidate | undefined) => (c && c.prio < 0 ? -1 : c?.prio === 0 ? 0 : 1);
+    return lead(ca) - lead(cb) || KIND_RANK[ca?.kind ?? 'status'] - KIND_RANK[cb?.kind ?? 'status'] || (ca?.prio ?? 9) - (cb?.prio ?? 9) || a - b;
   })[0];
 }
 

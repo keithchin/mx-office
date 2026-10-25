@@ -167,6 +167,8 @@ Videos of the app's workflows are on a page of their own, [🎬 Walkthroughs](wa
 
 When an agent's branch or an open PR has commits main hasn't and changes the model (`.mpr`, `mprcontents/`, `mdlsource/`), this tab and the [Model](model.md) tab show a banner: *main is 75 commits behind Sophie's branch, which has model changes (PR #6, open, not reviewed)*. The live app runs main, so it shows none of that until it merges. **View it in the Model tab** opens the Model tab, which can show the branch; **Ask Katherine to review** (admins) tells the team lead, after their turn, to have the PR reviewed per the [review gate](review-gate.md). The review state is the gate's: *reviewed by X* once a complete `Review:` by someone other than the opener is on the PR; *review not checked yet* while the office hasn't read the PR's comments, which the board reads for merged PRs only.
 
+In a [local-only project](../get-started/first-project.md#local-only-not-on-github) there are no pull requests, so under the banner each team branch ahead of main has the Project Manager's merge: **Approve at @abc1234** (a review of exactly that head), **Ask for changes**, and **Merge into main** once its head is approved. It merges with `--no-ff` into the local main, as the office, without force, recorded and audited, and the live app follows main as usual.
+
 ## Open live app
 
 When the app runs, **↗ Open live app** opens it in a window of its own: a browser window (or tab), or in the [desktop app](../administration/desktop-app.md) a separate *Live app* window. There the app is the page itself, so every widget works. **Copy link** copies its address.

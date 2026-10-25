@@ -64,9 +64,15 @@ export function manualInPlay(verdicts: readonly VerdictLike[], id: string, decis
   return true;
 }
 
-/** A CONFIRMED row for the stage in PROJECT.md's Decisions: the toolkit's record of a manual verdict. */
-export function signedOffIn(decisions: readonly { stage: string; status: string }[] | undefined, id: string): boolean {
-  return (decisions ?? []).some((r) => norm(r.stage.replace(/^stage\s*/i, '')) === norm(id) && /^confirmed\b/i.test(r.status.trim()));
+/**
+ * A row that only waives one artifact of a stage ("Waived artifact improvement-register-html: small tier"): CONFIRMED, but
+ * it says nothing about the stage being done. The real-build test's Stage 5 read "Build done" at row 5 of 29 from one.
+ */
+export const waiverRow = (r: { decision?: string }) => /^\s*waived\s+(artifact|file|document)\b/i.test(r.decision ?? '');
+
+/** A CONFIRMED row for the stage in PROJECT.md's Decisions: the toolkit's record of a manual verdict (an artifact waiver isn't one). */
+export function signedOffIn(decisions: readonly { stage: string; status: string; decision?: string }[] | undefined, id: string): boolean {
+  return (decisions ?? []).some((r) => norm(r.stage.replace(/^stage\s*/i, '')) === norm(id) && /^confirmed\b/i.test(r.status.trim()) && !waiverRow(r));
 }
 
 export type SignoffState = { state: 'recorded' } | { state: 'requested'; req: SignoffRequest } | { state: 'open' };

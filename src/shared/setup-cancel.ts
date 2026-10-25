@@ -94,6 +94,8 @@ export interface CancelPlan {
     why?: string;
     settingsUrl?: string;
   };
+  /** A local-only project's own bare repository (<projects home>/.local-git/<owner>/<name>.git), when this setup made it: it goes with the folder. */
+  localBare?: { path: string; exists: boolean };
   /** The Mendix app: its .mpr goes with the folder and the repository; a Portal / Team Server app never does. */
   mendix: { mpr: boolean; portalUrl?: string };
   /** Something that stops it now, in words. */
@@ -140,6 +142,21 @@ export function madeBySetup(
   };
 }
 
+/**
+ * The local bare repository a local-only project's repo step made (its detail "local only, nothing on GitHub: a local bare
+ * repository at <path>"), only when that step created it (done, not "already there") and the path is a .git folder under a
+ * .local-git folder: never anything else on the disk.
+ */
+export function localBareMade(steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[]): string | undefined {
+  const repo = stepOf(steps, 'repo');
+  if (repo?.status !== 'done') return undefined;
+  const m = /^local only, nothing on GitHub: a local bare repository at (.+)$/i.exec(repo.detail ?? '');
+  const at = m?.[1].trim();
+  if (!at || !/\.git$/i.test(at)) return undefined;
+  const segs = at.replace(/\\/g, '/').split('/');
+  return segs.includes('.local-git') && segs.indexOf('.local-git') < segs.length - 2 ? at : undefined;
+}
+
 /** A request read from JSON: anything missing or odd is the safe choice (keep the folder, keep the repository). */
 export function cleanCancelRequest(v: unknown): CancelRequest | string {
   if (!v || typeof v !== 'object') return 'Send JSON';
@@ -155,6 +172,7 @@ export function cancelConsequences(p: CancelPlan, r: Pick<CancelRequest, 'delete
     lines.push(first.charAt(0).toUpperCase() + first.slice(1));
   }
   lines.push(r.deleteFolder ? `The local folder ${p.dir} deleted, for good${p.mendix.mpr ? ', with the Mendix app (.mpr) in it' : ''}.` : `The local folder ${p.dir} kept.`);
+  if (p.localBare?.exists) lines.push(r.deleteFolder ? `The project’s local repository ${p.localBare.path} (its origin on this machine) deleted, for good.` : `The project’s local repository ${p.localBare.path} kept (it goes only with the folder).`);
   if (!p.repoDelete.offline) lines.push(r.deleteRepo ? `The GitHub repository ${p.repo} deleted, for good.` : `The GitHub repository ${p.repo} kept.`);
   lines.push('The setup itself removed: New project no longer lists it.');
   lines.push('A Mendix Portal / Team Server app is never deleted by the office: delete it in the Portal yourself if there is one.');

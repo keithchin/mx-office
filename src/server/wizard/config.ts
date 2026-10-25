@@ -178,3 +178,6 @@ export function toolkitEnv(cfg: WizardConfig, base: NodeJS.ProcessEnv = process.
   // The setup's git, gh and toolkit scripts have long paths on Windows even with a test's own base env (gitenv.ts).
   return withGitLongPaths(env);
 }
+
+/** The office's own commit identity (the setup's commits): re-exported for the wizard's steps. */
+export { officeGitEnv } from '../workers/git-identity.js';

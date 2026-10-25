@@ -2,12 +2,13 @@
 // else PATH), its version (asked once per binary), and the test-mode rule: in test mode only a plainly
 // fake mxcli runs (a file in a test office's folder, or one named fake / mock / stub), so a test office
 // never boots a Mendix runtime or rewrites a real project's files.
+// A test office that runs the real tools on purpose (testmode.ts realToolsAllowed) uses the real one.
 
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { findMxcli } from '../model/mxcli.js';
 import { execFileOffP, type OffError } from '../offloop/exec.js';
-import { isTestPath, testModeOf } from '../testmode.js';
+import { isTestPath, realToolsAllowed, testModeOf } from '../testmode.js';
 
 export interface MxTool {
   bin: string;
@@ -47,7 +48,8 @@ export async function mxcliFor(dataDir: string, floorDir: string, find: (dataDir
   const bin = find(dataDir);
   if (!bin) return { why: "mxcli isn't on the office's machine (set AGENT_OFFICE_LIVE_MXCLI or AGENT_OFFICE_MXCLI)" };
   const mode = testModeOf(floorDir);
-  if (mode.on && !looksFakeTool(bin)) return { why: `Test mode is on (${mode.why}): only a fake mxcli runs here, and ${bin} is not one` };
+  // A test office that runs the real tools on purpose (its agents and live app run this same mxcli) runs its own checks with it too.
+  if (mode.on && !looksFakeTool(bin) && !realToolsAllowed()) return { why: `Test mode is on (${mode.why}): only a fake mxcli runs here, and ${bin} is not one (set AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1 to run the real one)` };
   try {
     return { bin, version: await mxcliVersion(bin) };
   } catch (err) {

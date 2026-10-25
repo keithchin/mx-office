@@ -29,6 +29,8 @@ import type { TeamFloor } from './types.js';
 export const REPLY_ASK_DEDUPE_MS = 24 * 3_600_000;
 /** Items filed from one reply at most. */
 export const REPLY_ASKS_MAX = 8;
+/** The agent's own escalation raised this recently is the one its reply's items came with: they show as one card (real-build fix). */
+export const REPLY_GROUP_MS = 15 * 60_000;
 
 /** Words that put a list on the Project Manager. Checked per sentence, the clause before them not negated. */
 const PM_NEED = new RegExp(
@@ -337,6 +339,13 @@ export function fileReplyAsks(roster: Roster, floor: TeamFloor, w: Pick<WorkerIn
   const who = { workerId: w.id, by: w.name, ...(role ? { role } : {}) };
   const now = roster.deps.now();
   let changed = false;
+  // One reply, one card in Needs you: its items share a group, and so does the agent's own escalation raised in the same
+  // turn (the real-build test's test-database blocker showed as an action plus four cards harvested from one reply).
+  const own = roster
+    .data(floor.id)
+    .escalations.filter((x) => x.status === 'open' && x.workerId === w.id && x.from?.kind !== 'reply-ask' && now - x.at <= REPLY_GROUP_MS)
+    .sort((a, b) => b.at - a.at)[0];
+  const group = own?.group ?? `reply:${w.id}:${now}`;
   for (const item of found.asks) {
     const all = roster.data(floor.id).escalations;
     const key = replyAskKey(role ?? w.id, item.title);
@@ -363,6 +372,8 @@ export function fileReplyAsks(roster: Roster, floor: TeamFloor, w: Pick<WorkerIn
     }
     const e = roster.escalations.raiseFor(floor, who, ask, `📌 ${w.name}'s reply lists this as needing you: ${item.title}`);
     e.from = { kind: 'reply-ask', key, ...(src.message ? { message: src.message } : {}), ...(src.thread ? { thread: src.thread } : {}) };
+    e.group = group;
+    if (own && !own.group) own.group = group;
     out.raised.push(e);
     changed = true;
   }

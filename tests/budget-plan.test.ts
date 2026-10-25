@@ -318,3 +318,40 @@ test('the ledger\'s stage is read from origin/<default>, as the setup panel read
   assert.equal(folderStage(dir), '1', 'the folder says Stage 1');
   assert.equal(await refreshStage(dir), '3', 'origin/main says Stage 3');
 });
+
+test('real-build fix: a plan made before the setup recorded the project follows its tier, mode, team and level until edited', (t) => {
+  const s = service(t);
+  // Asked before agent-office.project.json said anything: a standard requirements-driven Enterprise project's plan ($905).
+  const first = planOf(s.b, s.floor);
+  assert.equal(planTotal(first), 905);
+  // The setup records a small greenfield Solo project: the plan follows, scaled to it.
+  writeFileSync(path.join(s.dir, 'agent-office.project.json'), JSON.stringify({ entryMode: 'greenfield', sizeTier: 'small', teamShape: 'solo' }));
+  const solo = planOf(s.b, s.floor);
+  assert.ok(planTotal(solo) < 300, `small Solo: ${planTotal(solo)}`);
+  assert.equal(planOf(s.b, s.floor), solo, 'the same plan while nothing moved');
+  // The chosen level scales it: Lean is 0.65 of Balanced.
+  // As the wizard's level step and the Budget tab's levels apply it (budget/index.ts applyChoice).
+  s.b.file(s.floor).settings = { ...s.b.file(s.floor).settings, total: 60, level: 'lean' };
+  const lean = planOf(s.b, s.floor);
+  assert.ok(Math.abs(planTotal(lean) - planTotal(solo) * 0.65) < 1, `${planTotal(lean)} vs ${planTotal(solo)}`);
+  assert.match(lean.basis, /at Lean \(×0\.65\)/);
+  // Someone's edit is kept, whatever changes after.
+  assert.equal(editPlan(s.b, s.floor, { lines: [{ id: lean.lines[0].id, usd: 5 }] }, 'Pat', s.deps), undefined);
+  writeFileSync(path.join(s.dir, 'agent-office.project.json'), JSON.stringify({ entryMode: 'greenfield', sizeTier: 'small', teamShape: 'startup' }));
+  assert.equal(planOf(s.b, s.floor).lines[0].usd, 5);
+});
+
+test('real-build fix: after the budget changes no alert names the old budget', () => {
+  const s = { total: 60, autoPause: true };
+  let r = checkAlerts(s, 80, 20, 905, [], 1);
+  assert.deepEqual(r.raised.map((a) => a.level), ['forecast']);
+  r = checkAlerts(s, 80, 61, 905, r.alerts, 2);
+  // Lowered to 30: reached is said against $30, the forecast goes (raised again with the new numbers).
+  const after = afterBudgetChange(r.alerts, 30, 61);
+  assert.ok(after.every((a) => !a.text.includes('$60')), JSON.stringify(after));
+  assert.deepEqual(after.filter((a) => a.text).map((a) => [a.level, a.budget]), [['full', 30]]);
+  assert.equal(after.some((a) => a.level === 'forecast'), false);
+  assert.match(after[0].text, /Budget reached: \$61(\.00)? of \$30/);
+  const again = checkAlerts({ total: 30, autoPause: true }, 80, 61, 200, after, 3);
+  assert.equal(again.raised.length, 0, 'past 100 %: no forecast or threshold news');
+});

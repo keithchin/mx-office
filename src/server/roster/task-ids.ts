@@ -82,10 +82,15 @@ export class TaskIds {
   }
 
   /** `m`'s task about to be replaced by `next`: kept in the cache (unless it's the same task carried on). */
-  retire(floor: TeamFloor, m: MemberRecord, next: Assignment) {
+  retire(floor: TeamFloor, m: MemberRecord, next: Assignment, keepOngoing = false) {
     const old = m.task;
     if (!old || (old.taskId && old.taskId === next.taskId)) return;
     m.prevTasks = [...(m.prevTasks ?? []), old].slice(-PREV_TASKS_KEPT);
+    // A change note to a member mid-task: the task it was on carries on afterwards, never superseded by the note.
+    if (keepOngoing && old.doneAt === undefined && !old.pending) {
+      m.ongoing = old;
+      return;
+    }
     // Still open when the member was given something else: that task was put aside for this one.
     if (old.taskId && old.doneAt === undefined) this.of(floor.id).event(floor.id, old.taskId, { type: 'superseded', at: this.roster.deps.now(), ...(next.taskId ? { by: next.taskId } : {}) });
   }

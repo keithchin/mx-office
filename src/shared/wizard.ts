@@ -11,6 +11,16 @@ import type { PlanAdopt } from './adopt-from.js';
 import type { SignoffRequest } from './gate-play.js';
 import type { AutonomyAsk, AutonomyChoice, AutonomyPolicy } from './roster/autonomy-step.js';
 import type { StageEvidence } from './stage-derive.js';
+import type { RoleId } from './roster/roles.js';
+
+/**
+ * A new project's Discovery choices: the brief written, and handed to the team as its first task (real-build fix: left
+ * unticked by default, the team sat idle after creation until someone typed the task by hand).
+ */
+export const newProjectDiscovery = (): { issue: boolean; queue: boolean; model: string } => ({ issue: true, queue: true, model: 'opus' });
+
+/** What happens when the Discovery task isn't handed on, said next to the box. */
+export const DISCOVERY_UNTICKED_TEXT = 'Left unticked, the team waits after the setup: the Overview then shows “The team is waiting for its first task: Start Discovery”.';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -334,6 +344,19 @@ export interface SetupView {
   localOnly?: boolean;
   /** Where the project is, as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
   stage?: StageEvidence;
+  /** What the team's working branch has that main hasn't, per stage: shown as "on the team's branch (not merged)" next to main's (server/wizard/branch-gates.ts). */
+  teamBranch?: TeamBranchGates;
+  /** The team waits for its first task: the setup didn't hand the Discovery task on (server/wizard/first-task.ts). */
+  firstTask?: { role: RoleId; name: string; task: 'Discovery' };
+}
+
+/** The gates on the team's working branch, ahead of main and not merged (server/wizard/branch-gates.ts). */
+export interface TeamBranchGates {
+  branch: string;
+  sha: string;
+  ahead: number;
+  /** Per stage, what the branch has that main hasn't ("every intake question answered", "confirmed: …"). */
+  stages: { id: string; text: string }[];
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

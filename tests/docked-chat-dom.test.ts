@@ -189,7 +189,10 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       assert.match((await text(page, '.aw-tab[data-view="live"]')) ?? '', /not running/);
       // The first page opened is a chip already.
       assert.equal(await text(page, '#lead-panel .lp-ctx-chip .lp-ctx-t'), 'Today’s visitors');
-      assert.equal(await page.getAttribute('#lead-panel .lp-mode[data-mode="change"]', 'aria-checked'), 'true', 'Request a change is the default with a chip');
+      // Real-build fix: a page merely selected keeps Ask the default; the mode is said before sending.
+      assert.equal(await page.getAttribute('#lead-panel .lp-mode[data-mode="ask"]', 'aria-checked'), 'true', 'Ask stays the default with a page chip');
+      assert.equal(await page.getAttribute('#lead-panel .lp-cbar-t', 'data-sends-as'), 'ask');
+      assert.match((await text(page, '#lead-panel .lp-cbar-t')) ?? '', /Sends as a question \(Ask\)/);
       if (theme === 'portal-light') await shot(page, '01-docked-model-preview-light.png');
 
       // A widget picked with Select element: its chip.
@@ -198,6 +201,8 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       await fr.click('[data-mx-w="btnSave"]');
       await page.waitForFunction(() => /›/.test(document.querySelector('#lead-panel .lp-ctx-chip')?.textContent ?? ''));
       assert.match((await text(page, '#lead-panel .lp-ctx-chip')) ?? '', /Today’s visitors › Save button/);
+      assert.equal(await page.getAttribute('#lead-panel .lp-mode[data-mode="change"]', 'aria-checked'), 'true', 'an element picked with Select element makes Request a change the default');
+      assert.match((await text(page, '#lead-panel .lp-cbar-t')) ?? '', /Sends as a change request/);
 
       // ✕ removes it, + Context puts it back.
       await page.click('#lead-panel .lp-ctx-x');
@@ -218,6 +223,7 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       assert.deepEqual([asked[1].ref?.docQn, asked[1].ref?.widgetName, asked[1].source, asked[1].via], ['VisitorDesk.Visitor_Overview', 'btnSave', A, 'chat']);
       assert.match(asked[1].text, /^Make the Save button say Sign in\n\nAbout: Today’s visitors › Save button/);
       assert.equal(await page.inputValue('#lead-panel .lp-box'), '', 'the box clears once it went');
+      assert.equal(await page.getAttribute('#lead-panel .lp-sent', 'data-sent-as'), 'change', 'the receipt says it went as a change');
       // It queued: the lead gets a note after its turn, so it knows (not a second task).
       const tell = posts.find((p) => p.url.startsWith('/api/roster') && p.body.includes('DC-7'));
       assert.ok(tell && /"when":"after"/.test(tell.body) && /queued/.test(tell.body), `a note to the lead: ${JSON.stringify(posts)}`);
@@ -229,6 +235,8 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       const prompt = (await get<{ t: string; prompt?: string }[]>(page, '__sent')).find((m) => m.t === 'worker.prompt');
       assert.match(prompt?.prompt ?? '', /^About: Today’s visitors › Save button \(widget btnSave on page VisitorDesk\.Visitor_Overview\) at revision @7d3f0b1[\s\S]*Which pages use this button\?$/);
       assert.equal((await get<unknown[]>(page, '__asked')).length, 2, 'Ask made no change');
+      await page.waitForFunction(() => document.querySelector('#lead-panel .lp-sent')?.getAttribute('data-sent-as') === 'ask');
+      assert.match((await text(page, '#lead-panel .lp-sent')) ?? '', /as a question \(Ask\): nothing was changed or queued/);
 
       // Receipts follow the record: queued (paused, with who and when), then on a candidate, then in preview with Please try this.
       const queued = change({ id: 'DC-5', queue: 'queued', state: 'queued', words: 'Queued', detail: 'The project is paused: it starts when the project is resumed.', position: 1, mayCancel: true });

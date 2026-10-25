@@ -22,7 +22,7 @@ import type { TaskVerification } from '../../shared/testing/verify.js';
 import { reviveVerifyFields } from './task-verify.js';
 import { outcomesSince } from './closed-since.js';
 import { closedPrAsk, outcome, OUTCOME_V, type FinalOutcome, type Outcome, type PendingOutcome, type PullLook } from './task-outcome.js';
-import { cleanTaskRef, type TaskSource } from '../../shared/tasks.js';
+import { cleanTaskRef, PREV_TASKS_KEPT, type TaskSource } from '../../shared/tasks.js';
 import { TaskIds, type Prepared } from './task-ids.js';
 import { PrTaskIds } from './pr-task-ids.js';
 import { reopenStale } from './task-reopen.js';
@@ -68,6 +68,10 @@ export function outcomeOf(t: Assignment): FinalOutcome | PendingOutcome | 'legac
   if (t.doneAt !== undefined) return t.outcome ?? 'legacy';
   return t.pending?.kind ?? 'open';
 }
+
+/** The sources whose task is a note on top of the member's work, never a replacement for it: change requests and model change notes. */
+export const isNoteSource = (s: TaskSource | undefined) => s === 'request' || s === 'mcr';
+
 
 /** Shorter than this and it's a reply within a task, not a new one. */
 const MIN_CHARS = 24;
@@ -226,10 +230,34 @@ export class Tasks {
     const a = mm && assignmentFrom(raw, by, this.roster.deps.now());
     if (!mm || !a) return false;
     this.ids.attach(floor, mm.role, workerId, String(raw), a, source, executionId);
-    this.ids.retire(floor, mm.m, a);
+    // A change request or a model change note is informational to a member at work: what it was on carries on after it.
+    this.ids.retire(floor, mm.m, a, isNoteSource(source));
     mm.m.task = a;
     this.roster.touch(floor, true);
     return true;
+  }
+
+  /** The open task a change note came in on top of, while the note's task is the member's (real-build fix). */
+  ongoing(floor: TeamFloor, w: WorkerInfo): Assignment | undefined {
+    const m = memberOf(this.roster, floor, w.id)?.m;
+    const o = m?.ongoing ? reviveAssignment(m.ongoing) : undefined;
+    return o && o.doneAt === undefined ? o : undefined;
+  }
+
+  /**
+   * The note's task is done (or claimed done): the member goes back to the task it was on, which becomes its task again.
+   * Its text, or undefined when there's nothing to go back to.
+   */
+  resumeOngoing(floor: TeamFloor, w: WorkerInfo): string | undefined {
+    const mm = memberOf(this.roster, floor, w.id);
+    if (!mm?.m.ongoing) return undefined;
+    const back = reviveAssignment(mm.m.ongoing);
+    delete mm.m.ongoing;
+    if (!back || back.doneAt !== undefined) return (this.roster.touch(floor, true), undefined);
+    if (mm.m.task) mm.m.prevTasks = [...(mm.m.prevTasks ?? []).filter((t) => !(back.taskId && t.taskId === back.taskId)), mm.m.task].slice(-PREV_TASKS_KEPT);
+    mm.m.task = back;
+    this.roster.touch(floor, true);
+    return back.text;
   }
 
   /**
