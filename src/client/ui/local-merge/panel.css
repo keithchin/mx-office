@@ -1,0 +1,10 @@
+/* The PM's merge for a local-only project, under the "main is behind the work" banner (./panel.ts). */
+.lm { margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line, #ccc); border-radius: 8px; background: var(--panel, transparent); }
+.lm[hidden] { display: none; }
+.lm-head { margin: 0 0 6px; font-size: 12px; color: var(--muted, inherit); }
+.lm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 0; border-top: 1px solid var(--line, #ddd); }
+.lm-row small { color: var(--faint, inherit); overflow-wrap: anywhere; }
+.lm-state { font-size: 12px; }
+.lm-state[data-state='approve'] { color: var(--good, inherit); }
+.lm-state[data-state='changes'] { color: var(--warn, inherit); }
+.lm-btns { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }

@@ -62,6 +62,7 @@ import { asksRoutes } from './asks.js';
 import { signoffRoutes } from './signoff.js';
 import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
+import { localMergeRoutes } from './local-merge.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -231,6 +232,9 @@ export const routes: readonly Route[] = [
   stageRoutes.fix,
   branchAheadRoutes.view,
   branchAheadRoutes.review,
+  localMergeRoutes.view,
+  localMergeRoutes.review,
+  localMergeRoutes.merge,
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,
