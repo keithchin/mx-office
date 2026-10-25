@@ -17,6 +17,8 @@ Before a change goes to the real office, it's tried on a **test office**: a seco
 - Projects are **throwaway clones** (or new empty git repositories) under that test home.
 - Keep the test projects' `workers.json` empty unless you want real `claude` processes.
 - When done, stop the test office and check that no `node`, `claude` or browser processes it started are left.
+- Clean up **only your own office**. The scripts' sweep (`scripts/perf/office.mjs` `killProcessesUnder`, used by the `*-shots.mjs` scripts, the performance guard and the desktop e2e) kills the processes whose command line names its office's root as a whole path (`namesRoot`): `scratch\test-offices\real-b` takes `real-b\office` with it, never a sibling such as `real-build`, and a sweep of the shared `scratch\test-offices` folder itself is refused. Your own scripts should do the same (or kill only the PIDs they started): a plain "command line contains the path" match once killed another agent's test office twice during a real build test.
+- The office writes a line to its log on every exit it can see (its exit code, a signal, the console closing, an uncaught exception). An `office.log` that just stops, with no `agent-office: exiting …` line, means something outside killed it (`taskkill /F`, a sweep): look for another script's clean-up first.
 
 ## Running a test office safely
 
