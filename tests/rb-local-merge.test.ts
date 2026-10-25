@@ -117,6 +117,6 @@ test('the office’s own commits (setup scaffold, local merges) use a neutral of
   // The setup's commit step passes it to git (wizard/steps.ts): never the machine user's own config.
   const { readFileSync } = await import('node:fs');
   const steps = readFileSync(path.join(import.meta.dirname, '..', 'src', 'server', 'wizard', 'steps.ts'), 'utf8');
-  assert.match(steps, /const who = officeGitEnv\(\);\s+await git\(dir, \['-c', 'core\.safecrlf=false', '-c', `user\.name=/);
+  assert.match(steps, /runCommand\('git', args, \{ cwd: dir, env: \{ \.\.\.env\(\), \.\.\.officeGitEnv\(\) \}/);
   assert.doesNotMatch(steps, /user\.name=agent-office/);
 });

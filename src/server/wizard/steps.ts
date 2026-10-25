@@ -14,7 +14,7 @@ import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-to
 import { DISCOVERY_TITLE, discoveryBrief } from './brief.js';
 import { discoveryTask, localBareOf, withLocalOnly } from './local-only.js';
 import { withSourceFolder } from './source-step.js';
-import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
+import { mendixVersions, mxbuildPath, officeGitEnv, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import { writeBriefFiles } from './brief-files.js';
 import { briefAssumptions, briefDecisionRows, briefOpenQuestions, intakeFromBrief } from '../../shared/brief-map.js';
@@ -40,7 +40,6 @@ import { nextRecord } from '../toolkit-pin/record.js';
 import { withPortfolio } from './portfolio-step.js';
 import { withTeamFrom } from './team-from.js';
 import { withAutonomy, type AutonomyDeps } from './autonomy-step.js';
-import { officeGitEnv } from '../workers/git-identity.js';
 
 export interface FloorRef {
   id: string;
@@ -112,7 +111,7 @@ const asChange = (job: JobState) => ({ change: !!job.existingProject });
 export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   const { cfg } = deps;
   const env = () => toolkitEnv(cfg, deps.env ?? process.env);
-  const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false, extra: Record<string, string> = {}) => runCommand('git', args, { cwd: dir, env: { ...env(), ...extra }, timeoutMs, onLine: said(io), allowFail });
+  const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false) => runCommand('git', args, { cwd: dir, env: { ...env(), ...officeGitEnv() }, timeoutMs, onLine: said(io), allowFail }); // commits as the office, never the machine user
   // The toolkit's scripts run with the project's toolkit.env over the office's environment, as everything
   // the office starts for a floor does (toolkit-env.ts), and with the picked Studio Pro's mxbuild even
   // before the env step has written it there.
@@ -196,8 +195,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(seed, ['clone', at, '.'], io, 2 * MIN, true);
           writeFileSync(path.join(seed, 'README.md'), `# ${job.plan.name}\n\n${job.plan.description}\n`);
           await git(seed, ['add', 'README.md'], io);
-          const who = officeGitEnv();
-          await git(seed, ['-c', `user.name=${who.GIT_AUTHOR_NAME}`, '-c', `user.email=${who.GIT_AUTHOR_EMAIL}`, 'commit', '-m', 'Initial commit'], io, 2 * MIN, false, who);
+          await git(seed, ['commit', '-m', 'Initial commit'], io);
           await git(seed, ['push', 'origin', 'HEAD:main'], io);
         } finally {
           await rm(seed, { recursive: true, force: true }).catch(() => undefined);
@@ -452,9 +450,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         const first = !(await git(dir, ['log', '--oneline', '-n', '50'], { log: () => undefined }, MIN, true)).stdout.includes('Toolkit scaffold');
         const subject = job.existingProject ? 'Change request recorded in the agent-office new-project wizard (docs/project-brief.md, Stage 0b rows in PROJECT.md)' : first ? `Toolkit scaffold${job.plan.kind === 'new' ? ' and Mendix app' : ''} (mxcli-project-toolkit init-project via the agent-office new-project wizard)` : 'Kickoff answers updated in the agent-office new-project wizard';
         const body = decisionsOf(job).rows.map((r) => `- ${r.decision}`).join('\n');
-        // As the office itself (workers/git-identity.ts), never the machine user's personal git identity.
-        const who = officeGitEnv();
-        await git(dir, ['-c', 'core.safecrlf=false', '-c', `user.name=${who.GIT_AUTHOR_NAME}`, '-c', `user.email=${who.GIT_AUTHOR_EMAIL}`, 'commit', '-m', subject, '-m', body], io, 10 * MIN, false, who);
+        await git(dir, ['-c', 'core.safecrlf=false', 'commit', '-m', subject, '-m', body], io, 10 * MIN);
         made = 'committed';
       }
       await git(dir, ['push', 'origin', 'HEAD'], io, 5 * MIN);
