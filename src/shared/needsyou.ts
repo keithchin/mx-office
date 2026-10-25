@@ -237,6 +237,9 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   out.push(...stageNeeds(b));
   // 6. Open, ready PRs whose checks fail.
   for (const c of prCheckCandidates(i.pulls)) put(c);
+  // The team waits for its first task (server/wizard/first-task.ts): one button hands it the Discovery task.
+  const ft = i.setup?.firstTask;
+  if (ft) out.push({ key: 'first-task', kind: 'setup', icon: '▶️', text: `The team is waiting for its first task: Start ${ft.task} (${ft.name} has nothing to do until then)`, level: 'warn', action: `Start ${ft.task}`, target: { to: 'nudge', role: ft.role } });
   // A toolkit stage at a ✋ gate, waiting for your sign-off: a MANUAL stage only once it is the stage in play (shared/gate-play.ts), from its verdicts whether or not the setup panel shows.
   for (const c of signoffCandidates(i.setup)) put(c);
   // What doesn't add up between the register and the office's own gate-check (shared/decisions/stage-flags.ts): info only.

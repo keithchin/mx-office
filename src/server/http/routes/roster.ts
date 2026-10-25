@@ -22,6 +22,8 @@ import { raisesTeamCap } from '../../phone-access/risky.js';
 import { levelOf } from '../../budget/index.js';
 import { cleanChoices } from '../../../shared/roster/interrupt.js';
 import { autonomyPolicy, autonomyRecordView, noteAutonomyChange } from '../../roster/autonomy-choice.js';
+import { startFirstTask } from '../../wizard/first-task.js';
+import { wizardOf } from '../../wizard/index.js';
 import { outsidePolicy } from '../../../shared/roster/autonomy-step.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide', 'subagent-rename']);
@@ -149,8 +151,12 @@ export const rosterRoutes = {
           error = await roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner);
           break;
         case 'nudge':
-          // Needs you's Nudge: an idle member with an open task, told to carry on or escalate.
-          error = roster.backToWork.nudgeNow(team, role!, by);
+          // Needs you's Nudge: an idle member with an open task, told to carry on or escalate. A team still waiting for its
+          // first task (wizard/first-task.ts) gets it instead: "Start Discovery".
+          {
+            const first = await startFirstTask(ctx, floor, wizardOf(ctx).jobForFloor(floor), role!, by, owner);
+            error = first.handled ? first.error : roster.backToWork.nudgeNow(team, role!, by);
+          }
           break;
         case 'skill':
           // One member's skill: on/off, its gate, or back to the project's default (🧰 Skills).

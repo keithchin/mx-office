@@ -10,7 +10,7 @@ import './new.css';
 import type { Net } from '../../../net';
 import { loadProfile } from '../../../state/persist';
 import type { DraftView, PlannerStatus } from '../../../../shared/brief';
-import type { JobView, ProjectPlan, WizardInfo } from '../../../../shared/wizard';
+import { newProjectDiscovery, type JobView, type ProjectPlan, type WizardInfo } from '../../../../shared/wizard';
 import { usdCents } from '../../../../shared/budget/money';
 import { h, openModal, toast } from '../../dom';
 import { wizardApi } from '../api';
@@ -72,7 +72,7 @@ export function blankPlan(info: WizardInfo): ProjectPlan {
     clients: [],
     operators: me ? [me] : [],
     roles: ['pm', 'lead-designer', 'lead-developer', 'lead-tester', 'chief-analyst'],
-    discovery: { issue: true, queue: false, model: 'opus' },
+    discovery: newProjectDiscovery(),
     createdByHand: false,
   };
 }

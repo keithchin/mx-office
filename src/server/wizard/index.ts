@@ -26,6 +26,7 @@ import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, type JobState } from './job.js';
 import { appDirTooLong, holdsToPathLimit, mprVersion } from './mendix-app.js';
 import { isStandInTool, testModeOf } from '../testmode.js';
+import { withFirstTask } from './first-task.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
@@ -292,7 +293,8 @@ export class Wizard {
   setup(floor: Floor, now = Date.now()): Promise<SetupView> {
     // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
     // So are the sign-offs given in the office and not yet recorded (server/signoff/): a small file kept in memory.
-    return this.sharedSetup(floor, now).then((v) => withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
+    // And whether the team still waits for its first task (first-task.ts): read now, never shared from before.
+    return this.sharedSetup(floor, now).then((v) => withFirstTask(this.ctx, floor, this.jobForFloor(floor), withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v)));
   }
 
   private sharedSetup(floor: Floor, now: number): Promise<SetupView> {
