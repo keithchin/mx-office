@@ -130,12 +130,14 @@ What you select in the explorer becomes a **chip** in the composer: a page you o
 
 ### Ask or Request a change
 
-Under the box, **Ask | Request a change** says what Enter does:
+Under the box, **Ask | Request a change** says what Enter does, and the line beside it says it again in words before you send (*Sends as a question (Ask): nothing is changed* or *Sends as a change request (DC)*). **Ask** is the default. A page merely selected in the explorer leaves it on Ask: a chip only says what you're talking about. **Request a change** becomes the default only when you pick an element with **Select element**, or press a **Request a change to this** button.
 
-- **Request a change** (the default when a chip is on) makes a **Developer change** (`DC-<n>`) through the one intake every entry point uses ([Change requests](#change-requests)): your words, the chip's page or widget, the **revision you were viewing** (main's head unless you picked another) and a key that makes sending again after a dropped connection the same change. It works with no lead at work and with the app stopped: the change waits in the queue. When it waits, the lead gets a short note after its turn, so it knows (it reaches the lead as its own task when it's next).
+- **Request a change** makes a **Developer change** (`DC-<n>`) through the one intake every entry point uses ([Change requests](#change-requests)): your words, the chip's page or widget, the **revision you were viewing** (main's head unless you picked another) and a key that makes sending again after a dropped connection the same change. It works with no lead at work and with the app stopped: the change waits in the queue. When it waits, the lead gets a short note after its turn, so it knows (it reaches the lead as its own task when it's next).
 - **Ask** is a message to the lead, as on every page, with what the chip points at said first (*About: My check sheets › New check sheet button (widget btnNew on page Sheets.Overview) at revision @7d3f0b1*). It makes no change. Ask needs a lead at work.
 
-The office doesn't guess which one you meant: the choice is yours.
+The office doesn't guess which one you meant: the choice is yours. Once a message has gone, a line under the box says which way it went (*Sent to Alan as a question (Ask): nothing was changed or queued*, or *Sent as a change request*), and a change's message in the conversation says *Sent as: Request a change* above its receipt.
+
+A change request that reaches a lead in the middle of other work is a note on top of it, not an instruction to stop: the lead carries on with its current task and folds the change in when it fits. When the lead says `task done` for the change, the office sends it back to the task it was on (its back-to-work nudge names that task), so a question or a small change never ends a build half way.
 
 ### What shows in the conversation
 

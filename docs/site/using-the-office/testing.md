@@ -160,7 +160,16 @@ How results are read:
 - mxcli's exit code 1 means both "a test failed" and "the run broke", so the office never reads it on its own: the JUnit content decides. When mxcli writes no JUnit at all (no Mendix runtime, a timeout, a start failure), the whole run is shown as **Harness error, not failed tests**.
 - A JUnit file found in the repository is never imported by itself: only the file from a run the office started counts as evidence.
 
-`mxcli test --local` needs a Mendix runtime on the office's machine, so the run can fail to start; that's recorded as a harness error. In test mode only a fake mxcli runs.
+`mxcli test --local` needs a Mendix runtime on the office's machine, so the run can fail to start; that's recorded as a harness error. In test mode only a fake mxcli runs, unless the test office runs the real tools on purpose: `AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1`, or the real-agent switch `AGENT_OFFICE_ALLOW_REAL_AGENTS=1` (its agents and live app run the real mxcli already). Then the office's own **Run mx check**, **Run microflow tests** and **Score main now** use the real mxcli too.
+
+## Prerequisites
+
+At the top of the page, **Before the tests can run** lists what this project's tests need on the office's machine, each *ready*, *missing* (with its one fix) or *unknown* (and why). Once both are ready it's one line: *Test prerequisites ready*.
+
+- **Test database.** `mxcli test --local` boots the app against its own database, `<App>_test` (the `.mpr`'s name), as the user `mendix`. **Prepare the test database** (admins) makes both with the database user the live apps already use (`live-app.json` / `AGENT_OFFICE_LIVE_DB_*`): the role `mendix` with `LOGIN` only (never `SUPERUSER`, `CREATEDB` or `CREATEROLE`), then the database owned by it. Nobody gives an agent a PostgreSQL superuser. It runs only against a database server on this machine, with `psql` (on `PATH`, under `Program Files\PostgreSQL\<version>\bin`, or `AGENT_OFFICE_PSQL`), the password in `PGPASSWORD`, never on a command line. When the office's user can't make the role, or the server is elsewhere, it says so with the exact SQL for whoever administers the database (**What it runs**).
+- **Playwright (e2e journeys).** The team's e2e journeys need Playwright's Chromium. Missing, it's said here rather than the journeys silently never starting, and **Install Playwright** runs `npx playwright install chromium` (the command is shown, to run by hand instead).
+
+Each fix is audited (`testing.prereq`). With both ready, the team's unit tests and journeys run, and a run the office starts records its result at the commit it tested.
 
 ## Test first
 

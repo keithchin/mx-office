@@ -88,7 +88,7 @@ In a classic theme, neither shows in Needs you. To settle an unconfirmed answer,
 
 ## One card per decision
 
-Sources fold into one card only when they share an **explicit id**: a BRD question key, a register decision id (`OW-1`), a PR number, a stage, a journey or test id. Similar wording never merges anything. **Separate** splits a source off, and that choice is kept. **Likely duplicates** among an agent's `AWAITING-PM` asks or proposals are offered on one clean-up card, and the office closes them only after you confirm. The rules are in [Decision cards](command-center.md#decision-cards).
+Sources fold into one card only when they share an **explicit id**: a BRD question key, a register decision id (`OW-1`), a PR number, a stage, a journey or test id. Similar wording never merges anything. Two more explicit links fold cards. A **stage gate** that names the questions it asks you to confirm (*Stage 2 gate: … Q-01..Q-11*) takes those questions' cards under it, the gate leading: one card and one count instead of twelve. And the items the office reads from an agent's turn-ending reply share **the reply they came from** with the agent's own escalation raised in that turn (within 15 minutes), so one blocker is one card, not five. **Separate** splits a source off, and that choice is kept. **Likely duplicates** among an agent's `AWAITING-PM` asks or proposals are offered on one clean-up card, and the office closes them only after you confirm. The rules are in [Decision cards](command-center.md#decision-cards).
 
 ## Your answers are kept, then typed
 

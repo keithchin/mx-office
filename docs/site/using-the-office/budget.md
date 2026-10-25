@@ -78,7 +78,8 @@ Every project gets an expected plan, made automatically. It gives an expected co
 
 The plan is built from:
 
-- **Size tier and entry mode**, from `agent-office.project.json` or the decision register in `PROJECT.md`. If neither says, the plan assumes a standard requirements-driven project.
+- **Size tier and entry mode**, from `agent-office.project.json` or the decision register in `PROJECT.md`. If neither says, the plan assumes a standard requirements-driven project. A plan nobody has edited follows the project: once the setup records its tier, mode and team, or the team or budget level changes, the plan is made again from them (a plan made before the project said anything doesn't stay the default $905).
+- **The budget level**: the rates are Balanced's, so Lean scales every line by 0.65 and Fast by 1.6 (the plan's basis says *at Lean (×0.65)*).
 - **The stages that mode runs**:
   - Greenfield: P (light), 0 (scope only), 5 and 6.
   - Requirements-driven: P and 0 to 6.
@@ -155,7 +156,7 @@ The budget raises an alert:
 - at **100 %**.
 - when the **forecast** goes over the budget.
 
-Each alert is raised once per budget. Raising the budget clears all of them, so crossing a level of the new budget is news again. Each alert:
+Each alert is raised once per budget. Raising the budget clears all of them, so crossing a level of the new budget is news again. Lowering it keeps the 100 % and threshold alerts (no repeats) but says them again against the new budget, and drops the forecast alert so the next check says it with the new numbers: no alert ever names a budget that's no longer the budget. Each alert:
 
 - goes to the [audit log](audit-log.md) (`budget.alert`) and appears as a toast.
 - shows on **🚨 Needs you** on the Command Center (kind `budget`), which also feeds the [Teams cards](../integrations/teams-notifications.md) and the Team phone.
