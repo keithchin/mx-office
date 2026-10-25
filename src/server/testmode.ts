@@ -91,6 +91,16 @@ export function testModeAnswer(): TestModeView {
 /** An executable that's plainly a stand-in: it lives in a test office's folder, or says it's a fake. */
 const looksFake = (p: string) => isTestPath(p) || /fake|mock|stub/i.test(nameOf(p));
 
+/**
+ * Whether a test office runs the real tools on purpose (real-build fix): AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1, or the
+ * real-agent switch (AGENT_OFFICE_ALLOW_REAL_AGENTS=1), whose agents and live app already run the real mxcli. Then the
+ * office's own mx check and microflow test runs use it too, instead of refusing what its agents just ran.
+ */
+export function realToolsAllowed(): boolean {
+  const v = process.env.AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS;
+  return (!!v && v !== '0') || allowReal();
+}
+
 /** Whether a tool the office would run (Studio Pro's mx, mxcli) is a stand-in: in a test office's folder, or named as a fake. A real one in a test office isn't. */
 export const isStandInTool = (p: string): boolean => looksFake(p) || /[\\/](fake|mock|stub)[^\\/]*[\\/]/i.test(p);
 
