@@ -12,7 +12,7 @@
 // over it's put to sleep with its session kept, so Resume carries it on.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
-import type { Pacing, PauseWhy, ResumeAction, RunAgent } from '../../shared/project-run.js';
+import { PAUSE_SETTLE_MS, type Pacing, type PauseWhy, type ResumeAction, type RunAgent } from '../../shared/project-run.js';
 import { latestEntry } from '../../shared/roster/journal.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
 import { audit, byWhom, office } from '../audit/index.js';
@@ -62,6 +62,8 @@ export interface ResumeRun {
 export interface PauseAgent extends RunAgent {
   key: string;
   askedAt?: number;
+  /** When the pause first saw it mid-turn (its bound counts from then). */
+  finishingAt?: number;
   sawBusy?: boolean;
   /** deps.turnsStarted when it was asked: a turn started since is its handoff, however short. */
   turnsAt?: number;
@@ -335,9 +337,28 @@ export function resumeFlow(deps: RunDeps): WorkflowDef<ResumeRun> {
 
 // ---- Pause --------------------------------------------------------------------------------------
 
+/**
+ * An agent whose turn (or handoff turn) didn't end within the bound is stopped, its session kept so Resume carries it
+ * on: Pause settles, and the spend stops (the real-build test's "Pausing 0/1" ran 8 minutes, spend rising). True when it did.
+ */
+function forceStop(deps: RunDeps, f: RunFloor, s: PauseRun, a: PauseAgent, w: WorkerInfo, now: number, settleMs: number): boolean {
+  const since = a.status === 'handoff' ? a.askedAt : a.finishingAt;
+  if (since === undefined || now - since < settleMs || !busy(w.status)) return false;
+  if (a.status === 'handoff') keepHandoff(deps, f, a, w);
+  const err = f.sleep(w.id);
+  const mins = Math.round(settleMs / 60_000);
+  a.status = err ? 'failed' : 'asleep';
+  a.note = err ?? `Stopped after ${mins} min: its turn hadn't ended. Its session is kept, so Resume carries it on`;
+  a.forced = !err;
+  delete a.until;
+  if (!err) audit.record({ floor: s.floor, actor: office('Pause project'), action: 'agent.force-slept', target: { kind: 'worker', id: w.id, label: a.name }, summary: `${a.name} was stopped mid-turn after ${mins} min so the pause could settle (paused by ${s.by}); its session is kept`, details: { bound: settleMs } });
+  return true;
+}
+
 /** One look at every agent being paused; true when anything changed. */
 function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean {
   let changed = false;
+  const settleMs = deps.settleMs ?? PAUSE_SETTLE_MS;
   const set = (a: PauseAgent, status: RunAgent['status'], note?: string) => {
     if (a.status === status && a.note === note) return;
     a.status = status;
@@ -354,6 +375,10 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
     if (isAsleepStatus(w.status)) {
       if (a.status === 'handoff') keepHandoff(deps, f, a, w);
       set(a, 'asleep');
+      continue;
+    }
+    if ((a.status === 'handoff' || a.status === 'finishing') && forceStop(deps, f, s, a, w, now, settleMs)) {
+      changed = true;
       continue;
     }
     if (a.status === 'handoff') {
@@ -378,12 +403,16 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
     }
     // Never typed into a question: it's left for a person, and listed.
     if (w.status === 'needs_input') set(a, 'waiting-on-you', 'Waiting on you in its terminal');
-    else if (busy(w.status)) set(a, 'finishing', 'Finishing its turn');
+    else if (busy(w.status)) {
+      if (a.finishingAt === undefined) ((a.finishingAt = now), (a.until = now + settleMs), (changed = true));
+      set(a, 'finishing', 'Finishing its turn');
+    }
     else if (between(w.status)) {
       const r = deps.roster.delivery.send(f.team, w, handoffPrompt(s.by, a.role, deps.roster.members.stamp(f.team)), { origin: 'person', by: s.by, between: true });
       if (r.status === 'refused') set(a, 'failed', r.why);
       else {
         a.askedAt = now;
+        a.until = now + settleMs;
         a.sawBusy = false;
         a.turnsAt = deps.turnsStarted?.(w.id);
         set(a, 'handoff', 'Writing its handoff note');

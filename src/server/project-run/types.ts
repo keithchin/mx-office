@@ -43,6 +43,8 @@ export interface RunDeps {
   pollMs?: number;
   /** How long a wake may take to reach a live session. */
   bootMs?: number;
+  /** How long Pause waits for a turn to end before it stops the agent (shared/project-run.ts PAUSE_SETTLE_MS). */
+  settleMs?: number;
   /** A line in the floor's Team chatter, from the office. */
   chatter?(floorId: string, text: string): void;
   /** How many turns a worker has started, counted as its status changes (turns.ts): one that came and went between two looks still counts. */

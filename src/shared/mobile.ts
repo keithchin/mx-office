@@ -121,7 +121,10 @@ export function runWords(r: RunProgress): string {
   const failed = r.agents.filter((a) => a.status === 'failed').length;
   const verb = r.kind === 'pause' ? 'Pausing' : 'Waking';
   if (r.finishedAt || (r.status !== 'running' && r.status !== 'waiting')) return `${r.kind === 'pause' ? '⏸ Paused' : '▶ Resumed'}: ${done} of ${r.agents.length}${failed ? ` · ${failed} failed` : ''}`;
-  return `${verb} ${done} of ${r.agents.length}${now ? ` · ${now.name} ${now.status === 'starting' ? 'starting' : now.status === 'handoff' ? 'writing its handoff' : 'finishing its turn'}` : ''}${failed ? ` · ${failed} failed` : ''}`;
+  // Pause says when a turn that hasn't ended is stopped at the latest, so "Pausing 0 of 1" never looks stuck (real-build fix).
+  const by = now?.until ? ` (stopped by ${new Date(now.until).toTimeString().slice(0, 5)} at the latest)` : '';
+  const forced = r.agents.filter((a) => a.forced).length;
+  return `${verb} ${done} of ${r.agents.length}${now ? ` · ${now.name} ${now.status === 'starting' ? 'starting' : now.status === 'handoff' ? 'writing its handoff' : 'finishing its turn'}${by}` : ''}${forced ? ` · ${forced} stopped mid-turn` : ''}${failed ? ` · ${failed} failed` : ''}`;
 }
 
 /** Worker statuses counted into a status line. */

@@ -119,7 +119,7 @@ export function progressOf(r: RunRecord<ResumeRun | PauseRun>): RunProgress {
     floor: r.state.floor,
     status: r.status,
     by: r.by,
-    agents: r.state.agents.map(({ workerId, role, name, action, status, note }) => ({ workerId, role, name, action, status, note })),
+    agents: r.state.agents.map(({ workerId, role, name, action, status, note, until, forced }) => ({ workerId, role, name, action, status, note, ...(until ? { until } : {}), ...(forced ? { forced } : {}) })),
     startedAt: r.createdAt,
     finishedAt: r.finishedAt,
   };
