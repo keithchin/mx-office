@@ -164,6 +164,7 @@ export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'pa
     '```',
     '',
     'How to handle it:',
+    '- If you are in the middle of other work, this is a note alongside it, not an instruction to stop: carry on with your current task, and fold this in when it fits, unless the request says otherwise.',
     ...(dc?.how ?? []),
     '- This is the business owner asking, in their words. Work out what it means for the app and plan the work as you usually would, yourself or through your team.',
     `- Keep this task's \`Task:\` line (below) on the work that delivers it (commit trailers and the PR description) and name ${r.id} there: that is how the office shows them where their request is.`,

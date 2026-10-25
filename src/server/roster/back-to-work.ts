@@ -155,7 +155,13 @@ export class BackToWork {
     // Finished is looked at last (it may read the agent's last words): only when everything else says go.
     const first = backToWorkDue(look);
     if (first !== 'nudge') return first;
-    return backToWorkDue({ ...look, finished: this.roster.tasks.finished(floor, w) });
+    const finished = this.roster.tasks.finished(floor, w);
+    // A change note's task done (or claimed done) on top of ongoing work: back to that work, never a stop (real-build fix).
+    if (finished) {
+      const back = this.roster.tasks.resumeOngoing(floor, w);
+      if (back) return backToWorkDue({ ...look, task: back, nudges: t.task === back ? t.nudges : [] });
+    }
+    return backToWorkDue({ ...look, finished });
   }
 
   /** Nudges the member if the rules say so; true when it did. */
@@ -165,7 +171,7 @@ export class BackToWork {
     const w = this.roster.workerOf(floor, m)!;
     const task = this.roster.tasks.current(floor, w)!;
     // The office's words, typed now (it's between turns); the prompt names the task, so no resume line.
-    const r = this.roster.delivery.send(floor, w, backToWorkPrompt(task), { origin: 'office', resume: false });
+    const r = this.roster.delivery.send(floor, w, backToWorkPrompt(task, undefined, this.roster.tasks.ongoing(floor, w)?.text), { origin: 'office', resume: false });
     if (r.status === 'refused') return false;
     this.noted(floor, role, task, now);
     backToWorkNudged(floor.id, w, task);
@@ -191,7 +197,7 @@ export class BackToWork {
     if (!w || m.phase !== 'active') return `${m.name} isn't at work`;
     if (isBusyStatus(w.status)) return w.status === 'needs_input' ? `${m.name} is waiting on an answer in its terminal` : `${m.name} is working already`;
     const task = this.roster.tasks.current(floor, w);
-    const text = task ? backToWorkPrompt(task, by) : `You're idle with no task: tell the Coordinator what you'll do next, or escalate if you're blocked. (${by} pressed Nudge in the Command Center.)`;
+    const text = task ? backToWorkPrompt(task, by, this.roster.tasks.ongoing(floor, w)?.text) : `You're idle with no task: tell the Coordinator what you'll do next, or escalate if you're blocked. (${by} pressed Nudge in the Command Center.)`;
     const r = this.roster.delivery.send(floor, w, text, { origin: 'person', by, wake: true, resume: false });
     if (r.status === 'refused') return r.why;
     if (task) this.noted(floor, role, task, this.roster.deps.now());

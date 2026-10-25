@@ -244,3 +244,37 @@ test('on a floor: an old closed-unmerged PR raises nothing and the task carries 
     closeConnections();
   }
 });
+
+test('real-build fix: a change request to a lead mid-build is a note on top of its work, and "task done" for it sends the lead back to the build, never to a stop', async () => {
+  const { floor, roster, w, stop, t } = await office();
+  assert.equal(t().text, 'build the Orders module (issue #5)');
+  const buildId = t().taskId;
+  // A DC arrives while the lead is building (change-requests/index.ts records it as a request task).
+  assert.equal(roster.tasks.assign(floor, w.id, 'Change request CR-1 from Pat: rename the New button to Add equipment item', 'Pat', 'request'), true);
+  assert.match(t().text, /CR-1/);
+  assert.equal(roster.tasks.ongoing(floor, w)?.text, 'build the Orders module (issue #5)', 'the build is kept, not superseded');
+  // The nudge names the note but tells it the build carries on.
+  floor.typed.length = 0;
+  assert.equal(stop(), true);
+  const nudge = floor.typed.at(-1)?.text ?? '';
+  assert.match(nudge, /note on top of your ongoing work \(build the Orders module \(issue #5\)\)/);
+  assert.match(nudge, /don't stop that work/);
+  assert.doesNotMatch(nudge, /then stop\./);
+  // The lead says task done for the note: the office sends it back to the build.
+  floor.lastWords = () => 'Task done: CR-1 renamed the button.';
+  floor.typed.length = 0;
+  assert.equal(stop(), true, 'nudged back to the build');
+  assert.equal(t().text, 'build the Orders module (issue #5)');
+  assert.equal(t().taskId, buildId);
+  assert.match(floor.typed.at(-1)?.text ?? '', /You stopped with build the Orders module/);
+  assert.equal(roster.tasks.ongoing(floor, w), undefined);
+  roster.stop();
+});
+
+test('real-build fix: a task the PM gives (not a change note) still replaces the old one as before', async () => {
+  const { floor, roster, w, t } = await office();
+  assert.equal(roster.tasks.assign(floor, w.id, 'Stop the Orders work and start on the Invoices module now', 'Pat', 'console'), true);
+  assert.equal(roster.tasks.ongoing(floor, w), undefined);
+  assert.match(t().text, /Invoices/);
+  roster.stop();
+});

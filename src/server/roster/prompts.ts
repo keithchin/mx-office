@@ -132,10 +132,14 @@ export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undef
  * The back-to-work nudge (back-to-work.ts): a member's turn ended with its task still open and nothing
  * escalated. One short prompt, a couple per task an hour at most; `by` when the Project Manager pressed Nudge.
  */
-export function backToWorkPrompt(task: string, by?: string): string {
+export function backToWorkPrompt(task: string, by?: string, ongoing?: string): string {
+  const going = ongoing?.replace(/[.\s]+$/, '');
   return [
     `You stopped with ${task.replace(/[.\s]+$/, '')} open: carry on, or escalate if you're blocked.`,
-    "If it's finished, say `task done` and what you delivered in one line, then stop. If you're waiting on another Lead, tell them with `office-workers tell` and carry on with what that doesn't block.",
+    // A change note on top of ongoing work (real-build fix): finishing the note never ends the work under it.
+    going
+      ? `It is a note on top of your ongoing work (${going}), not a replacement for it. If the note is finished, say \`task done\` for it in one line, then carry on with ${going}: don't stop that work. If you're waiting on another Lead, tell them with \`office-workers tell\`.`
+      : "If it's finished, say `task done` and what you delivered in one line, then stop. If you're waiting on another Lead, tell them with `office-workers tell` and carry on with what that doesn't block.",
     by ? `(${by} pressed Nudge in the Command Center.)` : '(Automatic nudge from Agent Office: one per stop, a couple per task an hour at most.)',
   ].join('\n');
 }
