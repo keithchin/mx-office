@@ -178,14 +178,17 @@ export class AgentApps {
   private async boot(e: AgentApp, floorDir: string): Promise<void> {
     try {
       const users = this.d.users?.(floorDir, e.commit).catch(() => []);
-      const inst = await this.d.boot({ floorId: e.floorId, floorDir, commit: e.commit, purpose: e.purpose, signal: e.abort.signal, progress: (l) => (e.phase = l), onPhase: (p) => (e.phase = BOOT_PHASE_TITLE[p] ?? p) });
+      const inst = await this.d.boot({ floorId: e.floorId, floorDir, commit: e.commit, purpose: e.purpose, signal: e.abort.signal, progress: (l) => (e.phase = l), onPhase: (p) => {
+          // Waiting is said by progress() only when something is building; the phase alone would claim a live app.
+          if (p !== 'waiting') e.phase = BOOT_PHASE_TITLE[p] ?? p;
+        } });
       if (e.abort.signal.aborted || this.apps.get(keyOf(e.floorId, e.workerId)) !== e) {
         await inst.stop();
         return;
       }
       e.instance = inst;
       e.users = (await users) ?? [];
-      void this.save();
+      await this.save();
       e.phase = 'Seeding';
       e.seed = (await this.d.seed?.(e).catch((err: Error) => `the seed journey couldn't run: ${err.message}`)) ?? 'the after-startup microflow (runs at every start)';
       e.state = 'ready';

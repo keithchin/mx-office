@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Agents run the app and test it themselves.** An agent asks the office for a running copy of its app at a commit (`office-app start --commit <sha>`, or the MCP tool `app_start`): its own ports and fresh database, its URL and test users, one per agent, stopped after 15 minutes unused, refused with the reason when memory is short, and its processes and database cleaned up when it stops (also after a crash). On it the agent plays journeys and smoke runs (`office-app journey J-12`, `office-app smoke`), signed out after each run; a runtime error in the app's log (such as *Operator formatDecimal not supported*) fails the run with its line. Results are recorded against that commit: the Testing page lists them and a change's **Checks** says *journeys passed at @C*. The Playbooks of the roles that build or test now say to do this before reporting done. **Microflow tests actually run:** the office makes the test database mxcli looks for (`<app>_test` in lower case, owned by `mendix`, no superuser) before every run, an agent can run them at its own commit (`office-app test`), and a run that gives no results says exactly why instead of *no JUnit file*.
 
 ## 2026-10-25 · release 77 (`4909977`)
 

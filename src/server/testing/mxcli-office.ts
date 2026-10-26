@@ -19,6 +19,8 @@ import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
 import { prepareTestRun, serialTestRuntime } from './test-db.js';
+import { pickMxbuild } from '../liveapp/mxbuild.js';
+import { floorToolkitEnv } from '../toolkit-env.js';
 import { execFileOffP } from '../offloop/exec.js';
 import { testingSwitches } from './switches.js';
 
@@ -90,7 +92,7 @@ export interface TestAsk {
 
 /** The full sha of `rev` in the project's repository (worktrees share its objects), or undefined. */
 export async function commitIn(dir: string, rev: string): Promise<string | undefined> {
-  if (!/^[w./@^~-]{1,200}$/.test(rev) || rev.startsWith('-')) return undefined;
+  if (!/^[\w./@^~-]{1,200}$/.test(rev) || rev.startsWith('-')) return undefined;
   try {
     const { stdout } = await execFileOffP('git', ['rev-parse', '--verify', '--quiet', `${rev}^{commit}`], { cwd: dir, timeout: 15_000, windowsHide: true });
     return /^[0-9a-f]{40}$/.test(stdout.trim()) ? stdout.trim() : undefined;
@@ -132,7 +134,7 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
   const done = (async () => {
     try {
       const prepare = deps.prepare ?? ((base: string) => prepareTestRun(base, { dataDir }));
-      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, ...(deps.now ? { now: deps.now } : {}) });
+      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(deps.now ? { now: deps.now } : {}) });
       const [rec] = await testingStore(dataDir, floor.id).ingest([draft]);
       slot.record = rec?.id;
       slot.harness = draft.harnessError;
@@ -148,7 +150,7 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
       slot.running = false;
     }
   })();
-  return { commit: main.sha, done };
+  return { commit: sha, done };
 }
 
 /** The project's microflow test run now, or its last one (what an agent's office-app test waits on). */

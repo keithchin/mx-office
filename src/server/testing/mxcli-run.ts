@@ -32,10 +32,10 @@ export interface MxOut {
 }
 
 /** Runs mxcli and always answers (never rejects): exit code, output, whether it was stopped or never started. */
-export async function runMx(bin: string, args: string[], cwd: string, timeout: number): Promise<MxOut> {
+export async function runMx(bin: string, args: string[], cwd: string, timeout: number, extraEnv: Record<string, string> = {}): Promise<MxOut> {
   const t0 = Date.now();
   try {
-    const { stdout, stderr } = await execFileOffP(bin, args, { cwd, timeout, maxBuffer: 64 * 1024 * 1024, windowsHide: true, env: { ...process.env, NO_COLOR: '1' } });
+    const { stdout, stderr } = await execFileOffP(bin, args, { cwd, timeout, maxBuffer: 64 * 1024 * 1024, windowsHide: true, env: { ...process.env, NO_COLOR: '1', ...extraEnv } });
     return { code: 0, stdout, stderr, ms: Date.now() - t0 };
   } catch (err) {
     const e = err as OffError;
@@ -80,6 +80,8 @@ export interface TestRunOpts {
   prepare?: (mprBase: string) => Promise<{ db: string; notes: string[] } | { why: string }>;
   /** One test runtime at a time on the machine (test-db.ts serialTestRuntime); runs it straight away without. */
   serial?: <T>(fn: () => Promise<T>) => Promise<T>;
+  /** The mxbuild for the app (liveapp/mxbuild.ts pickMxbuild, as the live app and the app instances pick it): handed to mxcli as MXCLI_MXBUILD_PATH. */
+  mxbuildFor?: (mprPath: string) => string | undefined;
 }
 
 export class NoTestsError extends Error {}
@@ -127,7 +129,8 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
     const run = async () => {
       const ready = o.prepare ? await o.prepare(base) : undefined;
       if (ready && 'why' in ready) return { ready };
-      return { ready, out: await runMx(o.bin, args, wf.dir, o.timeoutMs + 60_000) };
+      const mxbuild = o.mxbuildFor?.(path.join(wf.dir, wf.mpr));
+      return { ready, out: await runMx(o.bin, args, wf.dir, o.timeoutMs + 60_000, mxbuild ? { MXCLI_MXBUILD_PATH: mxbuild, MXBUILD_PATH: mxbuild } : {}) };
     };
     const got = await (o.serial ?? (<T>(fn: () => Promise<T>) => fn()))(run);
     if (got.ready && 'why' in got.ready) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${got.ready.why}` }), undefined) };

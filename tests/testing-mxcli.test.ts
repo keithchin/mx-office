@@ -419,6 +419,17 @@ test('the office wiring: automatic scoring is off by default; on, a new main com
     assert.equal(recs[0].testedRevision, next.sha);
     assert.equal(recs[0].actor.name, 'Ann');
     untouched(s);
+    // An agent's run (office-app test) on its own commit, an older one here: the JUnit result is recorded at exactly that commit.
+    const mine = await startMicroflowTests(s.dataDir, floor, { name: 'Rhea', agentId: 'w-rhea', commit: main.sha.slice(0, 10) }, deps);
+    assert.ok(typeof mine !== 'string', String(mine));
+    assert.equal(mine.commit, main.sha);
+    await mine.done;
+    const agentRec = (await testingStore(s.dataDir, 'f2').all()).at(-1)!;
+    assert.equal(agentRec.testedRevision, main.sha);
+    assert.equal(agentRec.actor.name, 'Rhea');
+    assert.ok(agentRec.results.length > 0 && !agentRec.harnessError, 'JUnit results, not a harness error');
+    assert.match(String(await startMicroflowTests(s.dataDir, floor, { name: 'Rhea', agentId: 'w-rhea', commit: 'f'.repeat(40) }, deps)), /has no commit f{40}: commit your work first/);
+    untouched(s);
 
     // Off again: an admin's "Score main now" still works.
     assert.ok(typeof setTestingSwitches({ autoScore: false }, { name: 'Ann' }) !== 'string');
