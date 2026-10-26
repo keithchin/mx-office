@@ -65,6 +65,7 @@ export interface RuntimeError {
 }
 
 const ENTRY = /^\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(?:[.,]\d+)?\s+(ERROR|CRITICAL)\s+-\s+(.*)$/;
+const FRAME = /^\s*(at\s|\.\.\.\s*\d+\s+more|\^\s*$|Advanced stacktrace)/;
 const ANY_ENTRY = /^\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d/;
 
 /**
@@ -82,15 +83,23 @@ export function runtimeErrorsIn(text: string, max = 5): RuntimeError[] {
       if (ENTRY.test(l) && out.length < max) out.push((cur = { line: l.slice(0, 400), more: [] }));
       continue;
     }
-    if (cur && l.trim() && cur.more.length < 4) cur.more.push(l.trim().slice(0, 300));
+    // The exception's own lines, without its stack frames: the message, the failing expression, each "Caused by".
+    if (cur && l.trim() && !FRAME.test(l) && cur.more.length < 12) cur.more.push(l.trim().slice(0, 300));
   }
   return out;
 }
 
 /** A runtime error in one line: the entry, and the exception's "…not supported…" / "Caused by" line when there is one. */
 export function runtimeErrorWords(e: RuntimeError): string {
-  const key = e.more.find((m) => /not supported|exception|caused by|error/i.test(m));
-  return key && !e.line.includes(key) ? `${e.line} — ${key}` : e.line;
+  const message = (m: string) => m.replace(/^Caused by:\s*/i, '');
+  const causes = e.more.filter((m) => /^Caused by:/i.test(m));
+  // The first cause says what failed (and the line after it, the expression); the deepest says why.
+  const first = causes[0];
+  const after = first ? e.more[e.more.indexOf(first) + 1] : undefined;
+  const parts = first
+    ? [message(first), ...(after && !/^Caused by:/i.test(after) ? [after] : []), ...(causes.length > 1 ? [message(causes[causes.length - 1])] : [])]
+    : [e.more.find((m) => /not supported|exception|error/i.test(m) && !e.line.includes(m))].filter((m): m is string => !!m);
+  return parts.length ? `${e.line} — ${parts.join(' — ')}`.slice(0, 900) : e.line;
 }
 
 /** A journey or smoke run's outcome, as the agent hears it. */
@@ -113,7 +122,7 @@ export function outcomeWords(o: RunOutcome): string {
   const head = `${o.suite} @${o.commit.slice(0, 7)}: ${o.status === 'passed' ? 'PASSED' : o.status === 'failed' ? 'FAILED' : 'DID NOT RUN'}`;
   const lines = [head];
   for (const s of o.steps ?? []) if (s.status !== 'passed') lines.push(`  step ${s.n} ${s.status}: ${s.caption}${s.why ? ` — ${s.why}` : ''}`);
-  if (o.failure && !(o.steps ?? []).some((s) => s.why === o.failure)) lines.push(`  ${o.failure}`);
+  if (o.failure && !(o.steps ?? []).some((s) => !!s.why && o.failure!.endsWith(s.why))) lines.push(`  ${o.failure}`);
   for (const r of o.runtimeErrors ?? []) lines.push(`  runtime error (failed check): ${r}`);
   if (o.sessionCap) lines.push(`  ${o.sessionCap}`);
   lines.push(o.record ? `  recorded against ${o.commit.slice(0, 7)} (${o.record}): it shows on the Testing page and in the change's Checks` : '  not recorded');

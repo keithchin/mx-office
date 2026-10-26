@@ -339,6 +339,19 @@ test('runtime log parsing: ERROR and CRITICAL with their exception line; warning
   assert.equal(errs.length, 2);
   assert.equal(runtimeErrorWords(errs[0]), '2026-10-26 10:00:02.000 ERROR - Connector: something broke — java.lang.IllegalStateException: Operator not supported');
   assert.match(errs[1].line, /CRITICAL/);
+  // The shape a failing page data source logs (measured on a sample app, Mendix 11.12.2): the cause chain without frames.
+  const ds = [
+    "2026-10-26 19:15:05.911 ERROR - Connector: An error has occurred while handling the request.: Exception while retrieving data for 'M.Amount_Web.dvAmount'",
+    "com.mendix.webui.WebUIException: Exception while retrieving data for 'M.Amount_Web.dvAmount'",
+    '\tat com.mendix.x(Y.java:1)',
+    'Caused by: com.mendix.modules.microflowengine.MicroflowException: Failed to evaluate expression, error occurred on line 1, character 1',
+    "parseDecimal('12,50 SGD')",
+    '^',
+    '\t... 41 more',
+    'Advanced stacktrace:',
+    'Caused by: java.lang.NumberFormatException: Character , is neither a decimal digit number',
+  ].join('\n');
+  assert.equal(runtimeErrorWords(runtimeErrorsIn(ds)[0]), "2026-10-26 19:15:05.911 ERROR - Connector: An error has occurred while handling the request.: Exception while retrieving data for 'M.Amount_Web.dvAmount' — com.mendix.modules.microflowengine.MicroflowException: Failed to evaluate expression, error occurred on line 1, character 1 — parseDecimal('12,50 SGD') — java.lang.NumberFormatException: Character , is neither a decimal digit number");
 });
 
 test('the command and the MCP tools: office-app parses, HEAD is resolved here, the tools are served and allowed without a prompt', () => {
