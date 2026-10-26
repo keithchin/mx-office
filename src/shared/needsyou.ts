@@ -30,6 +30,8 @@ import { designCandidates } from './decisions/design.js';
 import type { DesignNeedView } from './design/views.js';
 import type { ClaudeAuthView } from './claude-auth.js';
 import { claudeAuthNeeds } from './decisions/claude-auth.js';
+import { marketplaceCandidates } from './decisions/marketplace.js';
+import type { MarketplaceView } from './marketplace.js';
 import type { BrainAct, BrainChangeView } from './portfolios.js';
 import { liveNeeds } from './liveapp/status.js';
 
@@ -68,7 +70,7 @@ export type NeedTarget =
   /** 🔑 Claude for agents (server/claude-auth/, ui/claude-auth/): keep the environment's key, use the agents' Claude login, restart the agents Claude refused, or how to fix it. */
   | { to: 'claude-auth'; act: 'keep' | 'login' | 'restart' | 'help' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | 'claude' | 'delivery' | AskKind;
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | 'marketplace' | 'claude' | 'delivery' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -153,6 +155,8 @@ export interface NeedsInput {
   brain?: BrainChangeView;
   /** The project's design-system adoption waiting on you (server/design/): one ✋ card. */
   design?: DesignNeedView;
+  /** The project's Marketplace requests waiting on you (server/marketplace/): a card each. */
+  marketplace?: MarketplaceView;
   /** Where the agents' Claude credentials come from (server/claude-auth/): its office-wide alert and one-time decision. */
   claude?: ClaudeAuthView;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
@@ -223,6 +227,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   for (const c of brainCandidates(i.brain, i.floor)) put(c);
   // A design system proposed for this project (server/design/): Adopt or Keep existing design.
   for (const c of designCandidates(i.design, i.floor)) put(c);
+  // A Marketplace widget or module an agent asked for (server/marketplace/): Download and add, a package file, or Decline.
+  for (const c of marketplaceCandidates(i.marketplace, i.floor)) put(c);
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {

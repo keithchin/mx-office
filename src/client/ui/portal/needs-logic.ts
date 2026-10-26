@@ -142,6 +142,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   questions: 'Questions',
   brain: 'Company brain',
   design: 'Design system',
+  marketplace: 'Marketplace',
   claude: 'Claude sign-in',
   delivery: 'Needs intervention',
 };

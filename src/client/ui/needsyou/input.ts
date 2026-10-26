@@ -20,6 +20,7 @@ import { followFeedMessage } from '../followthrough/feed';
 import { brainFeedMessage, brainNeed, onBrainChanged } from '../portfolios/feed';
 import { designFeedMessage, designNeed, onDesignChanged } from '../design/feed';
 import { claudeAuthFeedMessage, claudeAuthNeed, onClaudeAuthChanged } from '../claude-auth/feed';
+import { marketplaceFeedMessage, marketplaceNeed, onMarketplaceChanged } from '../marketplace/feed';
 
 /** What a page knows that the feeds don't. */
 export type PageNeeds = Partial<Pick<NeedsInput, 'setup' | 'live' | 'firm' | 'studio' | 'budget'>>;
@@ -44,6 +45,7 @@ export function pageNeedsInput(floor: string | undefined, roster: RosterView | u
     splits: decisionSplits(floor),
     brain: brainNeed(floor),
     design: designNeed(floor),
+    marketplace: marketplaceNeed(floor),
     claude: claudeAuthNeed(),
   });
 }
@@ -57,6 +59,7 @@ export function onNeedsFeeds(fn: () => void): void {
   onDecisionsChanged(fn);
   onBrainChanged(fn);
   onDesignChanged(fn);
+  onMarketplaceChanged(fn);
   onClaudeAuthChanged(fn);
 }
 
@@ -71,5 +74,6 @@ export function needsFeedsMessage(msg: ServerMsg): void {
   followFeedMessage(msg);
   brainFeedMessage(msg);
   designFeedMessage(msg);
+  marketplaceFeedMessage(msg);
   claudeAuthFeedMessage(msg);
 }

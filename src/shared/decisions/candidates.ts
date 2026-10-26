@@ -27,7 +27,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission' | 'artifact' | 'trigger'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission' | 'artifact' | 'trigger' | 'marketplace'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }

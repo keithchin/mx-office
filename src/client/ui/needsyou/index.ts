@@ -78,6 +78,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   questions: ['questions for the client', 'questions for the client'],
   brain: ['company brain', 'company brain'],
   design: ['design system', 'design systems'],
+  marketplace: ['Marketplace request', 'Marketplace requests'],
   claude: ['Claude sign-in', 'Claude sign-in'],
   delivery: ['answer unconfirmed', 'answers unconfirmed'],
 };

@@ -10,7 +10,8 @@ request to the office repo.
 Every escalation that asks for a Studio Pro hand-add, or says mxcli can't do something, needs a `Tried:`
 section (each attempt with its exact error), or the office hands it back to the agent. Before escalating:
 `mxcli syntax <topic>`; `mxcli widget list -p <app>.mpr` / `mxcli widget describe <name> -p <app>.mpr`;
-`mxcli marketplace search "<what>"` (a pluggable widget or module that does it); `--engine legacy` for a
+`mxcli marketplace search "<what>"` (a pluggable widget or module that does it: ask for it with
+`office-marketplace add`, never install it yourself); `--engine legacy` for a
 write the default engine refuses; `mxcli check -p <app>.mpr` with the attempt; and this list.
 
 One entry per problem, in this format (no customer content: a project or escalation id at most):
@@ -27,16 +28,40 @@ One entry per problem, in this format (no customer content: a project or escalat
 - **Why mxcli can't do it directly:** Studio Pro's built-in Image uploader and File manager aren't placeable
   with mxcli: `imageuploader` / `fileuploader` in MDL give `MDL-WIDGET25` ("not a widget in this project")
   in a plain Mendix 11.12.4 app.
-- **Workaround:** install Mendix's pluggable **File Uploader** widget from the Marketplace (content 235351,
-  Apache-2.0, v2.5.1), then place it in MDL:
-  1. `mxcli marketplace search "file uploader"` (find content 235351 and its latest version).
-  2. `mxcli marketplace install …` with the id and version it lists (needs the Mendix PAT, `MENDIX_PAT`).
-  3. `mxcli widget init -p <app>.mpr`, then `mxcli widget describe fileuploader -p <app>.mpr` for its properties.
-  4. `fileuploader` in the page's MDL, bound to an entity that specialises `System.Image` (photos) or
-     `System.FileDocument` (files).
-  5. `mxcli check -p <app>.mpr`, then apply as usual (the one writer, `mxcli exec`).
-- **Verified with:** the `MDL-WIDGET25` error: mxcli v0.21.0 and nightly-20261003, Mendix 11.12.4,
-  16 Oct 2026. The install: verified on a migration project 16 Oct 2026 (agent-reported). MDL placement of
-  `fileuploader`: not yet verified by the office.
+- **Workaround:** get Mendix's pluggable **File Uploader** widget from the Marketplace (content 235351,
+  Apache-2.0) through the office, then place it in MDL:
+  1. `office-marketplace add --id 235351 --kind widget --version <x.y.z> --name com.mendix.widget.web.FileUploader --why "…"`.
+     The Project Manager approves it on Needs you; the office downloads it (or takes a package file the PM
+     picked), checks it and commits `widgets/com.mendix.widget.web.FileUploader.mpk` to your branch, then tells
+     you. Never install it yourself and never ask for a token (a test office has none).
+  2. `mxcli widget init -p <app>.mpr`. The `.mpk` in `widgets/` alone is not enough: `MDL-WIDGET25` stays until
+     `widget init` has extracted its definition.
+  3. `mxcli widget describe fileuploader -p <app>.mpr` for its properties.
+  4. `fileuploader` in the page's MDL, inside a data view of the context object, bound to an entity that
+     specialises `System.FileDocument` (files; `uploadMode: 'images'` and `associatedImages` for `System.Image`
+     photos), with its required properties:
+     ```
+     create persistent entity Notices.Attachment extends System.FileDocument ();
+     create association Notices.Attachment_Notice from Notices.Attachment to Notices.Notice;
+     create nanoflow Notices.ACT_Attachment_Create ($Notice: Notices.Notice)
+     returns Notices.Attachment as $Attachment
+     begin
+       $NewAttachment = create Notices.Attachment (Attachment_Notice = $Notice);
+       return $NewAttachment;
+     end;
+     create page Notices.Notice_Attachments (Title: 'Notice attachments', Layout: Atlas_Core.Atlas_Default, Params: ( $Notice: Notices.Notice )) {
+       dataview dv (DataSource: $Notice) {
+         fileuploader up (uploadMode: 'files', associatedFiles: $currentObject/Notices.Attachment_Notice, createFileAction: call nanoflow Notices.ACT_Attachment_Create)
+       }
+     };
+     ```
+     plus `grant execute` on the nanoflow, `grant view` on the page and entity access for the roles (without
+     them `mx check` says CE0106).
+  5. `mxcli check -p <app>.mpr`, then apply as usual (the one writer, `mxcli exec`), then `mx check`.
+- **Verified with:** mxcli nightly-20261003, Mendix 11.12.4, File Uploader 2.4.1, 26 Oct 2026, on a copy of
+  a neutral sample app: `MDL-WIDGET25` with the package in `widgets/` before `widget init`; `mxcli check`
+  passed after it; `mx check` 0 errors and `mxbuild` built the package with the page above. (Without
+  `associatedFiles` and a create action `mx check` says CE0642.) The upload itself in a running app: not
+  verified by the office.
 - **Source:** A migration project, the Lead Developer's "Studio Pro hand-add needed: photo upload control" escalation
   (16 Oct 2026).

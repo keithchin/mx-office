@@ -73,6 +73,7 @@ import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
 import { teamSourceRoutes } from './team-sources.js';
 import { designRoutes } from './design.js';
+import { marketplaceRoutes } from './marketplace.js';
 import { designImportRoutes } from './design-import.js';
 import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
@@ -271,6 +272,10 @@ export const routes: readonly Route[] = [
   designRoutes.needs,
   designRoutes.file,
   designRoutes.act,
+  // Add from the Mendix Marketplace (server/marketplace/): the requests, the PM's approve/decline/path, a package file.
+  marketplaceRoutes.view,
+  marketplaceRoutes.action,
+  marketplaceRoutes.upload,
   // Start from another app: what a client's apps offer a new project, and what a project adopted (adopt-from/).
   adoptFromRoutes.sources,
   adoptFromRoutes.record,
