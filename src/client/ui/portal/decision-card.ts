@@ -1,7 +1,7 @@
 // The Overview's Needs you card's decision cards (shared/decisions/): what every card says besides its
 // question (what it blocks, the evidence, every source with Separate, small print, "possibly related",
 // and the "After you answer" line), and the cards that aren't an escalation with options: a hands-on
-// action (I've done it / Can't now / Ask), an FYI (Noted), an AWAITING-PM line that's gone (Resolved /
+// action (I've done it / Can't now / Ask, with an optional note sent with either), an FYI (Noted), an AWAITING-PM line that's gone (Resolved /
 // Still needed), and any other source (its own button). The escalation with options stays needs-card.ts's.
 
 import type { DecisionCard } from '../../../shared/decisions/types';
@@ -11,6 +11,7 @@ import { h, timeAgo, toast } from '../dom';
 import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { fitsLine } from '../process-map/card-link';
+import { cardWords } from './card-words';
 import './decision-card.css';
 
 export interface CardCtx {
@@ -120,17 +121,20 @@ const notAdmin = () => h('p.pt-esc-meta', {}, 'Only the Project Manager (an admi
 export function handsOnCard(c: DecisionCard, x: CardCtx): HTMLElement {
   const owner = c.owner;
   const check = c.escalation ? decisionCheck(c.escalation) : undefined;
+  // An optional note, sent with I've done it or Can't now (./card-words.ts).
+  const words = x.admin ? cardWords(owner) : undefined;
+  const said = () => words?.value() ?? '';
   const acts = !x.admin
     ? notAdmin()
     : h(
         'div.pt-esc-acts',
         {},
-        btn('.primary.pt-dc-done', "I've done it", (b) => void busy(b, decisionAct(x.floor, { action: 'done', escalation: c.escalation, others: otherEscalations(c), expectedRev: 0 })).then((ok) => ok && (toast(`${owner} is told it's done and re-checks`), x.done(c, `Done · ${owner} re-checks`)))),
-        btn('.pt-dc-cant', `Can't now: tell ${owner}`, (b) => void busy(b, decisionAct(x.floor, { action: 'cant-now', escalation: c.escalation })).then((ok) => ok && toast(`${owner} is told you can't do it now`)), `${owner} hears it after their turn; the card stays open`),
+        btn('.primary.pt-dc-done', "I've done it", (b) => void busy(b, decisionAct(x.floor, { action: 'done', escalation: c.escalation, others: otherEscalations(c), expectedRev: 0, ...(said() ? { text: said() } : {}) })).then((ok) => ok && (words?.clear(), toast(`${owner} is told it's done and re-checks`), x.done(c, `Done · ${owner} re-checks`)))),
+        btn('.pt-dc-cant', `Can't now: tell ${owner}`, (b) => void busy(b, decisionAct(x.floor, { action: 'cant-now', escalation: c.escalation, ...(said() ? { text: said() } : {}) })).then((ok) => ok && (words?.clear(), toast(`${owner} is told you can't do it now`))), `${owner} hears it after their turn, with your note if you wrote one; the card stays open`),
         h('span.pt-grow'),
         x.leadName ? h('button.pt-link.pt-esc-ask', { type: 'button', onclick: () => x.ask(`About "${c.question.split(':')[0]}": `) }, `Ask ${x.leadName}`) : null,
       );
-  return shell(c, [c.detail ? h('p.pt-esc-q', {}, c.detail) : null, ...cardExtras(c, x), check ? h('p.pt-dc-check', { class: check.ok ? 'ok' : 'bad' }, h('b', {}, `${check.label} (a check, not proof): `), check.text) : null], acts);
+  return shell(c, [c.detail ? h('p.pt-esc-q', {}, c.detail) : null, ...cardExtras(c, x), check ? h('p.pt-dc-check', { class: check.ok ? 'ok' : 'bad' }, h('b', {}, `${check.label} (a check, not proof): `), check.text) : null, words?.el ?? null], acts);
 }
 
 /**

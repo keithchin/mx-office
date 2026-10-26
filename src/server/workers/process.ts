@@ -180,15 +180,21 @@ export function writeOfficeCommands(dataDir: string): string | undefined {
 function writeCommands(dataDir: string): string | undefined {
   const dir = path.join(dataDir, 'bin');
   let wrote = false;
-  for (const [name, what] of [['office-queue', "Agent Office's task queue, for the board agents"], ['office-workers', "Agent Office's workers, for every worker"]]) {
-    const script = binScript(`${name}.js`);
+  // office-marketplace is `office-workers marketplace …` (bin/office-marketplace.js): asking for a Marketplace package.
+  const commands: [string, string, string, string][] = [
+    ['office-queue', "Agent Office's task queue, for the board agents", 'office-queue', ''],
+    ['office-workers', "Agent Office's workers, for every worker", 'office-workers', ''],
+    ['office-marketplace', "Agent Office's Add from Marketplace, for every worker", 'office-workers', ' marketplace'],
+  ];
+  for (const [name, what, js, pre] of commands) {
+    const script = binScript(`${js}.js`);
     if (!script) continue;
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const file = path.join(dir, name);
-    writeFileSync(file, `#!/bin/sh\n# ${what} (see bin/${name}.js).\nexec ${shq(process.execPath)} ${shq(script)} "$@"\n`, { mode: 0o700 });
+    writeFileSync(file, `#!/bin/sh\n# ${what} (see bin/${name}.js).\nexec ${shq(process.execPath)} ${shq(script)}${pre} "$@"\n`, { mode: 0o700 });
     chmodSync(file, 0o700);
     // cmd.exe and PowerShell find it by PATHEXT; Git Bash (Claude Code's shell there) runs the sh one.
-    if (WIN) writeFileSync(`${file}.cmd`, `@"${process.execPath}" "${script}" %*\r\n`);
+    if (WIN) writeFileSync(`${file}.cmd`, `@"${process.execPath}" "${script}"${pre} %*\r\n`);
     wrote = true;
   }
   return wrote ? dir : undefined;

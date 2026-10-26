@@ -10,6 +10,7 @@ import type { NeedItem, NeedTarget } from '../needsyou.js';
 import type { DuplicateGroup } from './duplicates.js';
 import type { DecisionArtifact } from './artifact.js';
 import type { EscalationTrigger } from '../roster/autonomy.js';
+import type { MarketplaceCard } from './marketplace.js';
 
 /**
  * decision: only you can choose (options, Reply in my words, Ask the lead). hands-on: something only a
@@ -98,6 +99,8 @@ export interface DecisionCard {
   artifact?: DecisionArtifact;
   /** The primary escalation's trigger, when it has one (the App Workspace's business filter reads it). */
   trigger?: EscalationTrigger;
+  /** A Marketplace request (./marketplace.ts): Download and add, Use a package file…, Decline. */
+  marketplace?: MarketplaceCard;
   /** The compact row (NeedItem) for the strip, the phone and Teams. */
   need: NeedItem;
 }

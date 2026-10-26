@@ -14,6 +14,7 @@ import { ESCALATE_TOOL, ESCALATE_USAGE, formatEscalated, parseEscalate } from '.
 import { SUBAGENT_TOOL, SUBAGENT_USAGE, formatSubagent, parseSubagent } from './office-subagent.js';
 import { FIRM_USAGE, firmMain } from './office-firm.js';
 import { RENDER_USAGE, formatRendered, parseRender } from './office-render.js';
+import { MARKETPLACE_TOOL, MARKETPLACE_USAGE, formatMarketplace, parseMarketplace } from './office-marketplace.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this project: status, task,
@@ -38,6 +39,7 @@ const USAGE = `Usage:
 ${ESCALATE_USAGE}
 ${SUBAGENT_USAGE}
 ${RENDER_USAGE}
+${MARKETPLACE_USAGE}
 ${FIRM_USAGE}
   office-workers mcp                            serve these as MCP tools on stdio`;
 
@@ -50,9 +52,9 @@ export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 /** How long the office may take to come back when it's restarting (a dev reload, an upgrade). */
 const RETRY_MS = 6000;
 /** Sending several workers home waits on git for each; hiring may fetch from GitHub first. */
-const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 30_000, subagent: 15_000, render: 90_000 };
+const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 30_000, subagent: 15_000, render: 90_000, marketplace: 120_000 };
 /** Where each call goes, under /office/workers. */
-const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent', render: '/render' };
+const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent', render: '/render', marketplace: '/marketplace' };
 
 /**
  * Reads `--flag value` and `--flag=value` options, and the words that aren't options.
@@ -127,6 +129,7 @@ export function parseArgs(argv) {
   if (cmd === 'escalate') return parseEscalate(rest, UsageError);
   if (cmd === 'subagent' || cmd === 'subagents') return parseSubagent(rest, UsageError);
   if (cmd === 'export-pdf' || cmd === 'screenshot') return parseRender(cmd, rest, UsageError);
+  if (cmd === 'marketplace') return parseMarketplace(rest, UsageError);
   if (cmd === 'hire') {
     const { opts, words } = options(rest, ['--prompt', '--provider', '--model', '--effort', '--desk', '--issue'], ['--no-worktree', '--json']);
     if (words.length) throw new UsageError(`Unexpected argument: ${words[0]} (give the task on stdin or with --prompt)`);
@@ -168,7 +171,7 @@ export function officeEnv(env) {
 
 /**
  * The HTTP request for one of the office's worker calls.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render' | 'marketplace'} what
  * @param {{ url: string, worker: string, token: string }} office
  * @param {Record<string, unknown>} [body]
  * @returns {{ method: string, url: string, headers: Record<string, string>, body?: string, timeout: number }}
@@ -217,7 +220,7 @@ async function send(req, fetchImpl) {
 
 /**
  * Makes one call to the office; resolves to what it answered, or throws with why it said no.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render' | 'marketplace'} what
  * @param {Record<string, unknown> | undefined} body
  * @param {{ env: Record<string, string | undefined>, fetch: typeof fetch }} io
  */
@@ -374,6 +377,7 @@ export const TOOLS = [
   },
   ESCALATE_TOOL,
   SUBAGENT_TOOL,
+  MARKETPLACE_TOOL,
 ];
 
 const INSTRUCTIONS =
@@ -381,7 +385,7 @@ const INSTRUCTIONS =
   'the other agents: whenever you are asked about the agents or workers (who is working on what, whose pull request merged, hiring one, sending them home), use them, ' +
   "rather than looking for the agents with git, ps or HTTP calls. list_workers says where each one's pull request stands (merged: true means it merged), hire_worker " +
   'puts a new agent to work, send_home sends agents home and deletes their worktrees and branches, tell_worker gives one a prompt, and link_pr says which pull request is a ' +
-  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), and subagent is a Lead's track record and standing of its own subagents. Everyone in the office sees who did what. " +
+  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), subagent is a Lead's track record and standing of its own subagents, and marketplace_add asks the Project Manager for a Mendix Marketplace widget or module that the office then adds to your branch (never install one yourself). Everyone in the office sees who did what. " +
   'The office-workers command on your PATH does the same from a shell.';
 
 /** What a tell's answer says happened (the office's own words); never "told" without the office saying it was received. */
@@ -410,6 +414,7 @@ async function runTool(name, args, io) {
   if (name === 'link_pr') return { text: formatLinked(await call('pr', a, io)) };
   if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
   if (name === 'subagent') return { text: formatSubagent(await call('subagent', a, io)) };
+  if (name === 'marketplace_add') return { text: formatMarketplace(await call('marketplace', { op: 'add', ...a }, io), 'add') };
   throw new Error(`Unknown tool: ${name}`);
 }
 
@@ -549,6 +554,12 @@ export async function main(argv, io = {}) {
       const { cmd: _s, json: asJson, ...ask } = cmd;
       const answer = await call('subagent', ask, ctx);
       out(asJson ? JSON.stringify(answer, null, 2) : formatSubagent(answer));
+      return 0;
+    }
+    if (cmd.cmd === 'marketplace') {
+      const { cmd: _m, json: asJson, ...ask } = cmd;
+      const answer = await call('marketplace', ask, ctx);
+      out(asJson ? JSON.stringify(answer, null, 2) : formatMarketplace(answer, ask.op));
       return 0;
     }
     if (cmd.cmd === 'render') {

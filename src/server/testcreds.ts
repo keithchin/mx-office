@@ -38,6 +38,18 @@ export const ALLOW_CLAUDE_GATEWAY_ENV = 'AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY'
 /** A test office may hand its own Claude set (and only that) to agents and the planner. */
 export const claudeGatewayAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => on(env[ALLOW_CLAUDE_GATEWAY_ENV]);
 
+/**
+ * The one test-only way for a test office's OWN Marketplace download (server/marketplace/token.ts) to use a
+ * Mendix token: AGENT_OFFICE_TEST_ALLOW_MENDIX_MARKETPLACE=1 lets the office's "Add from Marketplace" read
+ * MENDIX_PAT (or MENDIX_TOKEN / MX_PAT) from the environment it was started with, for that one mxcli download
+ * child and nothing else. Agents still get no Mendix token (Connections keeps withholding it), no GitHub
+ * token passes, and Connections' stored token and the ~/Mendix/.env file stay unread.
+ */
+export const ALLOW_MENDIX_MARKETPLACE_ENV = 'AGENT_OFFICE_TEST_ALLOW_MENDIX_MARKETPLACE';
+
+/** A test office may use the environment's Mendix token for its own Marketplace download (and only that). */
+export const mendixMarketplaceAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => on(env[ALLOW_MENDIX_MARKETPLACE_ENV]);
+
 /** Tokens were let through on purpose (tests with a fake gh only). */
 export const tokensAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => on(env[ALLOW_TOKEN_ENV]);
 

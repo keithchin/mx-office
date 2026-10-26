@@ -33,6 +33,7 @@ import { stuckView } from '../stuck/feed';
 import { dispatchNotices } from '../dispatch/card';
 import { followNotices } from '../followthrough/card';
 import { duplicatesCard } from './duplicates-card';
+import { marketplaceCard } from '../marketplace/card';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -244,6 +245,15 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
         const sig = JSON.stringify(['dupes', !!r?.admin, card.duplicates]);
         const had = drawn.get(it.key);
         const d = had?.sig === sig ? had : { sig, el: duplicatesCard(card, ctx(r)) };
+        keep.set(it.key, d);
+        nodes.push(d.el);
+        continue;
+      }
+      // A Marketplace request (ui/marketplace/card.ts): Download and add, Use a package file…, Decline.
+      if (card?.marketplace) {
+        const sig = JSON.stringify(['mkt', !!r?.admin || !!s.roster?.admin, card.marketplace]);
+        const had = drawn.get(it.key);
+        const d = had?.sig === sig ? had : { sig, el: marketplaceCard(card, ctx(r)) };
         keep.set(it.key, d);
         nodes.push(d.el);
         continue;
