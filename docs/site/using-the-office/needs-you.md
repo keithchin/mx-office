@@ -28,9 +28,13 @@ Each card has a **kind**, which decides its buttons (see [Decision cards](comman
 | Kind | Tag on the card | Buttons |
 |---|---|---|
 | `decision` | *Decision* | The options, **Reply in my words**, **Ask &lt;lead&gt;** |
-| `hands-on` | *Action for you* | **I've done it**, **Can't now**, **Ask &lt;lead&gt;** |
+| `hands-on` | *Action for you* | **I've done it**, **Can't now**, **Ask &lt;lead&gt;**, and a field for a note sent with either (optional) |
 | `fyi` | *FYI* | **Noted** (approves nothing) |
 | `status` | *Status* | Its own button (open the PR, the setup panel…) |
+
+**Action cards take words.** An *Action for you* card has a one-line field, *A note for &lt;agent&gt; (optional: sent with the button you press)*: what you type goes with **I've done it** or **Can't now** (say why you can't, or what to do instead), and the field clears once it went. Empty is fine: the buttons work as before. A [Marketplace request](marketplace.md)'s **Decline** takes its note the same way.
+
+A **Marketplace request** (an agent asked for a Mendix Marketplace widget or module) is a *Decision* with its own buttons: **Download and add**, **Use a package file…** and **Decline**. See [Add from Marketplace](marketplace.md).
 
 ## Where it shows, and what each place counts
 

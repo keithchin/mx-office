@@ -34,6 +34,17 @@ On 2026-10-06 three test offices started **real** Claude Code sessions instead o
 
 **Real agents in a test office.** A test office never passes Claude credentials to agents, so its agents are fake unless you start it with `AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY=1` (plus whatever lets real agents start). That passes only the Claude variables the office was started with (for example a company LLM gateway's `ANTHROPIC_BASE_URL` and `ANTHROPIC_API_KEY`) to agents and the wizard's planner; GitHub, Mendix and every other token stay withheld. Its Claude workers use a Claude config folder of the test office's own (`claude-config` in its data folder): first-run questions answered, the project folder trusted and that key approved there, so they don't stop at Claude Code's trust or sign-in screens and the machine's own `~/.claude.json` is never written. Use a project whose remote is a local bare repository, set a low budget, and remember agents spend real money.
 
+### Marketplace downloads in a test office
+
+A test office holds no Mendix token, so on a [Marketplace request](../using-the-office/marketplace.md) **Download and add** is off and says why; **Use a package file…** works (pick a `.mpk` downloaded from the Marketplace website, or one already on the machine). To exercise the office's own download in a test office, start it with `AGENT_OFFICE_TEST_ALLOW_MENDIX_MARKETPLACE=1` and `MENDIX_PAT` set. That lets **only the office's own download** use that token, in the one mxcli child that downloads (with a home folder of its own). It is narrow on purpose:
+
+- agents still get **no** Mendix variable (`MENDIX_PAT`, `MENDIX_TOKEN`, `MX_PAT` are taken out of every worker's environment as before);
+- GitHub tokens are still dropped, `gh` still has an empty config and git no credential helper;
+- Connections' stored Mendix token and `~/Mendix/.env` are not read;
+- it is not `AGENT_OFFICE_TEST_ALLOW_GH_TOKEN` (which opens nothing here) nor `AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY`.
+
+The download goes to the internet: use it only with a token meant for testing, on a project whose remote is a local bare repository.
+
 The [Test Mode page](test-mode-page.md) (☰ → 🧪 Test mode, admins) shows whether the office you are on is in test mode, and runs the performance and journey suites against a throwaway test office of their own.
 
 So: start every test office with `--test-mode` and a fake `--agent`, keep it under `scratch\test-offices\<name>`, and prefer seeding data (a `workers.json`, the audit log, incidents) to hiring.

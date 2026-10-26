@@ -15,6 +15,7 @@ weight: 2
 | `link_pr` | pr, worker, unlink | `office-workers pr` |
 | `escalate` | **title**, urgency, trigger, details, options[], recommendation, artifact | `office-workers escalate` |
 | `subagent` | **op** (list, review, warn, bench, swap-model, reinstate), name, verdict (accept, rework), note, reason, model | `office-workers subagent` |
+| `marketplace_add` | **id**, **kind** (widget, module), version, name, why | `office-workers marketplace add` (`office-marketplace add`) |
 
 ## Allowed without asking
 

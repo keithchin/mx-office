@@ -72,6 +72,8 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `subagent` | Manage your subagents (Leads only) | See below |
 | `export-pdf` | An HTML file of your worktree as an A4 PDF | `--landscape`; see below |
 | `screenshot` | An HTML file of your worktree as a PNG | `--width`, `--height` (200 to 3840 by 2160), `--viewport` for the visible part only; see below |
+| `marketplace add` | Ask for a Mendix Marketplace widget or module | `--id`, `--kind widget\|module`, `--version`, `--name`, `--why`; also `office-marketplace add`; see below |
+| `marketplace list` | This project's Marketplace requests and where each is | |
 | `firm` | The Firm: reviewers ask and report, the team answers | See [The Firm](#the-firm) |
 | `mcp` | Serve these as MCP tools on stdio | See [MCP tools](mcp-tools.md) |
 
@@ -148,6 +150,21 @@ office-workers screenshot design/wireframes/home.html design/storyboard/01-home.
 - The page may load files from your worktree and nothing from the network. A Mermaid script from jsDelivr or unpkg is answered with the office's own copy, so `blueprint.html` renders its diagrams.
 - An input of at most 10 MB, an output of at most 50 MB, 45 seconds per render, one render at a time.
 - playwright-core is one of the office's own dependencies. On a machine where its Chromium isn't downloaded yet it says so (501, with `npx playwright-core install chromium` to run there); use `py` with matplotlib or openpyxl meanwhile.
+
+## marketplace
+
+For a widget or module from the Mendix Marketplace (mxcli says `MDL-WIDGET25 "… package not in widgets/"`, or the design needs one). The agent never downloads or installs it and never needs a token:
+
+```bash
+office-marketplace add --id 235351 --kind widget --version 2.5.1 \
+  --name com.mendix.widget.web.FileUploader --why "receipt upload on the expense form"
+```
+
+- `--id` is the number in the item's Marketplace URL; `--kind` is `widget` or `module`; `--version` defaults to the latest; `--name` is the package's own name (a widget id or package name, a module's name), which a package file is checked against.
+- The request goes to the Project Manager's Needs-you card. Once approved, the office downloads it with its own credential (or takes a package file the PM picked), checks it, commits it to the branch you asked from as the office and tells you. Asking again for the same item joins the open request.
+- Then `mxcli widget init -p <app>.mpr` (the package in `widgets/` alone still gives `MDL-WIDGET25`), `mxcli widget describe <name>`, and use it in MDL.
+
+See [Add from Marketplace](../using-the-office/marketplace.md).
 
 ## The Firm
 
