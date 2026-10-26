@@ -456,7 +456,7 @@ test('test first: the Tester Lead writes the test first and names its criteria; 
 test('microflow tests run with --require-assertions; whoever writes the model checks impact first and keeps widget docs out of commits', () => {
   for (const role of ['lead-tester', 'solo-lead'] as const) {
     const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
-    assert.match(text, /mxcli test <file> -p <app>\.mpr --require-assertions/, role);
+    assert.match(text, /run through the office, `office-app test --commit HEAD` \(it runs `mxcli test --require-assertions` with its own test database/, role);
     assert.match(text, /a test that asserts nothing is an error, never a pass/, role);
   }
   for (const role of ['lead-developer', 'solo-lead'] as const) {

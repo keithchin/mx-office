@@ -167,7 +167,7 @@ The Engagement Partner sends the sections `executive`, `statistics`, `findings`,
 
 ## office-app
 
-Every worker also has `office-app` (`bin/office-app.js`; `office-journey run <J>` is `office-app journey <J>`). It gives an agent **a running copy of its app at one commit**, run by the office, so it can check its own pages and flows before it says done. Never improvise `mxcli run --local` or `mxcli test --local` in a worktree: that leaves processes and databases behind, and its results count for nothing.
+Every worker also has `office-app` (`bin/office-app.js`; `office-journey run <J>` is `office-app journey <J>`, and `office-workers app …` is `office-app …`). It gives an agent **a running copy of its app at one commit**, run by the office, so it can check its own pages and flows before it says done. Never improvise `mxcli run --local` or `mxcli test --local` in a worktree: that leaves processes and databases behind, and its results count for nothing.
 
 ```text
 office-app start [--commit <sha|main|HEAD>] [--no-wait]   an instance at that commit (default HEAD, committed files only); waits, prints its URL and test users

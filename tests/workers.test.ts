@@ -1179,6 +1179,9 @@ test("every Claude worker gets the office's MCP server, and office-workers on it
   const bin = path.join(f.data, 'bin');
   accessSync(path.join(bin, 'office-workers'), constants.X_OK);
   assert.match(officeCommand(path.join(bin, 'office-workers'), ['--help']), /office-workers home --merged/);
+  // office-app and office-journey (an agent's app instance and its journeys) are on its PATH too.
+  assert.match(officeCommand(path.join(bin, 'office-app'), ['--help']), /office-app start \[--commit <sha\|main\|HEAD>\]/);
+  assert.match(readFileSync(path.join(bin, 'office-journey'), 'utf8'), /office-app\.js' journey "\$@"/);
   // Claude Code's --mcp-config: the shipped script, run as an MCP server by the office's own node.
   const config = path.join(f.data, 'agent-office-mcp.json');
   const server = JSON.parse(readFileSync(config, 'utf8')).mcpServers['agent-office'];
@@ -1186,7 +1189,7 @@ test("every Claude worker gets the office's MCP server, and office-workers on it
   assert.deepEqual(server.args.slice(1), ['mcp']);
   assert.ok(server.args[0].endsWith(path.join('bin', 'office-workers.js')));
   // Looking is allowed without asking; hiring and sending home aren't.
-  assert.deepEqual(JSON.parse(readFileSync(path.join(f.data, 'claude-hooks.json'), 'utf8')).permissions, { allow: ['mcp__agent-office__list_workers', 'mcp__agent-office__escalate', 'mcp__agent-office__subagent'] });
+  assert.deepEqual(JSON.parse(readFileSync(path.join(f.data, 'claude-hooks.json'), 'utf8')).permissions, { allow: ['mcp__agent-office__list_workers', 'mcp__agent-office__escalate', 'mcp__agent-office__subagent', ...['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test'].map((t) => `mcp__agent-office__${t}`)] });
 
   const desk = await workers.spawn('desk-2', 'Ada', 'Fix login');
   assert.equal(typeof desk, 'object');
