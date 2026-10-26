@@ -4,7 +4,7 @@
 // was a PostgreSQL superuser for an agent. The Testing page now lists both as prerequisites, each with one fix
 // the Project Manager can press:
 //
-//   test database   `mxcli test --local` boots the app against its own `<App>_test` database as the user
+//   test database   `mxcli test --local` boots the app against its own `<app>_test` database (lower case) as the user
 //                   "mendix" (mxcli's default; `mxcli test --help`). The office creates both once, with the
 //                   database user its live apps already use (live-app.json / AGENT_OFFICE_LIVE_DB_*): the role
 //                   "mendix" with LOGIN only (never SUPERUSER, CREATEDB or CREATEROLE) and the database owned
@@ -41,12 +41,20 @@ const there = (p: string) => access(p).then(
 );
 const list = (p: string) => readdir(p).catch(() => [] as string[]);
 
-/** The test database's name as `mxcli test --local` derives it: the app's (.mpr) name (at the top, else one folder down) and "_test". */
+/**
+ * The test database's name as `mxcli test --local` looks for it: the app's (.mpr) name and "_test", in lower
+ * case. mxcli names it unquoted, so PostgreSQL folds it: a database made as `"Shop_test"` is not the
+ * `shop_test` it looks for (measured with mxcli nightly 2026-10-03: a mixed-case one is "not there" and the run
+ * stops at "no local PostgreSQL superuser available"; the lower-case one is found).
+ */
+export const mxcliTestDb = (mprBase: string) => `${mprBase}_test`.toLowerCase().slice(0, 63);
+
+/** The test database's name for the project's app (.mpr at the top, else one folder down): mxcliTestDb. */
 export async function testDbName(floorDir: string): Promise<string | undefined> {
   const isMpr = (f: string) => f.toLowerCase().endsWith('.mpr');
   let mpr = (await list(floorDir)).find(isMpr);
   if (!mpr) for (const d of ['app', 'src']) if ((mpr = (await list(path.join(floorDir, d))).find(isMpr))) break;
-  return mpr ? `${path.basename(mpr, path.extname(mpr))}_test`.slice(0, 63) : undefined;
+  return mpr ? mxcliTestDb(path.basename(mpr, path.extname(mpr))) : undefined;
 }
 
 /** psql on this machine, or null. */

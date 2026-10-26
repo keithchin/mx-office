@@ -17,6 +17,7 @@ import { parseLintJson, parseReportJson, qualityKey, ruleFailuresOf, type Qualit
 import type { TestRunDraft } from '../../shared/testing/record.js';
 import { stripNoise } from '../model/mxcli.js';
 import { execFileOffP, type OffError } from '../offloop/exec.js';
+import { testRunWhy } from '../../shared/testing/test-reason.js';
 import { checkoutAt, disposeFolder, testPathsIn, workDirOf } from './workfolder.js';
 
 export interface MxOut {
@@ -72,6 +73,13 @@ export interface TestRunOpts {
   /** mxcli's own runtime timeout; the process gets a minute more. */
   timeoutMs: number;
   now?: () => number;
+  /**
+   * What the run needs, got ready first (test-db.ts prepareTestRun: the lower-case test database, the fixed
+   * ports): the database it uses and what was done, or why the run can't start (a harness error that says so).
+   */
+  prepare?: (mprBase: string) => Promise<{ db: string; notes: string[] } | { why: string }>;
+  /** One test runtime at a time on the machine (test-db.ts serialTestRuntime); runs it straight away without. */
+  serial?: <T>(fn: () => Promise<T>) => Promise<T>;
 }
 
 export class NoTestsError extends Error {}
@@ -115,10 +123,20 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
     await rm(junitFile, { force: true });
     const minutes = Math.max(1, Math.round(o.timeoutMs / 60_000));
     const args = ['test', ...paths, '-p', wf.mpr, '--local', '--require-assertions', '--junit', junitFile, '--timeout', `${minutes}m`];
-    const out = await runMx(o.bin, args, wf.dir, o.timeoutMs + 60_000);
+    const base = path.basename(wf.mpr).replace(/\.mpr$/i, '');
+    const run = async () => {
+      const ready = o.prepare ? await o.prepare(base) : undefined;
+      if (ready && 'why' in ready) return { ready };
+      return { ready, out: await runMx(o.bin, args, wf.dir, o.timeoutMs + 60_000) };
+    };
+    const got = await (o.serial ?? (<T>(fn: () => Promise<T>) => fn()))(run);
+    if (got.ready && 'why' in got.ready) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${got.ready.why}` }), undefined) };
+    const out = got.out!;
+    const db = got.ready && 'db' in got.ready ? got.ready.db : undefined;
     const junit = await readFile(junitFile, 'utf8').catch(() => undefined);
     const mendix = mendixOf(`${out.stdout}\n${out.stderr}`);
-    const failure = out.startError ? `mxcli could not start: ${out.startError}` : out.killed && junit === undefined ? `Timed out after ${minutes + 1} min with no result` : undefined;
+    // No results: why, in mxcli's words and what they mean (shared/testing/test-reason.ts), never "no JUnit file" alone.
+    const failure = junit === undefined ? testRunWhy({ ...out, minutes: minutes + 1 }, db) : undefined;
     const env = envelope({
       commit: wf.commit,
       paths,
@@ -127,7 +145,7 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
       exitCode: out.code,
       ...(junit !== undefined ? { junitLocator: locator(o.dataDir, junitFile) } : {}),
       ...(failure ? { failure } : {}),
-      tail: lastWords(out),
+      tail: [...(got.ready && 'notes' in got.ready ? got.ready.notes : []), lastWords(out)].filter(Boolean).join(' · ').slice(0, 600),
     });
     return { draft: draftFromMxcliRun(env, junit), ...(junit !== undefined ? { junit: junitFile } : {}) };
   } finally {
