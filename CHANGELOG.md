@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Add from Marketplace, and words on action cards.** An agent that needs a Mendix Marketplace widget or module asks with `office-marketplace add` (or `office-workers marketplace add`, or the `marketplace_add` tool) instead of installing it or asking for a token. Needs you shows a card naming the item, version, publisher and licence (when known), who asked and why: **Download and add** has the office download it with its own Mendix credential (the token goes only into that one download, never to agents, logs or the audit log); **Use a package file…** takes a `.mpk` you downloaded from the Marketplace website, the way for test offices and anyone without a token; **Decline** tells the agent, with your note. The office checks it is the package asked for (kind, name, version; a wrong one is refused and nothing changes), commits it to the agent's branch as the office and tells the agent to run `mxcli widget init`. A test office keeps withholding the Mendix token; `AGENT_OFFICE_TEST_ALLOW_MENDIX_MARKETPLACE=1` lets only its own download use `MENDIX_PAT` from its environment. **Action for you** cards get a note field sent with **I've done it** or **Can't now**.
 
 ## 2026-10-25 · release 77 (`4909977`)
 
