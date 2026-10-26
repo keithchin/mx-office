@@ -34,11 +34,23 @@ export async function forkOf(git: Git, dir: string, target: string, sha: string)
   return (await git(['merge-base', target, sha], dir).catch(() => '')).trim() || undefined;
 }
 
-/** What the commit changes since it left main, by kind. */
-export async function kindAt(git: Git, dir: string, target: string, sha: string): Promise<{ files: LocalMergeFiles; kind: LocalMergeKind; paths: string[]; fork?: string }> {
-  const fork = await forkOf(git, dir, target, sha);
-  const paths = fork ? await changedPaths(git, dir, fork, sha) : [];
-  return { ...classify(paths), paths, ...(fork ? { fork } : {}) };
+type Kind = { files: LocalMergeFiles; kind: LocalMergeKind; paths: string[]; fork?: string };
+const kindKept = new Map<string, Promise<Kind>>();
+
+/** What the commit changes since it left main, by kind (kept per main and commit: a look costs nothing until either moves). */
+export function kindAt(git: Git, dir: string, target: string, sha: string): Promise<Kind> {
+  const key = `${dir}|${target}|${sha}`;
+  let p = kindKept.get(key);
+  if (!p) {
+    p = (async () => {
+      const fork = await forkOf(git, dir, target, sha);
+      const paths = fork ? await changedPaths(git, dir, fork, sha) : [];
+      return { ...classify(paths), paths, ...(fork ? { fork } : {}) };
+    })();
+    kindKept.set(key, p);
+    if (kindKept.size > 300) kindKept.delete(kindKept.keys().next().value!);
+  }
+  return p;
 }
 
 const DC_BRANCH = /^dev\/(DC-\d{1,6})$/;

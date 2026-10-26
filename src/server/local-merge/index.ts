@@ -95,11 +95,23 @@ export function levelOf(ctx: Ctx, floor: Floor): AutonomyLevel {
 }
 
 export const ref = async (git: Git, dir: string, name: string) => (await git(['rev-parse', '--verify', '--quiet', `${name}^{commit}`], dir).catch(() => '')).trim();
-export const isAncestor = (git: Git, dir: string, a: string, b: string) =>
-  git(['merge-base', '--is-ancestor', a, b], dir).then(
+const ancestry = new Map<string, Promise<boolean>>();
+/** Whether commit `a` is in `b`'s history (kept per pair of full shas, which never change; names are asked anew). */
+export const isAncestor = (git: Git, dir: string, a: string, b: string): Promise<boolean> => {
+  const fixed = /^[0-9a-f]{40}$/i.test(a) && /^[0-9a-f]{40}$/i.test(b);
+  const key = `${dir}|${a}|${b}`;
+  const had = fixed ? ancestry.get(key) : undefined;
+  if (had) return had;
+  const p = git(['merge-base', '--is-ancestor', a, b], dir).then(
     () => true,
     () => false,
   );
+  if (fixed) {
+    ancestry.set(key, p);
+    if (ancestry.size > 1000) ancestry.delete(ancestry.keys().next().value!);
+  }
+  return p;
+};
 /** What branches merge into: origin/<main>, else the local <main>. */
 export const targetOf = async (git: Git, dir: string, main: string) => (await ref(git, dir, `refs/remotes/origin/${main}`)) || main;
 
@@ -125,7 +137,7 @@ function taskOf(ctx: Ctx, floor: Floor, workerId: string): string | undefined {
 }
 
 /** One branch's row as it is now (its head read now), or undefined when it has nothing main hasn't. */
-export async function rowOf(ctx: Ctx, floor: Floor, branch: string, owner: { id?: string; name?: string } = {}, git: Git = runGit, main?: string): Promise<LocalMergeBranch | undefined> {
+export async function rowOf(ctx: Ctx, floor: Floor, branch: string, owner: { id?: string; name?: string } = {}, git: Git = runGit, main?: string, tip?: { sha: string; subject: string }): Promise<LocalMergeBranch | undefined> {
   const m = main ?? (await gitGraphsOf(ctx).graph(floor)).defaultBranch;
   const target = await targetOf(git, floor.dir, m);
   const sha = await ref(git, floor.dir, `refs/heads/${branch}`);
@@ -133,10 +145,12 @@ export async function rowOf(ctx: Ctx, floor: Floor, branch: string, owner: { id?
   const [ahead, behind] = (await git(['rev-list', '--left-right', '--count', `${sha}...${target}`], floor.dir).catch(() => '0 0')).trim().split(/\s+/).map(Number);
   if (!ahead) return undefined;
   const [subject, what, dcs, review] = await Promise.all([
-    git(['log', '-1', '--format=%s', sha], floor.dir).then(
-      (s) => s.trim(),
-      () => '',
-    ),
+    tip?.sha === sha
+      ? Promise.resolve(tip.subject)
+      : git(['log', '-1', '--format=%s', sha], floor.dir).then(
+          (s) => s.trim(),
+          () => '',
+        ),
     kindAt(git, floor.dir, target, sha),
     dcsOf(ctx, floor.id, branch, owner.id),
     liveReview(git, floor.dir, bookOf(ctx.cfg.dataDir, floor.id), branch, sha, target),
@@ -156,7 +170,7 @@ export async function localMergeView(ctx: Ctx, floor: Floor): Promise<LocalMerge
   const mainSha = await ref(runGit, floor.dir, await targetOf(runGit, floor.dir, main));
   // The graph names the branches (cached up to a minute); each head, review and kind are read now.
   const listed = g.branches.filter((b) => b.name !== main && (b.worker || b.where !== 'remote')).slice(0, 12);
-  const rows = await Promise.all(listed.map((b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main)));
+  const rows = await Promise.all(listed.map((b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main, { sha: b.sha, subject: b.subject })));
   return { ...base, main, ...(mainSha ? { mainSha } : {}), branches: rows.filter((b): b is LocalMergeBranch => !!b).slice(0, 10) };
 }
 
