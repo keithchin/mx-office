@@ -67,8 +67,14 @@ export function verificationFact(i: Pick<FourInput, 'state' | 'revision' | 'chec
   const on = i.checks && i.checks.candidate === rev ? i.checks.on : [];
   if (!on.length) return { status: 'incomplete', words: i.hasCI ? `Incomplete @${short(rev)}: no checks reported` : `Incomplete @${short(rev)}: no CI`, tone: 'warn', revision: rev };
   const failed = on.filter((r) => r.verdict === 'failed').length;
-  if (failed) return { status: 'failed', words: `Failed @${short(rev)}: ${failed} of ${on.length}`, tone: 'bad', revision: rev };
-  if (on.every((r) => r.verdict === 'passed')) return { status: 'passed', words: `Passed @${short(rev)}: ${on.length} check${on.length === 1 ? '' : 's'}`, tone: 'good', revision: rev };
+  // Journeys and smoke runs on an agent's app instance (server/agent-app/) are named as such: the app ran at this revision.
+  const runs = on.filter((r) => /^(journey\s|smoke$)/i.test(r.name));
+  const ran = (rs: typeof on) => rs.map((r) => r.name.replace(/^journey\s+/i, '')).slice(0, 4).join(', ');
+  if (failed) {
+    const bad = runs.filter((r) => r.verdict === 'failed');
+    return { status: 'failed', words: `Failed @${short(rev)}: ${failed} of ${on.length}${bad.length ? ` (in the running app: ${ran(bad)})` : ''}`, tone: 'bad', revision: rev };
+  }
+  if (on.every((r) => r.verdict === 'passed')) return { status: 'passed', words: `Passed @${short(rev)}: ${on.length} check${on.length === 1 ? '' : 's'}${runs.length ? `; journeys passed at @${short(rev)} (${ran(runs)})` : ''}`, tone: 'good', revision: rev };
   return { status: 'incomplete', words: `Incomplete @${short(rev)}: ${on.filter((r) => r.verdict === 'passed').length} of ${on.length} passed`, tone: 'warn', revision: rev };
 }
 

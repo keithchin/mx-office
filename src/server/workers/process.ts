@@ -180,15 +180,23 @@ export function writeOfficeCommands(dataDir: string): string | undefined {
 function writeCommands(dataDir: string): string | undefined {
   const dir = path.join(dataDir, 'bin');
   let wrote = false;
-  for (const [name, what] of [['office-queue', "Agent Office's task queue, for the board agents"], ['office-workers', "Agent Office's workers, for every worker"]]) {
-    const script = binScript(`${name}.js`);
+  // office-app and office-journey: an agent's app instance, its journeys and tests (bin/office-app.js; office-journey runs its journey command).
+  const commands: [name: string, bin: string, what: string, first: string][] = [
+    ['office-queue', 'office-queue', "Agent Office's task queue, for the board agents", ''],
+    ['office-workers', 'office-workers', "Agent Office's workers, for every worker", ''],
+    ['office-app', 'office-app', "An agent's own app instance, journeys and tests", ''],
+    ['office-journey', 'office-app', "An agent's journeys on its app instance (office-app journey)", 'journey'],
+  ];
+  for (const [name, bin, what, first] of commands) {
+    const script = binScript(`${bin}.js`);
     if (!script) continue;
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const file = path.join(dir, name);
-    writeFileSync(file, `#!/bin/sh\n# ${what} (see bin/${name}.js).\nexec ${shq(process.execPath)} ${shq(script)} "$@"\n`, { mode: 0o700 });
+    const lead = first ? ` ${first}` : '';
+    writeFileSync(file, `#!/bin/sh\n# ${what} (see bin/${bin}.js).\nexec ${shq(process.execPath)} ${shq(script)}${lead} "$@"\n`, { mode: 0o700 });
     chmodSync(file, 0o700);
     // cmd.exe and PowerShell find it by PATHEXT; Git Bash (Claude Code's shell there) runs the sh one.
-    if (WIN) writeFileSync(`${file}.cmd`, `@"${process.execPath}" "${script}" %*\r\n`);
+    if (WIN) writeFileSync(`${file}.cmd`, `@"${process.execPath}" "${script}"${lead} %*\r\n`);
     wrote = true;
   }
   return wrote ? dir : undefined;

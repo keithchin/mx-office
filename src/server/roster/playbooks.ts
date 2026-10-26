@@ -32,6 +32,7 @@ import type { EntryMode } from '../../shared/wizard.js';
 import { projectShape } from '../budget/plan-source.js';
 import { securityPlaybookLines, type SecurityPolicy } from '../../shared/security.js';
 import { securityRole } from '../security-gate/playbook.js';
+import { runtimeLines } from '../agent-app/playbook.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -169,7 +170,7 @@ const COVERS = '- Before opening a pull request, run the task’s tests; put `Co
  * writes only `.mxcli/catalog.db`), but `lint`, `report` and `refresh catalog` rewrite the widget docs, so
  * those changes are kept out of commits.
  */
-const MF_TESTS = '- New microflow tests (`tests/*.test.mdl`) are run with `mxcli test <file> -p <app>.mpr --require-assertions`: a test that asserts nothing is an error, never a pass.';
+const MF_TESTS = '- New microflow tests (`tests/*.test.mdl`) are run through the office, `office-app test --commit HEAD` (it runs `mxcli test --require-assertions` with its own test database and records the JUnit result at that commit): a test that asserts nothing is an error, never a pass.';
 const IMPACT =
   '- Before changing an entity or microflow, see what uses it: `mxcli refs`, `mxcli impact` or `mxcli context -p <app>.mpr <Module.Name>` (they read the catalog and write nothing to commit). `mxcli lint`, `report` and `refresh catalog` can rewrite `.ai-context/skills/widgets/` and create `.claude/skills/widgets/`: never commit those changes (`git checkout -- .ai-context/skills/widgets`, delete `.claude/skills/widgets/`).';
 
@@ -312,6 +313,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also, ctx.entry, !!ctx.toolkit && toolkitHas(ctx.toolkit.dir, PROCESS_MAP_SKILL)),
     ...(ctx.security && securityRole(roleId, also) ? securityPlaybookLines(ctx.security) : []),
+    ...runtimeLines(roleId, also),
     ...(ctx.maxSubagents && subs.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }
