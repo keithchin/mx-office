@@ -78,8 +78,8 @@ export function localMergePanel(): LocalMergePanel {
     return h(
       'div.lm-row',
       { 'data-branch': b.branch, 'data-kind': b.kind, 'data-dc': (b.dcs ?? []).map((d) => d.id).join(' ') },
-      h('div.lm-what', {}, dc ? h('b.lm-dc', {}, dc) : h('b', {}, who), h('small', {}, ` ${dc ? `${who} · ` : ''}${b.branch}${b.task ? ` · task ${b.task}` : ''}`)),
-      h('small.lm-meta', {}, `${b.ahead} ahead · head @${short(b.sha)} · ${b.subject} · `, kind),
+      h('div.lm-what', {}, dc ? h('b.lm-dc', {}, dc) : h('b', {}, who), h('small', {}, ' ' + [dc && b.owner ? who : '', dc || b.owner ? b.branch : '', b.task ? `task ${b.task}` : ''].filter(Boolean).join(' · '))),
+      h('small.lm-meta', {}, ` ${b.ahead} ahead · head @${short(b.sha)} · ${b.subject} · `, kind),
       state,
       h('span.lm-btns', {}, ...btns),
     );
