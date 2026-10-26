@@ -120,6 +120,6 @@ export function localMergePanel(): LocalMergePanel {
   }
 
   // A merge made elsewhere (a Developer change receipt) moves main: look again.
-  window.addEventListener('mx:local-merged', () => refresh());
+  window.addEventListener?.('mx:local-merged', () => refresh());
   return { el, refresh };
 }

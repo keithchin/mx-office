@@ -105,7 +105,7 @@ export async function openMergeConfirm(o: ConfirmOpts): Promise<void> {
         modal.close();
         toast(`${done.words} ${c.main} is now @${short(done.merge)}.${done.told.length ? ` Told ${done.told.join(' and ')}.` : ''}`);
         o.onDone?.(done);
-        window.dispatchEvent(new CustomEvent('mx:local-merged', { detail: { floor: o.floor, merge: done.merge } }));
+        window.dispatchEvent?.(new CustomEvent('mx:local-merged', { detail: { floor: o.floor, merge: done.merge } }));
       } catch (e) {
         go.disabled = false;
         err.hidden = false;
