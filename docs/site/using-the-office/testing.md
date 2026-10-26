@@ -140,11 +140,12 @@ How the scores are made:
 
 ## Microflow tests
 
-An admin can click **Run microflow tests on main** on the Quality card (its tooltip says it needs a local Mendix runtime). The office then:
+An admin can click **Run microflow tests on main** on the Quality card (its tooltip says it needs a local Mendix runtime), and an agent can run them at its own commit with `office-app test --commit <sha>` ([office-app](../reference/office-workers-cli.md#office-app)). The office then:
 
-1. makes a fresh copy of main's commit in its own work folder (`<data>/testing/work/<project>/tests`), never the project's checkout;
-2. runs `mxcli test <the .test.mdl and .test.md files> -p <app>.mpr --local --require-assertions --junit <file>` there, with a 15-minute timeout and one run at a time per project;
-3. keeps the JUnit file in `<data>/testing/evidence/<project>/` and records the run, then wipes the work folder.
+1. makes a fresh copy of the commit in its own work folder (`<data>/testing/work/<project>/tests`), never the project's checkout;
+2. gets the test database ready with its own database user, never a superuser: `<app>_test` **in lower case** (mxcli names it unquoted, so PostgreSQL folds it: a database made as `"Shop_test"` is not the `shop_test` it looks for), owned by the login role `mendix` (password `mendix`, mxcli's default). One the office made (it carries the office's comment) is dropped and made again, so every run starts empty; one somebody else made is used as it is and never dropped. It checks that the ports `mxcli test --local` always uses (8081 and 8091, no flag moves them) are free, and runs one test runtime at a time on the machine;
+3. runs `mxcli test <the .test.mdl and .test.md files> -p <app>.mpr --local --require-assertions --junit <file>` there, with a 15-minute timeout and one run at a time per project;
+4. keeps the JUnit file in `<data>/testing/evidence/<project>/` and records the run, then wipes the work folder.
 
 The run record says:
 
@@ -157,7 +158,7 @@ How results are read:
 
 - JUnit `<failure>` is **Failed**. `<skipped>` is **Skipped**.
 - JUnit `<error>` is a **harness error**: the test never reached a verdict (it threw outside its assertions, or asserted nothing, which `--require-assertions` makes an error). A harness error never counts as passed, never as a failed business rule, and never meets a required check.
-- mxcli's exit code 1 means both "a test failed" and "the run broke", so the office never reads it on its own: the JUnit content decides. When mxcli writes no JUnit at all (no Mendix runtime, a timeout, a start failure), the whole run is shown as **Harness error, not failed tests**.
+- mxcli's exit code 1 means both "a test failed" and "the run broke", so the office never reads it on its own: the JUnit content decides. When mxcli writes no JUnit at all (no Mendix runtime, a timeout, a start failure), the whole run is shown as **Harness error, not failed tests**, with the reason in mxcli's own words and what they mean, never just *no JUnit file*: the test database missing (and the fix), the role `mendix` refusing its password, a fixed port taken, the build failing, the timeout, or mxcli's `Error:` line.
 - A JUnit file found in the repository is never imported by itself: only the file from a run the office started counts as evidence.
 
 `mxcli test --local` needs a Mendix runtime on the office's machine, so the run can fail to start; that's recorded as a harness error. In test mode only a fake mxcli runs, unless the test office runs the real tools on purpose: `AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1`, or the real-agent switch `AGENT_OFFICE_ALLOW_REAL_AGENTS=1` (its agents and live app run the real mxcli already). Then the office's own **Run mx check**, **Run microflow tests** and **Score main now** use the real mxcli too.
@@ -166,7 +167,7 @@ How results are read:
 
 At the top of the page, **Before the tests can run** lists what this project's tests need on the office's machine, each *ready*, *missing* (with its one fix) or *unknown* (and why). Once both are ready it's one line: *Test prerequisites ready*.
 
-- **Test database.** `mxcli test --local` boots the app against its own database, `<App>_test` (the `.mpr`'s name), as the user `mendix`. **Prepare the test database** (admins) makes both with the database user the live apps already use (`live-app.json` / `AGENT_OFFICE_LIVE_DB_*`): the role `mendix` with `LOGIN` only (never `SUPERUSER`, `CREATEDB` or `CREATEROLE`), then the database owned by it. Nobody gives an agent a PostgreSQL superuser. It runs only against a database server on this machine, with `psql` (on `PATH`, under `Program Files\PostgreSQL\<version>\bin`, or `AGENT_OFFICE_PSQL`), the password in `PGPASSWORD`, never on a command line. When the office's user can't make the role, or the server is elsewhere, it says so with the exact SQL for whoever administers the database (**What it runs**).
+- **Test database.** `mxcli test --local` boots the app against its own database, `<app>_test` (the `.mpr`'s name in lower case), as the user `mendix`. Every office-run test run also prepares it by itself (above). **Prepare the test database** (admins) makes both with the database user the live apps already use (`live-app.json` / `AGENT_OFFICE_LIVE_DB_*`): the role `mendix` with `LOGIN` only (never `SUPERUSER`, `CREATEDB` or `CREATEROLE`), then the database owned by it. Nobody gives an agent a PostgreSQL superuser. It runs only against a database server on this machine, with `psql` (on `PATH`, under `Program Files\PostgreSQL\<version>\bin`, or `AGENT_OFFICE_PSQL`), the password in `PGPASSWORD`, never on a command line. When the office's user can't make the role, or the server is elsewhere, it says so with the exact SQL for whoever administers the database (**What it runs**).
 - **Playwright (e2e journeys).** The team's e2e journeys need Playwright's Chromium. Missing, it's said here rather than the journeys silently never starting, and **Install Playwright** runs `npx playwright install chromium` (the command is shown, to run by hand instead).
 
 Each fix is audited (`testing.prereq`). With both ready, the team's unit tests and journeys run, and a run the office starts records its result at the commit it tested.

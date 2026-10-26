@@ -75,6 +75,7 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `marketplace add` | Ask for a Mendix Marketplace widget or module | `--id`, `--kind widget\|module`, `--version`, `--name`, `--why`; also `office-marketplace add`; see below |
 | `marketplace list` | This project's Marketplace requests and where each is | |
 | `firm` | The Firm: reviewers ask and report, the team answers | See [The Firm](#the-firm) |
+| `app` | Your app instance, journeys and microflow tests | Same as `office-app`; see [office-app](#office-app) |
 | `mcp` | Serve these as MCP tools on stdio | See [MCP tools](mcp-tools.md) |
 
 ## escalate
@@ -180,6 +181,30 @@ The Firm's [Reviewer Agents](../using-the-office/the-firm.md) and the project te
 | `firm done ["note"]` | a reviewer | Everything is sent: release me. |
 
 The Engagement Partner sends the sections `executive`, `statistics`, `findings`, `prosCons`, `rootCauses`, `timeline`, `expectations`, `workers`, `risks`, `recommendations` and `appendix` (`executive`, `findings` and `recommendations` are required); a specialist sends `reviewer`.
+
+## office-app
+
+Every worker also has `office-app` (`bin/office-app.js`; `office-journey run <J>` is `office-app journey <J>`, and `office-workers app …` is `office-app …`). It gives an agent **a running copy of its app at one commit**, run by the office, so it can check its own pages and flows before it says done. Never improvise `mxcli run --local` or `mxcli test --local` in a worktree: that leaves processes and databases behind, and its results count for nothing.
+
+```text
+office-app start [--commit <sha|main|HEAD>] [--no-wait]   an instance at that commit (default HEAD, committed files only); waits, prints its URL and test users
+office-app status                                         your instance now
+office-app journey <J-id|path> [--commit <sha>]           play a journey on it, recorded at its commit
+office-app smoke [--page /p/addr]... [--as <user>]         open pages as a test user, recorded at its commit
+office-app test [--commit <sha|main|HEAD>] [--no-wait]    the microflow tests at that commit, JUnit recorded there
+office-app stop                                           stop it (its processes and database go)
+```
+
+- **One instance per agent.** The same commit again gives the same instance; another commit replaces it. It runs in the office's own workspace (`<data>/testing/work/<project>/instance-ag<id>`), on three free ports and a fresh database `<project>_ag<id>_<random>`, never the live app's.
+- **Refused with the reason** when the machine has less than about 2.5 GB of memory free, or when 2 agents' instances already run.
+- **Stops by itself** after 15 minutes without a call from its agent, and after an hour at most. Stopping ends mxcli's whole process tree, drops the database, and then ends anything whose command line still names the instance's workspace (a stale rollup-runner). What runs is kept in `<data>/agent-apps/live.json`, so an office that crashed cleans up a minute after its next start.
+- **Seed.** The project's after-startup microflow runs at every start; a project that has `tests/e2e/seed.journey.json` gets it played once before the instance is ready.
+- **Journeys** are the project's own (`tests/**/*.journey.json` at the instance's commit, by id or path) or a file you send (its definition revision is then *unknown*). They're played by the walkthrough recorder, unfilmed, as the journey's identity (`tests/e2e/project.config.js`), and **signed out after every run**: an unlicensed Mendix app keeps only 6 sessions. When the app refuses one anyway, the answer says so plainly (and the run counts for no journey).
+- **Runtime errors fail the run.** The instance's runtime log is read for the stretch the run played: an `ERROR` or `CRITICAL` entry (a page's *Operator formatDecimal not supported…*) is a failed check with its line, even when every step passed on screen.
+- **Results are bound to the commit.** Each run is a test-run record (`office-journey`) whose tested revision is the instance's commit. The [Testing](../using-the-office/testing.md) page lists it, the [Live app](../using-the-office/live-app.md)'s readiness counts its journeys for exactly that commit, and a Developer change's **Checks** fact says *journeys passed at @C*.
+- **Microflow tests** run through the office's own runner (see [Microflow tests](../using-the-office/testing.md#microflow-tests)), one at a time per project, at the commit given.
+
+The same is in the MCP server as `app_start`, `app_status`, `app_stop`, `journey_run`, `app_smoke` and `app_test` ([MCP tools](mcp-tools.md)).
 
 ## office-queue
 

@@ -15,6 +15,7 @@ import { SUBAGENT_TOOL, SUBAGENT_USAGE, formatSubagent, parseSubagent } from './
 import { FIRM_USAGE, firmMain } from './office-firm.js';
 import { RENDER_USAGE, formatRendered, parseRender } from './office-render.js';
 import { MARKETPLACE_TOOL, MARKETPLACE_USAGE, formatMarketplace, parseMarketplace } from './office-marketplace.js';
+import { APP_TOOLS, APP_TOOL_NAMES, APP_USAGE, appMain, runAppTool } from './office-app.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this project: status, task,
@@ -41,6 +42,8 @@ ${SUBAGENT_USAGE}
 ${RENDER_USAGE}
 ${MARKETPLACE_USAGE}
 ${FIRM_USAGE}
+  office-workers app …                          your app instance, journeys and tests (office-app):
+${APP_USAGE}
   office-workers mcp                            serve these as MCP tools on stdio`;
 
 /** A mistake in how the command was called: the usage is shown with it. */
@@ -378,6 +381,7 @@ export const TOOLS = [
   ESCALATE_TOOL,
   SUBAGENT_TOOL,
   MARKETPLACE_TOOL,
+  ...APP_TOOLS,
 ];
 
 const INSTRUCTIONS =
@@ -385,7 +389,7 @@ const INSTRUCTIONS =
   'the other agents: whenever you are asked about the agents or workers (who is working on what, whose pull request merged, hiring one, sending them home), use them, ' +
   "rather than looking for the agents with git, ps or HTTP calls. list_workers says where each one's pull request stands (merged: true means it merged), hire_worker " +
   'puts a new agent to work, send_home sends agents home and deletes their worktrees and branches, tell_worker gives one a prompt, and link_pr says which pull request is a ' +
-  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), subagent is a Lead's track record and standing of its own subagents, and marketplace_add asks the Project Manager for a Mendix Marketplace widget or module that the office then adds to your branch (never install one yourself). Everyone in the office sees who did what. " +
+  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), subagent is a Lead's track record and standing of its own subagents, and marketplace_add asks the Project Manager for a Mendix Marketplace widget or module that the office then adds to your branch (never install one yourself). app_start, journey_run, app_smoke, app_test, app_status and app_stop run the app at a commit and test it there, through the office (never `mxcli run --local` or `mxcli test --local` in your worktree). Everyone in the office sees who did what. " +
   'The office-workers command on your PATH does the same from a shell.';
 
 /** What a tell's answer says happened (the office's own words); never "told" without the office saying it was received. */
@@ -415,6 +419,7 @@ async function runTool(name, args, io) {
   if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
   if (name === 'subagent') return { text: formatSubagent(await call('subagent', a, io)) };
   if (name === 'marketplace_add') return { text: formatMarketplace(await call('marketplace', { op: 'add', ...a }, io), 'add') };
+  if (APP_TOOL_NAMES.includes(name)) return runAppTool(name, a, io);
   throw new Error(`Unknown tool: ${name}`);
 }
 
@@ -508,6 +513,8 @@ export async function main(argv, io = {}) {
   const ctx = { env, fetch: fetchImpl };
   // The Firm's commands (bin/office-firm.js): a reviewer's, and a worker answering one of its questions.
   if (argv[0] === 'firm') return firmMain(argv.slice(1), { env, stdin, fetch: fetchImpl, out, err });
+  // An agent's app instance, journeys and tests (bin/office-app.js).
+  if (argv[0] === 'app') return appMain(argv.slice(1), { env, fetch: fetchImpl, out, err });
   try {
     const cmd = parseArgs(argv);
     if (cmd.cmd === 'help') {

@@ -35,10 +35,10 @@ test('the test database: made by the office with its own user, the role "mendix"
   const dir = mkdtempSync(path.join(tmpdir(), 'rb-prereqs-'));
   try {
     writeFileSync(path.join(dir, 'EquipmentLoans.mpr'), '');
-    assert.equal(await testDbName(dir), 'EquipmentLoans_test');
-    const sql = testDbSql('EquipmentLoans_test');
+    assert.equal(await testDbName(dir), 'equipmentloans_test', 'lower case: mxcli looks for the folded name');
+    const sql = testDbSql('equipmentloans_test');
     assert.match(sql.role, /CREATE ROLE mendix LOGIN PASSWORD 'mendix' NOSUPERUSER NOCREATEDB NOCREATEROLE/);
-    assert.equal(sql.create, 'CREATE DATABASE "EquipmentLoans_test" OWNER mendix');
+    assert.equal(sql.create, 'CREATE DATABASE "equipmentloans_test" OWNER mendix');
     const pg = fakePg({ role: false, db: false });
     const deps = { dataDir: dir, run: pg.run, env: ENV, psql: 'psql', playwright: true };
     let v = await testPrereqs(dir, deps);

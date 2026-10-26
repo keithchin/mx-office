@@ -250,7 +250,7 @@ test('a run that cannot start the runtime is a harness error, and the JUnit file
     process.env.FAKE_MXCLI_MODE = 'no-runtime';
     const { draft, junit } = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'nightly-fake-1', sha: s.sha, actor: 'Ann', timeoutMs: 60_000 });
     assert.equal(junit, undefined);
-    assert.match(draft.harnessError!, /no JUnit file \(exit 1\).*could not start the local runtime/);
+    assert.match(draft.harnessError!, /stopped before any result \(exit 1\): could not start the local runtime: no JDK/, 'mxcli’s own Error line, never "no JUnit file" alone');
     assert.equal(draft.results.length, 0, 'the committed reports/testing/results.junit.xml was not read');
     // Nor does the Testing view's own import of the repo's report files take it.
     const floor = { id: 'f1', dir: s.floorDir, def: { repo: undefined }, github: { pulls: { items: [] } } };
@@ -374,7 +374,8 @@ test('the office wiring: automatic scoring is off by default; on, a new main com
     const floor = { id: 'f2', dir: s.floorDir, workers: { list: () => [{ status: working ? 'working' : 'idle' }] as never } };
     const main = { sha: s.sha, branch: 'main' };
     let t = 1_000_000;
-    const deps = { tool, now: () => t };
+    // The test database step stands in (test-db.ts has its own tests): nothing touches a real PostgreSQL.
+    const deps = { tool, now: () => t, prepare: async () => ({ db: 'app_test', notes: [] }) };
     // The default (nothing saved): no automatic run from either trigger, even with the floor idle.
     working = false;
     assert.equal(testingSwitches().autoScore, false);
@@ -417,6 +418,17 @@ test('the office wiring: automatic scoring is off by default; on, a new main com
     assert.equal(recs.length, 1);
     assert.equal(recs[0].testedRevision, next.sha);
     assert.equal(recs[0].actor.name, 'Ann');
+    untouched(s);
+    // An agent's run (office-app test) on its own commit, an older one here: the JUnit result is recorded at exactly that commit.
+    const mine = await startMicroflowTests(s.dataDir, floor, { name: 'Rhea', agentId: 'w-rhea', commit: main.sha.slice(0, 10) }, deps);
+    assert.ok(typeof mine !== 'string', String(mine));
+    assert.equal(mine.commit, main.sha);
+    await mine.done;
+    const agentRec = (await testingStore(s.dataDir, 'f2').all()).at(-1)!;
+    assert.equal(agentRec.testedRevision, main.sha);
+    assert.equal(agentRec.actor.name, 'Rhea');
+    assert.ok(agentRec.results.length > 0 && !agentRec.harnessError, 'JUnit results, not a harness error');
+    assert.match(String(await startMicroflowTests(s.dataDir, floor, { name: 'Rhea', agentId: 'w-rhea', commit: 'f'.repeat(40) }, deps)), /has no commit f{40}: commit your work first/);
     untouched(s);
 
     // Off again: an admin's "Score main now" still works.

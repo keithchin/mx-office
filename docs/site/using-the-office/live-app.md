@@ -159,6 +159,10 @@ The card is read again when the app starts, stops or crashes, when a fetch lands
 
 See also [State and sources of truth](../architecture/state-and-truth.md): where the running commit, readiness and test evidence come from, and what survives a restart.
 
+## Agents' own instances
+
+The live app is yours. An agent that needs to see its own work running asks the office for **an instance of its own at its commit** with `office-app start --commit <sha>`: the office's copy of the app on its own ports and fresh database, one per agent, stopped after 15 minutes unused, refused with the reason when memory is short. It drives journeys and smoke runs on it (`office-app journey`, `office-app smoke`), recorded against that commit, so the readiness card above counts them when the live app serves that commit. Runtime errors in that instance's log fail the run. See [office-app](../reference/office-workers-cli.md#office-app).
+
 ## Walkthroughs
 
 Videos of the app's workflows are on a page of their own, [🎬 Walkthroughs](walkthroughs.md). The office records them by itself at each passing build, against its own copy of the app (never this one, and never its database). Under the readiness card, **🎬 Walkthroughs →** leads there, and a ready milestone with a video of the running build has a **▶ Walkthrough** link that opens it.

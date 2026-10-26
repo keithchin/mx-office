@@ -9,7 +9,7 @@
 
 import path from 'node:path';
 import { buildQualityView, qualityKey, type MxcliRunState, type QualityPart } from '../../shared/testing/quality.js';
-import { audit, human, office } from '../audit/index.js';
+import { agent, audit, human, office } from '../audit/index.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { dropKeys, onForgetFloor } from '../office/forget.js';
@@ -18,6 +18,10 @@ import { NoTestsError, runMicroflowTests, runQuality } from './mxcli-run.js';
 import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
+import { prepareTestRun, serialTestRuntime } from './test-db.js';
+import { pickMxbuild } from '../liveapp/mxbuild.js';
+import { floorToolkitEnv } from '../toolkit-env.js';
+import { execFileOffP } from '../offloop/exec.js';
 import { testingSwitches } from './switches.js';
 
 /** mxcli test's runtime timeout for the office's run. */
@@ -30,6 +34,11 @@ interface RunSlot {
   since?: number;
   commit?: string;
   last?: string;
+  /** Who started the last microflow test run (a person, or an agent through office-app test). */
+  by?: string;
+  /** The last run's record (the test-run store's id) and whether it decided anything. */
+  record?: string;
+  harness?: string;
 }
 interface FloorRuns {
   tests: RunSlot;
@@ -67,33 +76,68 @@ export interface MxDeps {
   now?: () => number;
   /** Whether automatic scoring is on (tests); the office's switch otherwise. */
   auto?: boolean;
+  /** Stand-in for test-db.ts prepareTestRun (tests); the real one otherwise. */
+  prepare?: (mprBase: string) => Promise<{ db: string; notes: string[] } | { why: string }>;
+}
+
+/** Who starts a microflow test run, and on which commit (default: main's newest). */
+export interface TestAsk {
+  name: string;
+  accountId?: string;
+  /** An agent (office-app test): its worker id. */
+  agentId?: string;
+  /** A commit the project's repository has (an agent's candidate): its full sha. */
+  commit?: string;
+}
+
+/** The full sha of `rev` in the project's repository (worktrees share its objects), or undefined. */
+export async function commitIn(dir: string, rev: string): Promise<string | undefined> {
+  if (!/^[\w./@^~-]{1,200}$/.test(rev) || rev.startsWith('-')) return undefined;
+  try {
+    const { stdout } = await execFileOffP('git', ['rev-parse', '--verify', '--quiet', `${rev}^{commit}`], { cwd: dir, timeout: 15_000, windowsHide: true });
+    return /^[0-9a-f]{40}$/.test(stdout.trim()) ? stdout.trim() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const toolOf = (deps: MxDeps) => deps.tool ?? ((d: string, f: string) => mxcliFor(d, f));
 
-/** Starts the microflow test run on main (admins only: the route checks). The started commit, or why not. */
-export async function startMicroflowTests(dataDir: string, floor: FloorLike, who: { name: string; accountId?: string }, deps: MxDeps = {}): Promise<{ commit: string; done: Promise<void> } | string> {
+/**
+ * Starts a microflow test run (admins from the Testing page: the route checks; agents through office-app test,
+ * on their candidate): on main's newest commit, or `who.commit`. The test database and the fixed ports are got
+ * ready first (test-db.ts), one test runtime at a time on the machine. The started commit, or why not.
+ */
+export async function startMicroflowTests(dataDir: string, floor: FloorLike, who: TestAsk, deps: MxDeps = {}): Promise<{ commit: string; done: Promise<void> } | string> {
   const slot = runsOf(floor.id).tests;
-  if (slot.running) return 'A microflow test run is already under way for this project';
+  const busy = () => `A microflow test run is already under way for this project${slot.by ? ` (${slot.by}'s, on ${slot.commit?.slice(0, 7)})` : ''}: wait for it, then ask again`;
+  if (slot.running) return busy();
   const tool = await toolOf(deps)(dataDir, floor.dir);
   if ('why' in tool) return tool.why;
   const main = await mainOf(floor.dir);
   if (!main) return 'This project has no commits yet';
-  if (slot.running) return 'A microflow test run is already under way for this project';
-  Object.assign(slot, { running: true, since: Date.now(), commit: main.sha });
+  const sha = who.commit ? await commitIn(floor.dir, who.commit) : main.sha;
+  if (!sha) return `The project's repository has no commit ${who.commit}: commit your work first (the run uses committed files only)`;
+  const onMain = sha === main.sha;
+  const label = onMain ? `main at ${sha.slice(0, 7)}` : `commit ${sha.slice(0, 7)}`;
+  if (slot.running) return busy();
+  Object.assign(slot, { running: true, since: Date.now(), commit: sha, by: who.name, record: undefined, harness: undefined });
   audit.record({
     floor: floor.id,
-    actor: human(who.name, who.accountId),
+    actor: who.agentId ? agent(who.name, who.agentId) : human(who.name, who.accountId),
     action: 'testing.mxcli-test',
-    target: { kind: 'commit', id: main.sha, label: `main at ${main.sha.slice(0, 7)}` },
-    summary: `Started the microflow tests (mxcli test --local --require-assertions) on main at ${main.sha.slice(0, 7)}, in the office's work folder`,
-    details: { mxcli: tool.version, branch: main.branch },
+    target: { kind: 'commit', id: sha, label },
+    summary: `Started the microflow tests (mxcli test --local --require-assertions) on ${label}, in the office's work folder`,
+    details: { mxcli: tool.version, ...(onMain ? { branch: main.branch } : {}) },
     severity: 'info',
   });
   const done = (async () => {
     try {
-      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha: main.sha, branch: main.branch, actor: who.name, timeoutMs: TEST_TIMEOUT_MS, ...(deps.now ? { now: deps.now } : {}) });
-      await testingStore(dataDir, floor.id).ingest([draft]);
+      const prepare = deps.prepare ?? ((base: string) => prepareTestRun(base, { dataDir }));
+      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(deps.now ? { now: deps.now } : {}) });
+      const [rec] = await testingStore(dataDir, floor.id).ingest([draft]);
+      slot.record = rec?.id;
+      slot.harness = draft.harnessError;
       const c = { passed: 0, failed: 0, skipped: 0, harness: 0 };
       for (const t of draft.results) {
         if (t.harness) c.harness++;
@@ -106,7 +150,12 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
       slot.running = false;
     }
   })();
-  return { commit: main.sha, done };
+  return { commit: sha, done };
+}
+
+/** The project's microflow test run now, or its last one (what an agent's office-app test waits on). */
+export function testRunOf(floorId: string): Readonly<RunSlot> {
+  return { ...runsOf(floorId).tests };
 }
 
 /** Runs report + lint on `sha` unless that commit and mxcli version are already recorded. */

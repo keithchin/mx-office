@@ -146,3 +146,10 @@ While the Chief Analyst is still on Stages 0–2, make a draft domain model (`ar
 - A draft never claims a gate: don't tick a stage, run its gate as done, or call it approved.
 - Keep it small: at most three files and about 30 minutes of work, no high-fidelity design, no MDL. Read the sources and the knowledge base; don't interview anyone for it.
 - Once the BRDs are confirmed (Stage 2 gate), revise each draft into the real deliverable (drop the `-draft` and the banner) or delete it, and say which in your journal.
+
+## Run it before you say done
+- After building or changing a page or flow, commit, then start the app at your candidate through the office: `office-app start --commit HEAD` (MCP `app_start`). It runs on its own ports and database and gives you its URL and test users.
+- Run the journeys that cover the change (`office-app journey J-12`, MCP `journey_run`), or, when none does, a smoke click-through of the changed pages (`office-app smoke --page /p/...`). A runtime error in the app's log fails the run: fix it before you report.
+- Report the result with its commit ("journeys J-12, J-13 passed at @abc1234"). "Not measured" is no longer acceptable when an instance can be started; if the office refuses one (memory, limit), say its reason.
+- Microflow tests: `office-app test --commit HEAD` (MCP `app_test`); the result is recorded at that commit. Never `mxcli run --local` or `mxcli test --local` in your worktree (they leave processes and databases behind and count for nothing), never a database superuser.
+- `office-app stop` when you are done (it also stops by itself after 15 minutes unused).

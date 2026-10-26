@@ -193,6 +193,12 @@ export function readPrRequest(body: unknown): PrRequest | string {
 
 /** The MCP server's name, which agents put before its tools (Claude Code: mcp__agent-office__send_home). */
 export const MCP_NAME = 'agent-office';
+/**
+ * The app-instance tools (bin/office-app.js, agent-app/): they only start, test and stop the office's own copy
+ * of the agent's app, so they never ask the Project Manager for permission (the real rebuild test's raw
+ * permission prompts were engineering reaching the business PM).
+ */
+const APP_TOOLS_ALLOWED = ['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test'].map((t) => `mcp__${MCP_NAME}__${t}`);
 /** What it needs from the worker's environment; Codex hands an MCP server only what it's told to. */
 const MCP_ENV = ['AGENT_OFFICE_HOOK_URL', 'AGENT_OFFICE_WORKER_ID', 'AGENT_OFFICE_HOOK_TOKEN'];
 /** Its tools that only look, which Claude Code workers may call without asking. */
@@ -202,7 +208,7 @@ export const MCP_READ_ONLY = [`mcp__${MCP_NAME}__list_workers`];
  * Project Manager, which only records a card for the human (asking the human for permission to ask
  * the human would defeat it).
  */
-export const MCP_ALLOWED = [...MCP_READ_ONLY, `mcp__${MCP_NAME}__escalate`, `mcp__${MCP_NAME}__subagent`];
+export const MCP_ALLOWED = [...MCP_READ_ONLY, `mcp__${MCP_NAME}__escalate`, `mcp__${MCP_NAME}__subagent`, ...APP_TOOLS_ALLOWED];
 
 /**
  * Writes Claude Code's --mcp-config file for the MCP server (bin/office-workers.js `mcp`, run by the

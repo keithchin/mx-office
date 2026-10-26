@@ -35,7 +35,7 @@ export const FRESHNESS: Record<Freshness, { word: string; tone: Tone }> = {
   none: { word: 'No run', tone: 'muted' },
 };
 
-export const SOURCE_WORD: Record<string, string> = { 'pr-checks': 'CI (pr-checks)', 'report-file': 'Report file', 'gate-check': 'Office gate-check', 'mxcli-test': 'Office run (mxcli test)' };
+export const SOURCE_WORD: Record<string, string> = { 'pr-checks': 'CI (pr-checks)', 'report-file': 'Report file', 'gate-check': 'Office gate-check', 'mxcli-test': 'Office run (mxcli test)', 'office-journey': 'Office journey run (agent instance)' };
 
 /** A revision as people read it: 7 characters of a sha, "unknown" spelled out. */
 export const rev = (r: Revision | undefined) => (r && r !== UNKNOWN ? shortRev(r) : 'unknown');

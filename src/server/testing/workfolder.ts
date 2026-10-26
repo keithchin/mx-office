@@ -31,7 +31,7 @@ export interface WorkFolder {
 
 async function git(floorDir: string, args: string[], extraEnv: Record<string, string> = {}, timeout = 120_000): Promise<string> {
   try {
-    const { stdout } = await execFileOffP('git', ['-C', floorDir, ...args], { env: { ...process.env, ...GIT_ENV, ...extraEnv }, timeout, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const { stdout } = await execFileOffP('git', ['-c', 'core.longpaths=true', '-C', floorDir, ...args], { env: { ...process.env, ...GIT_ENV, ...extraEnv }, timeout, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
     return stdout;
   } catch (err) {
     const e = err as OffError;

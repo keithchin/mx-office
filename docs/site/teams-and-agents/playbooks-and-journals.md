@@ -24,6 +24,10 @@ The Playbooks point at the toolkit's own skills in the toolkit clone (`AGENT_OFF
 > [!TIP]
 > Read a team's journal from the [Team boards](../using-the-office/team-boards.md) tab, or open any of these files from **☰ → 📚 Project docs**.
 
+## Run it before you say done
+
+The Playbooks of the roles that build or check the model (the Lead Developer, the Lead Tester, a Solo lead, and whoever covers Development) have **Run it before you say done**: after building or changing a page or flow, commit, start the app at the candidate through the office (`office-app start --commit HEAD`), run the journeys that cover the change (`office-app journey J-12`) or, when none does, a smoke click-through of the changed pages (`office-app smoke --page /p/…`), and report the result with its commit (*journeys J-12, J-13 passed at @abc1234*). *Not measured* is no longer acceptable when an instance can be started. Microflow tests go through `office-app test`; never `mxcli run --local` or `mxcli test --local` in a worktree, never a database superuser. See [office-app](../reference/office-workers-cli.md#office-app).
+
 ## Every ask is an escalation
 
 The Playbooks and the office's prompts make sure nothing an agent needs from you sits where you don't look:

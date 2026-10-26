@@ -7,6 +7,7 @@ import type { Ctx } from '../office/context.js';
 import { readBody, send } from '../http/util.js';
 import { officeQueue } from './office-queue.js';
 import { officeWorkers } from './office-workers.js';
+import { officeApp } from '../agent-app/hook.js';
 import { officeFirm } from './firm.js';
 import { officeStudio } from '../studio/guard.js';
 import { providerHook } from '../providers/index.js';
@@ -23,6 +24,8 @@ export async function startHookServer(ctx: Ctx): Promise<{ hookServer: http.Serv
     }
     if (url.pathname === '/office/queue') return officeQueue(ctx, req, res, url);
     if (url.pathname === '/office/workers' || url.pathname.startsWith('/office/workers/')) return officeWorkers(ctx, req, res, url);
+    // An agent's own app instance and its journey, smoke and microflow test runs (agent-app/hook.ts).
+    if (url.pathname === '/office/app' || url.pathname.startsWith('/office/app/')) return officeApp(ctx, req, res, url);
     // The Firm's reviewers, and a Lead answering one of their questions (hooks/firm.ts).
     if (url.pathname.startsWith('/office/firm/')) return officeFirm(ctx, req, res, url);
     // A worker's Studio mode guard held an mxcli write (studio/guard.ts): for the audit log.
