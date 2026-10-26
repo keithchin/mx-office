@@ -147,7 +147,7 @@ export function requestTitle(text: string, max = 90): string {
 }
 
 /** The task as it's typed to the lead: what was asked, about which page and version, and how to go about it. */
-export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'page' | 'pageMoved' | 'revision' | 'by'> & { change?: Pick<DevChangeNew, 'id' | 'source' | 'ref'> }): string {
+export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'page' | 'pageMoved' | 'revision' | 'by'> & { change?: Pick<DevChangeNew, 'id' | 'source' | 'ref'>; main?: string }): string {
   const dc = r.change ? changeTaskLines(r.change) : undefined;
   return [
     `Change request ${r.id} from ${r.by}: ${requestTitle(r.text)}`,
@@ -158,6 +158,7 @@ export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'pa
     `id: ${r.id}`,
     `page: ${r.page ?? 'unknown'}${r.pageMoved ? ' (the app had moved on from there by itself; this is where it was last opened)' : ''}`,
     `version: ${r.revision ?? 'unknown (no version was running)'}`,
+    ...(r.main ? [`main: ${r.main.slice(0, 12)} (main when this was handed over: \`git fetch origin\` and compare with origin/main before you ask for a merge)`] : []),
     ...(dc?.fence ?? []),
     'request: |',
     ...r.text.replace(/\r\n?/g, '\n').trim().split('\n').map((l) => `  ${l}`),

@@ -50,6 +50,8 @@ export interface RequestAsk {
   owner?: string;
   /** The Developer change it carries out (server/dev-changes/): its id, source revision and element, put in the task. */
   change?: Pick<DevChangeNew, 'id' | 'source' | 'ref'>;
+  /** main's commit when it was handed over (a Developer change's), so the lead compares with the current main. */
+  main?: string;
 }
 
 interface Book {
@@ -106,7 +108,7 @@ export class RequestBook {
     const id = `CR-${b.next++}`;
     const by = ask.by || 'The Project Manager';
     const r: Omit<ChangeRequestRecord, 'taskId' | 'delivery'> = { id, text, ...(page ? { page } : {}), ...(page && ask.pageMoved === true ? { pageMoved: true } : {}), ...(revision ? { revision } : {}), by, ...(ask.owner ? { owner: ask.owner } : {}), at: this.deps.now(), role: m.role, member: m.name, ...(m.workerId ? { workerId: m.workerId } : {}), ...(ask.change ? { changeId: ask.change.id, source: { ...(ask.change.source.sha ? { sha: ask.change.source.sha } : {}), ...(ask.change.ref ? { ref: ask.change.ref } : {}) } } : {}) };
-    const handed = await this.deps.hand(floorId, m, requestTaskText({ ...r, ...(ask.change ? { change: ask.change } : {}) }), {
+    const handed = await this.deps.hand(floorId, m, requestTaskText({ ...r, ...(ask.change ? { change: ask.change } : {}), ...(ask.main ? { main: ask.main } : {}) }), {
       by,
       id: `change-request:${floorId}:${id}`,
       onSent: () => {

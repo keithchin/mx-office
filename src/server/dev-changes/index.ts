@@ -25,6 +25,7 @@ import { git } from '../asks/sources.js';
 import { modelOf } from '../model/index.js';
 import { testingStore } from '../testing/index.js';
 import { changeRequestBook } from '../change-requests/index.js';
+import { localOnlyAt } from '../local-only.js';
 import { managerOf } from '../../shared/roster/coverage.js';
 import { activeOf, changeBranch, currentChange, queuedOf, type CheckResult, type DevChange, type DevChangesView, type StripFacts } from '../../shared/dev-changes.js';
 import { ChangeStore } from './store.js';
@@ -174,7 +175,10 @@ export function devChangesOf(ctx: Ctx): Office {
       return refGone(model, ref, sha.slice(0, 7));
     },
     async hand(floorId, c) {
-      const r = await changeRequestBook(ctx).request(floorId, { text: c.text, page: c.page, pageMoved: c.pageMoved, revision: c.revision, by: c.by, ...(c.owner ? { owner: c.owner } : {}), change: { id: c.id, source: c.source, ...(c.ref ? { ref: c.ref } : {}) } });
+      // The hand-over carries main as it is now, so the lead compares with the current main, not a stale one.
+      const dir = ctx.floors.get(floorId)?.dir;
+      const main = dir ? await mainHead(dir).catch(() => undefined) : undefined;
+      const r = await changeRequestBook(ctx).request(floorId, { ...(main ? { main } : {}), text: c.text, page: c.page, pageMoved: c.pageMoved, revision: c.revision, by: c.by, ...(c.owner ? { owner: c.owner } : {}), change: { id: c.id, source: c.source, ...(c.ref ? { ref: c.ref } : {}) } });
       if (typeof r === 'string') return r;
       return { requestId: r.id, taskId: r.taskId, ...(r.executionId ? { executionId: r.executionId } : {}), member: r.member, role: r.role, ...(r.workerId ? { workerId: r.workerId } : {}), delivery: r.delivery };
     },
@@ -294,5 +298,7 @@ export async function changesView(ctx: Ctx, floor: Floor, who: Who): Promise<Dev
   const behind = main && preview.served ? await behindBy(floor.dir, preview.served, main) : undefined;
   const strip = stripFacts(main, preview, behind, views);
   const cur = currentChange(views);
-  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}), policy, mayPolicy: who.admin };
+  // A local-only project's receipt offers "Review and merge @C" to admins (server/local-merge/, the same path as the panel).
+  const local = localOnlyAt(floor.dir);
+  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}), policy, mayPolicy: who.admin, ...(local ? { localOnly: true, mayMerge: who.admin } : {}) };
 }

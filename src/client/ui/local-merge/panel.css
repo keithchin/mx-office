@@ -8,3 +8,19 @@
 .lm-state[data-state='approve'] { color: var(--good, inherit); }
 .lm-state[data-state='changes'] { color: var(--warn, inherit); }
 .lm-btns { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.lm-what { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; min-width: 0; }
+.lm-dc { overflow-wrap: anywhere; }
+.lm-meta { flex-basis: 100%; }
+.lm-kind[data-kind='notes'] { padding: 0 6px; border-radius: 8px; border: 1px solid var(--line, #ccc); font-weight: 600; }
+.lm-toggle { display: block; padding-top: 6px; font-size: 12px; color: var(--muted, inherit); border-top: 1px solid var(--line, #ddd); }
+/* The confirm step (./confirm.ts). */
+.lmc-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 10px 0; }
+.lmc-facts dt { font-weight: 600; color: var(--muted, inherit); }
+.lmc-facts dd { margin: 0; overflow-wrap: anywhere; }
+.lmc-paths { display: block; color: var(--faint, inherit); }
+.lmc-lines { margin: 4px 0 0; padding-left: 18px; }
+.lmc-lead { font-weight: 600; margin: 0; }
+.lmc-small { font-size: 12px; color: var(--muted, inherit); margin: 0; }
+.lmc-err { margin: 0 16px 10px; }
+.lmc-facts dd[data-status='impact'], .lmc-facts dd[data-status='unknown'] { color: var(--warn, inherit); }
+@media (max-width: 480px) { .lmc-facts { grid-template-columns: 1fr; } .lmc-facts dd { margin-bottom: 4px; } }

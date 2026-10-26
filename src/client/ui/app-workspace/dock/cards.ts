@@ -5,7 +5,8 @@
 //             Implemented @M, Needs attention, Abandoned, Cancelled, Superseded), the record's own line, then the
 //             four facts apart (work, checks at that revision, preview availability or a data-impact hold, your
 //             review), a correction's link to the change it corrects, the dependency note, late results "not
-//             counted", related commits, and the actions the record allows (Cancel, Retry, Mark superseded)
+//             counted", related commits, and the actions the record allows (Cancel, Retry, Mark superseded; in a
+//             local-only project, Review and merge @C for an admin: ../../local-merge/receipt.ts)
 //   try       "Please try this" once a change's merge is in the live preview: Looks right (a scoped review of the
 //             version tried, kept with that version; never acceptance) or Something's wrong (what went wrong,
 //             sent as a correction linked to the change: a new DC), and Open the live preview
@@ -19,12 +20,13 @@ import { CHANGE_TONE, refWords, type DevChangesView, type DevChangeView } from '
 import { changeActions, factList, lifecycleLines } from '../../dev-changes/view';
 import { askedWords, receiptWords, reviewAt } from './logic';
 import type { MarkAsk, MarkSent } from '../validation-api';
+import { receiptMergeButton } from '../../local-merge/receipt';
 
 const short = (sha?: string) => (sha ?? '').slice(0, 7);
 const when = (ms: number) => h('time.pmc-when', { datetime: new Date(ms).toISOString(), title: new Date(ms).toLocaleString() }, new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
 /** The person's request as their message in the conversation, with its receipt under it. */
-export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView['pause'], me: string | undefined): HTMLElement {
+export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView['pause'], me: string | undefined, mayMerge?: boolean): HTMLElement {
   const r = receiptWords(c, pause);
   const who = me && c.by === me ? 'You' : c.by;
   const via = c.via === 'validation' ? ' from a guided check' : c.via === 'try' ? ' after trying it' : c.via === 'dialog' ? ' with Request a change' : '';
@@ -42,7 +44,7 @@ export function askedCard(floor: string, c: DevChangeView, pause: DevChangesView
     h(
       'div.dk-receipt',
       { 'data-state': c.state, class: CHANGE_TONE[c.state], role: 'status' },
-      h('div.dk-rhead', {}, h('b.dk-rid', {}, r.head), h('span.dc-grow'), ...changeActions(floor, c)),
+      h('div.dk-rhead', {}, h('b.dk-rid', {}, r.head), h('span.dc-grow'), receiptMergeButton(floor, c, mayMerge), ...changeActions(floor, c)),
       r.line ? h('p.dk-rline', {}, r.line) : '',
       c.of ? h('p.dk-rline', {}, `A correction of ${c.of}.`) : '',
       factList(floor, c),

@@ -53,19 +53,21 @@ test('local-only PM merge through the gate: review bound to the head, --no-ff in
     // No review: refused. A review by one of its authors: refused.
     const r0 = await mergeLocal(ctx, floor, { branch: b!.branch, sha: b!.sha }, pat);
     assert.equal(r0.ok, false);
-    assert.match((r0 as { error: string }).error, /no review of its head/);
+    assert.match((r0 as { error: string }).error, /has no review/);
     const self = await reviewLocal(ctx, floor, { branch: b!.branch, sha: b!.sha, verdict: 'approve' }, { name: 'Alan (Mx Office Solo Lead)' });
     assert.equal(self.ok, false);
     assert.match((self as { error: string }).error, /wouldn't be independent/);
 
-    // The PM approves the head they saw; then the branch moves on: the old review no longer lets it merge.
+    // The PM approves the head they saw; then the branch moves on: Merge takes exactly the reviewed commit
+    // (merge-safe: never the moving head), and the newer commit stays on the branch for its own review.
     assert.equal((await reviewLocal(ctx, floor, { branch: b!.branch, sha: b!.sha, verdict: 'approve' }, pat)).ok, true);
     writeFileSync(path.join(wt, 'brd.md'), '# BRD\n');
     git(wt, 'add', '.');
     git(wt, ...as('Alan (Mx Office Solo Lead)'), 'commit', '-q', '-m', 'Stage 2: BRD');
     const moved = await mergeLocal(ctx, floor, { branch: b!.branch, sha: b!.sha }, pat);
-    assert.equal(moved.ok, false);
-    assert.match((moved as { error: string }).error, /moved on/);
+    assert.ok(moved.ok, JSON.stringify(moved));
+    assert.equal((moved as { newer: number }).newer, 1);
+    const first = (moved as { merge: string }).merge;
     v = await localMergeView(ctx, floor);
     const b2 = v.branches.find((x) => x.branch === 'office/alan-1')!;
     assert.notEqual(b2.sha, b!.sha);
@@ -84,7 +86,7 @@ test('local-only PM merge through the gate: review bound to the head, --no-ff in
     assert.match(git(bare, 'log', '-1', '--format=%B', merge), /Reviewed at [0-9a-f]{12} by Pat Morgan[\s\S]*Mx-Office-Local-Merge: office\/alan-1@/);
     assert.equal(git(floorDir, 'rev-parse', 'HEAD'), merge, 'the project folder fast-forwarded to it');
     // Recorded, and the review gate counts it as a reviewed merge, not a push around review.
-    assert.deepEqual(localMergeCommits(data, 'app'), [merge]);
+    assert.deepEqual(localMergeCommits(data, 'app'), [first, merge]);
     assert.equal(bookOf(data, 'app').merges[0].by, 'Pat Morgan');
     v = await localMergeView(ctx, floor);
     assert.equal(v.branches.some((x) => x.branch === 'office/alan-1'), false, 'nothing left ahead of main');

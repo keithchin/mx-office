@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Merge exactly what you reviewed (local-only projects).** **Approve at @sha** pins that commit, and **Merge @sha into main** merges that commit even if the agent has committed more since: newer commits stay on the branch for a later review, and it says so (*Merging @3d6ca6b (reviewed). The branch has 2 newer commits, not included.*). Merge opens a confirmation first (the commit, its DC, files and model units, checks and journeys at that commit, data impact; ✕ or Esc). Rows show each branch's DC and request title; journal or docs branches are labelled **notes only** and hidden behind **Show notes branches**. Approve updates the row at once. A Developer change's receipt offers **Review and merge @C** through the same confirmation. After a merge, the branch's agent and the lead are told *main is now @M (merged DC-n)*, the project's local main follows, and a change's hand-over says where main was.
 
 ## 2026-10-25 · release 77 (`4909977`)
 
