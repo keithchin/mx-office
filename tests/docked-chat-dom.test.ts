@@ -353,7 +353,8 @@ test('no lead at work: the chat still takes requests (they queue); a phone: the 
 
     // A phone: a floating button opens the chat as a bottom sheet with the chip; Esc closes it.
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForTimeout(250);
+    // Wait for the phone layout to settle (the button shows once the media query applies), not a fixed time.
+    await page.waitForSelector('.lp-fab', { state: 'visible', timeout: 5000 }).catch(() => {});
     assert.equal(await page.isVisible('.lp-fab'), true);
     const sw = await page.evaluate(() => document.documentElement.scrollWidth);
     assert.ok(sw <= 391, `nothing scrolls sideways (${sw})`);
