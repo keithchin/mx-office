@@ -64,6 +64,8 @@ export interface AppInstance {
   /** http://127.0.0.1:<app port>/: the only origin a caller should reach (a retried start may move it). */
   readonly url: string;
   readonly appPort: number;
+  /** mxcli's process id while it runs (the root of the tree stop() ends): for a caller that keeps a record of what it started. */
+  readonly pid: number | undefined;
   commit: string;
   /** The database this run made (dropped by stop()). */
   readonly dbName: string;
@@ -219,6 +221,9 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
       },
       get timing() {
         return timing;
+      },
+      get pid() {
+        return child?.pid;
       },
       logFile,
       runtimeLog: path.join(cwd, '.mxcli', 'runtime.log'),

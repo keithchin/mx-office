@@ -23,6 +23,7 @@ import { startToolkitPins } from '../toolkit-pin/office.js';
 import { startWalkthroughs } from '../walkthroughs/office.js';
 import { startSecurityGate } from '../security-gate/index.js';
 import { startLiveWarm } from '../liveapp/warm.js';
+import { startAgentApps } from '../agent-app/office.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -95,6 +96,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopSecurity = startSecurityGate(ctx);
   // Keep warm: the live apps of projects that asked for it started a little after the office, one at a time, memory allowing (liveapp/warm.ts).
   const stopWarm = startLiveWarm(ctx);
+  // Agents' app instances: a crashed office's leftovers cleaned up a minute after the start; every instance stopped with the office (agent-app/).
+  const stopAgentApps = startAgentApps(ctx);
 
   return () => {
     stopRuns();
@@ -119,6 +122,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopWalks();
     stopSecurity();
     stopWarm();
+    stopAgentApps();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

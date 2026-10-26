@@ -73,7 +73,7 @@ export const normPath = (p: string) => p.replace(/'/g, '').replace(/\\/g, '/').r
  * ends the argument (a quote, the end, or a space unless the path has spaces of its own, when only a
  * quote or the end can tell "Shop App" from "Shop App 2"), or a trailing slash that does.
  */
-function hasPath(hay: string, needle: string): boolean {
+export function hasPath(hay: string, needle: string): boolean {
   const ends = (s: string) => s === '' || s.startsWith('"') || (!needle.includes(' ') && s.startsWith(' '));
   let at = hay.indexOf(needle);
   while (at >= 0) {
