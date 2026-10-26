@@ -37,7 +37,9 @@ One entry per problem, in this format (no customer content: a project or escalat
   2. `mxcli widget init -p <app>.mpr`. The `.mpk` in `widgets/` alone is not enough: `MDL-WIDGET25` stays until
      `widget init` has extracted its definition.
   3. `mxcli widget describe fileuploader -p <app>.mpr` for its properties.
-  4. `fileuploader` in the page's MDL, inside a data view of the context object, with its required properties:
+  4. `fileuploader` in the page's MDL, inside a data view of the context object, bound to an entity that
+     specialises `System.FileDocument` (files; `uploadMode: 'images'` and `associatedImages` for `System.Image`
+     photos), with its required properties:
      ```
      create persistent entity Notices.Attachment extends System.FileDocument ();
      create association Notices.Attachment_Notice from Notices.Attachment to Notices.Notice;

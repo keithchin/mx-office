@@ -187,7 +187,7 @@ test('the workarounds list ships with the office, starts with image/file upload,
   const list = officeWorkarounds();
   assert.ok(list, 'docs/mendix-workarounds.md is found');
   assert.match(list!, /## Image or file upload on a page/);
-  for (const s of ['235351', 'Apache-2.0', 'v2.5.1', 'MDL-WIDGET25', 'mxcli marketplace install', 'MENDIX_PAT', 'mxcli widget init', 'fileuploader', 'System.Image', 'System.FileDocument', 'mxcli check -p', 'not yet verified by the office']) assert.ok(list!.includes(s), s);
+  for (const s of ['235351', 'Apache-2.0', '2.4.1', 'MDL-WIDGET25', 'office-marketplace add', 'Never install it yourself', 'mxcli widget init', 'fileuploader', 'System.Image', 'System.FileDocument', 'mxcli check -p', 'mxbuild', 'running app: not']) assert.ok(list!.includes(s), s);
   for (const s of ['**Problem:**', "**Why mxcli can't do it directly:**", '**Workaround:**', '**Verified with:**', '**Source:**']) assert.ok(list!.includes(s), s);
   const dir = mkdtempSync(path.join(os.tmpdir(), 'handadd-proj-'));
   const names = Object.fromEntries(ROLES.map((r) => [r.id, r.id.toUpperCase()])) as never;
