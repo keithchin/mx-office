@@ -1,22 +1,20 @@
 // The Project Manager's merge for local-only projects (real-build fix, docs/mockups/product-assessment/
-// real-build-test.md P1-3). A project created with "Keep this project off GitHub" has no pull requests, so
-// the merge gate (server/merge-gate/, PR-based) never offers a Merge, and under Guided ("you decide merges")
-// the work reached main only because someone asked the lead in chat. Here the same gate in local git:
+// real-build-test.md P1-3; made safe after the rebuild test, docs/mockups/rebuild-apac/slice-build-report.md).
+// A project created with "Keep this project off GitHub" has no pull requests, so the merge gate (server/merge-gate/,
+// PR-based) never offers a Merge. Here the same gate in local git:
 //
-//   review   the PM reviews a team branch at the exact head they saw (a review bound to the head: a branch
-//            that moved since needs a new one), never by one of its commits' authors (the E5 rule);
-//   merge    only with an approving review of the branch's head now: merged into the local default branch with
-//            `git merge --no-ff` in a temporary worktree off origin/<default>, committed as the office's own
-//            identity (workers/git-identity.ts), then pushed to the project's local origin without force (a
-//            main that moved meanwhile refuses the push: nothing changes). A conflict aborts and says so.
-//            Recorded here (<data>/local-merge/<project>.json) and in the audit log, and the review gate counts
-//            the merge commit as reviewed (review-gate/index.ts), not as "reached main without a pull request".
+//   review   the PM reviews one commit of a team branch, the one they saw ("Approve at @sha"): a review pins that
+//            commit (it must be on the branch and not on main yet), never by one of its commits' authors (E5);
+//   merge    exactly the reviewed commit (./merge.ts), even if the branch moved on since: newer commits stay on the
+//            branch for a later review, and the merge says so. --no-ff, as the office's identity, never forced,
+//            audited, admins only (the routes); then the team is told "main is now @M" (./tell.ts);
+//   describe what a branch is (./describe.ts): its DC(s) and the request's title, and whether it is notes only
+//            (journal or docs, no model or code changes), plus the confirm step's facts for one commit.
 //
-// Admins only (the routes). Nothing here runs gh or touches GitHub; the project's folder moves to the new main
-// only when it is on the default branch with nothing uncommitted (fast-forward only).
+// Recorded in <data>/local-merge/<project>.json and the audit log; the review gate counts the merge commits as
+// reviewed (review-gate/index.ts). Nothing here runs gh or touches GitHub.
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import os from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
@@ -24,14 +22,16 @@ import { gitGraphsOf, runGit, type Git } from '../gitgraph/index.js';
 import { localOnlyAt } from '../local-only.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import { audit, byWhom } from '../audit/index.js';
-import { officeGitEnv } from '../workers/git-identity.js';
 import { rosterOf } from '../roster/adapter.js';
 import { AUTONOMY, needsApproval, type AutonomyLevel } from '../../shared/roster/autonomy.js';
-import type { LocalMergeBranch, LocalMergeReview, LocalMergeView } from '../../shared/local-merge.js';
+import type { LocalMergeBranch, LocalMergeConfirm, LocalMergeReview, LocalMergeView } from '../../shared/local-merge.js';
+import { dcsOf, impactAt, kindAt, resultsAt, somePaths, unitsAt } from './describe.js';
+
+export { mergeLocal } from './merge.js';
 
 export interface LocalMergeBook {
   reviews: LocalMergeReview[];
-  merges: { branch: string; sha: string; merge: string; into: string; by: string; at: number }[];
+  merges: { branch: string; sha: string; merge: string; into: string; by: string; at: number; newer?: number }[];
 }
 
 const KEEP = 200;
@@ -53,7 +53,7 @@ export function bookOf(dataDir: string, floorId: string): LocalMergeBook {
   return b;
 }
 
-function save(dataDir: string, floorId: string, b: LocalMergeBook) {
+export function saveBook(dataDir: string, floorId: string, b: LocalMergeBook) {
   b.reviews = b.reviews.slice(-KEEP);
   b.merges = b.merges.slice(-KEEP);
   writeJsonAtomic(fileOf(dataDir, floorId), b);
@@ -67,21 +67,25 @@ export function localMergeCommits(dataDir: string, floorId: string): string[] {
 /** Tests: forget what was read. */
 export const forgetLocalMerges = () => books.clear();
 
-const sameSha = (a: string, b: string) => a.length >= 7 && b.length >= 7 && (a.toLowerCase().startsWith(b.toLowerCase()) || b.toLowerCase().startsWith(a.toLowerCase()));
+export const sameSha = (a: string, b: string) => a.length >= 7 && b.length >= 7 && (a.toLowerCase().startsWith(b.toLowerCase()) || b.toLowerCase().startsWith(a.toLowerCase()));
 
-/** The approving review of exactly this head, if there is one (a review of an older head doesn't count). */
-export function reviewOfHead(reviews: readonly LocalMergeReview[], branch: string, head: string): LocalMergeReview | undefined {
-  return [...reviews].reverse().find((r) => r.branch === branch && sameSha(r.sha, head));
+/** The newest review of exactly this commit on the branch, if there is one. */
+export function reviewAt(reviews: readonly LocalMergeReview[], branch: string, sha: string): LocalMergeReview | undefined {
+  return [...reviews].reverse().find((r) => r.branch === branch && sameSha(r.sha, sha));
 }
 
-/** Seams for the tests: git and the clock. */
+/** Seams for the tests: git, the clock, and who hears "main is now @M" (./tell.ts). */
 export interface LocalMergeDeps {
   git: Git;
   now: () => number;
+  /** Delivers the office's note to a worker of the project: undefined when it went in or was held, else why not. */
+  deliver?: (workerId: string, text: string, id: string) => string | undefined;
+  /** The workers to tell after a merge: the branch's own and the team lead's. */
+  recipients?: (ownerId: string | undefined) => { id: string; name: string }[];
 }
 
 /** The autonomy level of the project's team (Guided when there's no team). */
-function levelOf(ctx: Ctx, floor: Floor): AutonomyLevel {
+export function levelOf(ctx: Ctx, floor: Floor): AutonomyLevel {
   try {
     if (!ctx.floors?.has(floor.id)) return 2;
     return rosterOf(ctx).data(floor.id).settings.autonomy;
@@ -90,142 +94,148 @@ function levelOf(ctx: Ctx, floor: Floor): AutonomyLevel {
   }
 }
 
-/** The branches the team has ahead of main, with their review at the head. Empty for a project that isn't local only. */
+export const ref = async (git: Git, dir: string, name: string) => (await git(['rev-parse', '--verify', '--quiet', `${name}^{commit}`], dir).catch(() => '')).trim();
+export const isAncestor = (git: Git, dir: string, a: string, b: string) =>
+  git(['merge-base', '--is-ancestor', a, b], dir).then(
+    () => true,
+    () => false,
+  );
+/** What branches merge into: origin/<main>, else the local <main>. */
+export const targetOf = async (git: Git, dir: string, main: string) => (await ref(git, dir, `refs/remotes/origin/${main}`)) || main;
+
+/** The newest review of a commit still on the branch (the head or an ancestor) that main hasn't got yet. */
+async function liveReview(git: Git, dir: string, book: LocalMergeBook, branch: string, head: string, target: string): Promise<LocalMergeReview | undefined> {
+  const mine = book.reviews.filter((r) => r.branch === branch).slice(-6).reverse();
+  for (const r of mine) {
+    if (sameSha(r.sha, head)) return r;
+    if ((await isAncestor(git, dir, r.sha, head)) && !(await isAncestor(git, dir, r.sha, target))) return r;
+  }
+  return undefined;
+}
+
+/** The task id the worker is on, from the roster (none for a project without a team). */
+function taskOf(ctx: Ctx, floor: Floor, workerId: string): string | undefined {
+  try {
+    if (!ctx.floors?.has(floor.id)) return undefined;
+    const members = Object.values(rosterOf(ctx).data(floor.id).members) as { workerId?: string; task?: { taskId?: string } }[];
+    return members.find((m) => m.workerId === workerId)?.task?.taskId;
+  } catch {
+    return undefined;
+  }
+}
+
+/** One branch's row as it is now (its head read now), or undefined when it has nothing main hasn't. */
+export async function rowOf(ctx: Ctx, floor: Floor, branch: string, owner: { id?: string; name?: string } = {}, git: Git = runGit, main?: string): Promise<LocalMergeBranch | undefined> {
+  const m = main ?? (await gitGraphsOf(ctx).graph(floor)).defaultBranch;
+  const target = await targetOf(git, floor.dir, m);
+  const sha = await ref(git, floor.dir, `refs/heads/${branch}`);
+  if (!sha) return undefined;
+  const [ahead, behind] = (await git(['rev-list', '--left-right', '--count', `${sha}...${target}`], floor.dir).catch(() => '0 0')).trim().split(/\s+/).map(Number);
+  if (!ahead) return undefined;
+  const [subject, what, dcs, review] = await Promise.all([
+    git(['log', '-1', '--format=%s', sha], floor.dir).then(
+      (s) => s.trim(),
+      () => '',
+    ),
+    kindAt(git, floor.dir, target, sha),
+    dcsOf(ctx, floor.id, branch, owner.id),
+    liveReview(git, floor.dir, bookOf(ctx.cfg.dataDir, floor.id), branch, sha, target),
+  ]);
+  const newer = review && !sameSha(review.sha, sha) ? Number((await git(['rev-list', '--count', `${review.sha}..${sha}`], floor.dir).catch(() => '0')).trim()) || 0 : 0;
+  const task = owner.id ? taskOf(ctx, floor, owner.id) : undefined;
+  return { branch, sha, ahead, behind: behind || 0, subject, ...(owner.name ? { owner: owner.name } : {}), ...(dcs.length ? { dcs } : {}), ...(task ? { task } : {}), kind: what.kind, files: what.files, ...(review ? { review } : {}), ...(newer ? { newer } : {}) };
+}
+
+/** The branches the team has ahead of main, with what they are and their review. Empty for a project that isn't local only. */
 export async function localMergeView(ctx: Ctx, floor: Floor): Promise<LocalMergeView> {
   const level = levelOf(ctx, floor);
   const base: LocalMergeView = { floor: floor.id, localOnly: localOnlyAt(floor.dir), main: 'main', branches: [], level, levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') };
   if (!base.localOnly) return base;
   const g = await gitGraphsOf(ctx).graph(floor);
-  const book = bookOf(ctx.cfg.dataDir, floor.id);
-  const git = runGit;
   const main = g.defaultBranch;
-  const target = (await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${main}^{commit}`], floor.dir).catch(() => '')).trim() || main;
-  // The graph names the branches (cached up to a minute); each head and how far ahead it is are read now, so a review
-  // and a merge always name the head as it is.
+  const mainSha = await ref(runGit, floor.dir, await targetOf(runGit, floor.dir, main));
+  // The graph names the branches (cached up to a minute); each head, review and kind are read now.
   const listed = g.branches.filter((b) => b.name !== main && (b.worker || b.where !== 'remote')).slice(0, 12);
-  const fresh = await Promise.all(
-    listed.map(async (b): Promise<LocalMergeBranch | undefined> => {
-      const sha = (await git(['rev-parse', '--verify', '--quiet', `refs/heads/${b.name}^{commit}`], floor.dir).catch(() => '')).trim();
-      if (!sha) return undefined;
-      const [ahead, behind] = (await git(['rev-list', '--left-right', '--count', `${sha}...${target}`], floor.dir).catch(() => '0 0')).trim().split(/\s+/).map(Number);
-      if (!ahead) return undefined;
-      const subject = sha === b.sha ? b.subject : (await git(['log', '-1', '--format=%s', sha], floor.dir).catch(() => '')).trim();
-      const review = reviewOfHead(book.reviews, b.name, sha);
-      return { branch: b.name, sha, ahead, behind: behind || 0, subject, ...(b.worker ? { owner: b.worker.name } : {}), ...(review ? { review } : {}) };
-    }),
-  );
-  return { ...base, main, branches: fresh.filter((b): b is LocalMergeBranch => !!b).slice(0, 6) };
+  const rows = await Promise.all(listed.map((b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main)));
+  return { ...base, main, ...(mainSha ? { mainSha } : {}), branches: rows.filter((b): b is LocalMergeBranch => !!b).slice(0, 10) };
 }
 
-/** The branch's head now, and its commits' authors since it left main (local git only). */
-async function headOf(git: Git, dir: string, main: string, branch: string): Promise<{ head: string; authors: string[] } | undefined> {
-  const head = (await git(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}^{commit}`], dir).catch(() => '')).trim();
-  if (!head) return undefined;
-  const base = (await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${main}^{commit}`], dir).catch(() => '')).trim() || main;
-  const authors = (await git(['log', '--format=%an', `${base}..${head}`], dir).catch(() => ''))
+/** The branch's head now, the reviewed commit in full, and the authors of the commits it brings in (local git only). */
+export async function commitOn(git: Git, dir: string, main: string, branch: string, sha: string): Promise<{ head: string; full: string; target: string; authors: string[] } | { status: number; error: string }> {
+  const head = await ref(git, dir, `refs/heads/${branch}`);
+  if (!head) return { status: 404, error: `There's no branch ${branch} in the project` };
+  const full = /^[0-9a-f]{7,40}$/i.test(sha) ? await ref(git, dir, sha) : '';
+  if (!full) return { status: 404, error: `The commit @${sha.slice(0, 7) || '?'} doesn't exist in the project any more (was the branch rewritten?): review what ${branch} has now` };
+  if (full !== head && !(await isAncestor(git, dir, full, head))) return { status: 409, error: `@${full.slice(0, 7)} is no longer on ${branch} (its history was rewritten): review its head @${head.slice(0, 7)} instead` };
+  const target = await targetOf(git, dir, main);
+  if (await isAncestor(git, dir, full, target)) return { status: 409, error: `@${full.slice(0, 7)} is on ${main} already: nothing to merge` };
+  const authors = (await git(['log', '--format=%an', `${target}..${full}`], dir).catch(() => ''))
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
-  return { head, authors: [...new Set(authors)] };
+  return { head, full, target, authors: [...new Set(authors)] };
 }
 
-const BRANCH_OK = /^[\w./-]{1,200}$/;
+export const BRANCH_OK = /^[\w./-]{1,200}$/;
 
-/** A person's review of the branch head they saw. Refuses a head that moved on, and a reviewer who authored commits on it. */
+/** A person's review of the commit they saw. Refuses a commit not on the branch or on main already, and a reviewer who authored commits in it. */
 export async function reviewLocal(
   ctx: Ctx,
   floor: Floor,
   r: { branch: string; sha: string; verdict: 'approve' | 'changes'; note?: string },
   by: { name: string; id?: string },
   deps: Partial<LocalMergeDeps> = {},
-): Promise<{ ok: true; review: LocalMergeReview } | { ok: false; status: number; error: string }> {
+): Promise<{ ok: true; review: LocalMergeReview; branch?: LocalMergeBranch } | { ok: false; status: number; error: string }> {
   const git = deps.git ?? runGit;
   const now = deps.now ?? Date.now;
   if (!localOnlyAt(floor.dir)) return { ok: false, status: 409, error: 'This project is on GitHub: review and merge its pull requests in the PR window' };
   if (!BRANCH_OK.test(r.branch)) return { ok: false, status: 400, error: 'Not a branch name' };
-  const main = (await gitGraphsOf(ctx).graph(floor)).defaultBranch;
-  const h = await headOf(git, floor.dir, main, r.branch);
-  if (!h) return { ok: false, status: 404, error: `There's no branch ${r.branch} in the project` };
-  if (!sameSha(h.head, r.sha)) return { ok: false, status: 409, error: `${r.branch} moved on: you reviewed ${r.sha.slice(0, 7) || 'nothing'}, its head is now ${h.head.slice(0, 7)}. Look at the new commits and review again.` };
-  if (h.authors.some((a) => a.toLowerCase() === by.name.trim().toLowerCase())) return { ok: false, status: 409, error: `${by.name} authored commits on ${r.branch}, so that review wouldn't be independent` };
-  const review: LocalMergeReview = { branch: r.branch, sha: h.head, verdict: r.verdict, by: by.name, ...(by.id ? { byId: by.id } : {}), at: now(), ...(r.note ? { note: r.note.replace(/\s+/g, ' ').trim().slice(0, 500) } : {}) };
+  const g = await gitGraphsOf(ctx).graph(floor);
+  const main = g.defaultBranch;
+  const c = await commitOn(git, floor.dir, main, r.branch, r.sha);
+  if ('error' in c) return { ok: false, ...c };
+  if (c.authors.some((a) => a.toLowerCase() === by.name.trim().toLowerCase())) return { ok: false, status: 409, error: `${by.name} authored commits on ${r.branch}, so that review wouldn't be independent` };
+  const review: LocalMergeReview = { branch: r.branch, sha: c.full, verdict: r.verdict, by: by.name, ...(by.id ? { byId: by.id } : {}), at: now(), ...(r.note ? { note: r.note.replace(/\s+/g, ' ').trim().slice(0, 500) } : {}) };
   const b = bookOf(ctx.cfg.dataDir, floor.id);
   b.reviews.push(review);
-  save(ctx.cfg.dataDir, floor.id, b);
-  audit.record({ floor: floor.id, actor: byWhom(by.name, by.id), action: 'local-merge.review', target: { kind: 'branch', id: r.branch, label: r.branch }, summary: `${by.name} ${r.verdict === 'approve' ? 'approved' : 'asked for changes on'} ${r.branch} at ${h.head.slice(0, 7)}`, details: { sha: h.head, verdict: r.verdict } });
-  return { ok: true, review };
+  saveBook(ctx.cfg.dataDir, floor.id, b);
+  const later = c.full === c.head ? '' : ` (the head is @${c.head.slice(0, 7)}: newer commits aren't part of this review)`;
+  audit.record({ floor: floor.id, actor: byWhom(by.name, by.id), action: 'local-merge.review', target: { kind: 'branch', id: r.branch, label: r.branch }, summary: `${by.name} ${r.verdict === 'approve' ? 'approved' : 'asked for changes on'} ${r.branch} at ${c.full.slice(0, 7)}${later}`, details: { sha: c.full, head: c.head, verdict: r.verdict } });
+  // The row as it is now, for the panel to show at once (no second look, no lag).
+  const w = g.branches.find((x) => x.name === r.branch)?.worker;
+  const row = await rowOf(ctx, floor, r.branch, w ? { id: w.id, name: w.name } : {}, git, main).catch(() => undefined);
+  return { ok: true, review, ...(row ? { branch: row } : {}) };
 }
 
-/**
- * Merges the branch into the local default branch, with an approving review of its head now. Never a force:
- * a main that moved meanwhile refuses the push and nothing changes.
- */
-export async function mergeLocal(
-  ctx: Ctx,
-  floor: Floor,
-  r: { branch: string; sha: string },
-  by: { name: string; id?: string },
-  deps: Partial<LocalMergeDeps> = {},
-): Promise<{ ok: true; merge: string; into: string } | { ok: false; status: number; error: string }> {
+/** The confirm step's facts for merging `sha` of `branch`: refused like the merge would be when it can't. */
+export async function confirmLocal(ctx: Ctx, floor: Floor, branch: string, sha: string, deps: Partial<LocalMergeDeps> = {}): Promise<{ ok: true; confirm: LocalMergeConfirm } | { ok: false; status: number; error: string }> {
   const git = deps.git ?? runGit;
-  const now = deps.now ?? Date.now;
-  if (!localOnlyAt(floor.dir)) return { ok: false, status: 409, error: 'This project is on GitHub: merge its pull requests in the PR window, through the merge gate' };
-  if (!BRANCH_OK.test(r.branch)) return { ok: false, status: 400, error: 'Not a branch name' };
-  const graph = await gitGraphsOf(ctx).graph(floor);
-  const main = graph.defaultBranch;
-  if (r.branch === main) return { ok: false, status: 400, error: `${main} can't be merged into itself` };
-  const h = await headOf(git, floor.dir, main, r.branch);
-  if (!h) return { ok: false, status: 404, error: `There's no branch ${r.branch} in the project` };
-  if (!sameSha(h.head, r.sha)) return { ok: false, status: 409, error: `${r.branch} moved on since you looked (${r.sha.slice(0, 7)} → ${h.head.slice(0, 7)}): review its new head first` };
-  const book = bookOf(ctx.cfg.dataDir, floor.id);
-  const review = reviewOfHead(book.reviews, r.branch, h.head);
-  if (!review) return { ok: false, status: 409, error: `Not merged: ${r.branch} has no review of its head ${h.head.slice(0, 7)}. Review it first (a review of an older head doesn't count).` };
-  if (review.verdict !== 'approve') return { ok: false, status: 409, error: `Not merged: the review of ${h.head.slice(0, 7)} asked for changes` };
+  if (!localOnlyAt(floor.dir)) return { ok: false, status: 409, error: 'This project is on GitHub: merge its pull requests in the PR window' };
+  if (!BRANCH_OK.test(branch)) return { ok: false, status: 400, error: 'Not a branch name' };
+  const g = await gitGraphsOf(ctx).graph(floor);
+  const main = g.defaultBranch;
+  const c = await commitOn(git, floor.dir, main, branch, sha);
+  if ('error' in c) return { ok: false, ...c };
+  const w = g.branches.find((x) => x.name === branch)?.worker;
+  const what = await kindAt(git, floor.dir, c.target, c.full);
+  const [subject, newer, dcs, results, units, impact] = await Promise.all([
+    git(['log', '-1', '--format=%s', c.full], floor.dir).then(
+      (s) => s.trim(),
+      () => '',
+    ),
+    git(['rev-list', '--count', `${c.full}..${c.head}`], floor.dir).then(
+      (s) => Number(s.trim()) || 0,
+      () => 0,
+    ),
+    dcsOf(ctx, floor.id, branch, w?.id),
+    resultsAt(ctx, floor.id, c.full),
+    what.fork && what.files.model ? unitsAt(ctx, floor, what.fork, c.full) : Promise.resolve([] as string[]),
+    impactAt(ctx, floor, git, what.fork, c.full, what.files),
+  ]);
   const level = levelOf(ctx, floor);
-  // In a temporary worktree off origin/<main>: the project's folder (Studio Pro, the live app) is never mid-merge.
-  await git(['fetch', 'origin', '--quiet'], floor.dir).catch(() => '');
-  const base = (await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${main}^{commit}`], floor.dir).catch(() => '')).trim();
-  if (!base) return { ok: false, status: 409, error: `The project's local origin has no ${main} to merge into` };
-  const tmp = mkdtempSync(path.join(os.tmpdir(), 'mx-local-merge-'));
-  const wt = path.join(tmp, 'wt');
-  const env = officeGitEnv();
-  const id = ['-c', `user.name=${env.GIT_COMMITTER_NAME}`, '-c', `user.email=${env.GIT_COMMITTER_EMAIL}`, '-c', 'commit.gpgsign=false', '-c', 'core.safecrlf=false'];
-  let merge = '';
-  try {
-    await git(['worktree', 'add', '--detach', wt, base], floor.dir);
-    const msg = `Merge ${r.branch} into ${main} (local only)\n\nReviewed at ${h.head.slice(0, 12)} by ${review.by}; merged by ${by.name} in Mx Office.\nMx-Office-Local-Merge: ${r.branch}@${h.head}`;
-    try {
-      await git([...id, 'merge', '--no-ff', '-m', msg, h.head], wt);
-    } catch (err) {
-      await git(['merge', '--abort'], wt).catch(() => '');
-      return { ok: false, status: 409, error: `Not merged: ${r.branch} conflicts with ${main} (${(err as Error).message.slice(0, 160)}). Ask the lead to bring ${main} into the branch, then review its new head.` };
-    }
-    merge = (await git(['rev-parse', 'HEAD'], wt)).trim();
-    try {
-      // No force, ever: a main that moved since the fetch refuses this, and the merge is dropped with the worktree.
-      await git(['push', 'origin', `HEAD:refs/heads/${main}`], wt);
-    } catch (err) {
-      return { ok: false, status: 409, error: `Not merged: ${main} moved on in the project's origin meanwhile (${(err as Error).message.slice(0, 160)}). Try again.` };
-    }
-  } finally {
-    await git(['worktree', 'remove', '--force', wt], floor.dir).catch(() => '');
-    rmSync(tmp, { recursive: true, force: true });
-  }
-  // The project's folder follows when it's on main with nothing uncommitted: fast-forward only.
-  await git(['fetch', 'origin', '--quiet'], floor.dir).catch(() => '');
-  const cur = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], floor.dir).catch(() => '')).trim();
-  const dirty = (await git(['status', '--porcelain', '--untracked-files=no'], floor.dir).catch(() => 'x')).trim();
-  if (cur === main && !dirty) await git(['merge', '--ff-only', `origin/${main}`], floor.dir).catch(() => '');
-  book.merges.push({ branch: r.branch, sha: h.head, merge, into: main, by: by.name, at: now() });
-  save(ctx.cfg.dataDir, floor.id, book);
-  audit.record({
-    floor: floor.id,
-    actor: byWhom(by.name, by.id),
-    action: 'local-merge.merge',
-    target: { kind: 'branch', id: r.branch, label: r.branch },
-    summary: `${by.name} merged ${r.branch} (${h.head.slice(0, 7)}, reviewed by ${review.by}) into ${main} with --no-ff as ${merge.slice(0, 7)}: local only, no GitHub`,
-    details: { sha: h.head, merge, into: main, reviewedBy: review.by, autonomy: level, pmDecides: needsApproval(level, 'merge') },
-    severity: 'notice',
-  });
-  return { ok: true, merge, into: main };
+  const review = reviewAt(bookOf(ctx.cfg.dataDir, floor.id).reviews, branch, c.full);
+  return {
+    ok: true,
+    confirm: { floor: floor.id, branch, main, sha: c.full, subject, head: c.head, newer, kind: what.kind, files: what.files, paths: somePaths(what.paths), units, dcs, checks: results.checks, journeys: results.journeys, dataImpact: impact, ...(review ? { review } : {}), levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') },
+  };
 }

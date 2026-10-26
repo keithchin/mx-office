@@ -1,11 +1,12 @@
 // The Project Manager's merge for local-only projects (server/local-merge/): GET /api/local-merge?floor= is the
 // branches the team has ahead of main with their review at the head; POST /api/local-merge/review
-// {floor, branch, sha, verdict, note?} records a review of the head seen; POST /api/local-merge/merge
-// {floor, branch, sha} merges it into main with --no-ff (an approving review of that head first). Admins
-// only for the writes, same origin, audited. No GitHub.
+// {floor, branch, sha, verdict, note?} records a review of the commit seen (and answers with the branch's row as it
+// is now); GET /api/local-merge/confirm?floor=&branch=&sha= is the confirm step's facts for merging that commit
+// (admins); POST /api/local-merge/merge {floor, branch, sha} merges exactly that reviewed commit into main with
+// --no-ff, even if the branch moved on. Admins only for the writes, same origin, audited. No GitHub.
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
-import { localMergeView, mergeLocal, reviewLocal } from '../../local-merge/index.js';
+import { confirmLocal, localMergeView, mergeLocal, reviewLocal } from '../../local-merge/index.js';
 import { readBody, send } from '../util.js';
 import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
@@ -32,6 +33,22 @@ export const localMergeRoutes = {
       if (!floor) return send(res, 404, { error: 'No such project' });
       try {
         return send(res, 200, await localMergeView(ctx, floor));
+      } catch (err) {
+        return send(res, 502, { error: (err as Error).message });
+      }
+    },
+  },
+  confirm: {
+    method: 'GET',
+    path: '/api/local-merge/confirm',
+    auth: 'session',
+    async handle(ctx, { res, url, session }) {
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the Project Manager (an admin) merges' });
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      try {
+        const r = await confirmLocal(ctx, floor, url.searchParams.get('branch') ?? '', url.searchParams.get('sha') ?? '');
+        return r.ok ? send(res, 200, r.confirm) : send(res, r.status, { error: r.error });
       } catch (err) {
         return send(res, 502, { error: (err as Error).message });
       }

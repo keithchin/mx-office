@@ -235,6 +235,7 @@ export const routes: readonly Route[] = [
   branchAheadRoutes.view,
   branchAheadRoutes.review,
   localMergeRoutes.view,
+  localMergeRoutes.confirm,
   localMergeRoutes.review,
   localMergeRoutes.merge,
   decisionRoutes.view,

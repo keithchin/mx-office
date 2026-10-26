@@ -489,4 +489,7 @@ export interface DevChangesView {
   /** The project's queue policy, and whether this viewer may change it (admins). */
   policy?: DevChangePolicy;
   mayPolicy?: boolean;
+  /** A local-only project, and whether this viewer may review and merge a candidate from its receipt (admins: server/local-merge/). */
+  localOnly?: boolean;
+  mayMerge?: boolean;
 }
