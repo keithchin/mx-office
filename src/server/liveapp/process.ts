@@ -57,13 +57,15 @@ export function stopTree(child: ChildProcess, waitMs = 15_000): Promise<void> {
   return new Promise((resolve) => {
     if (child.exitCode !== null || child.signalCode !== null || !child.pid) return resolve();
     const timer = setTimeout(resolve, waitMs);
-    child.once('exit', () => {
+    // Done when the root has exited and taskkill has finished with the whole tree: the root can exit first,
+    // and a caller that moved on then could leave the runtime's children holding ports and pipes.
+    const exited = new Promise<void>((r) => child.once('exit', () => r()));
+    // Not killTreeNow: a synchronous taskkill held the event loop for a second or more per stop on Windows
+    // (one of the server's 1-7 s stalls while instances and live apps stopped).
+    void Promise.all([exited, killTreeAsync(child.pid)]).then(() => {
       clearTimeout(timer);
       resolve();
     });
-    // Not killTreeNow: a synchronous taskkill held the event loop for a second or more per stop on Windows
-    // (one of the server's 1-7 s stalls while instances and live apps stopped).
-    void killTreeAsync(child.pid);
   });
 }
 
