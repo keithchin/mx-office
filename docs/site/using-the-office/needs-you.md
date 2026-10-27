@@ -23,6 +23,8 @@ Each row has a **level**:
 | `warn` | Worth a look (an important escalation, a failing PR, an idle agent with a task) | Yes |
 | `info` | Shown, not waiting on you (an FYI, *Not on main*, *Review gate*, a sign-off waiting for the lead to record it) | No |
 
+**New first.** Within that order of urgency, what is new comes first: an item that has waited more than a day (by its own time), or whose source is gone (an `AWAITING-PM` line removed, an agent's ask to merge a commit that is on main now), goes after the new ones, and the Overview and the strip fold those behind **Show N older** while there is anything new (`src/shared/needs-order.ts`). Rows that don't wait on you (`info`) come last, and other projects' *N waiting* rows stay after this project's. Nothing is hidden or resolved by this: the count is the same, and **Show N older** shows them all.
+
 Each card has a **kind**, which decides its buttons (see [Decision cards](command-center.md#decision-cards)):
 
 | Kind | Tag on the card | Buttons |
