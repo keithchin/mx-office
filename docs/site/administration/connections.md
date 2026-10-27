@@ -91,6 +91,7 @@ Set the office's commit identity there: it goes into the workers' environment as
 
 - **Projects folder**: where new projects are cloned (`<folder>/<owner>/<repo>`); the same setting as ⚙️ Settings › 🛠️ Advanced › *Workspace folder*.
 - **Toolkit folder**: the mxcli-project-toolkit clone the wizard runs and the Playbooks point at. It must contain `bin/init-project.sh`. Picked here (or in the first-run setup, which can also clone it), it beats `AGENT_OFFICE_TOOLKIT_DIR`; **Default** goes back to the variable or the first of `~/mendix-toolkit`, `~/agent-spike/mendix-toolkit` and `~/agent-spike/mxcli-project-toolkit` that is there.
+- **mxcli**: the office's own mxcli (the same setting first-run setup's mxcli step saves). The live apps, microflow tests, the Model tab, walkthroughs and the wizard run it. Give the full path of `mxcli.exe` (or its folder) and **Save**; it beats `AGENT_OFFICE_MXCLI` and `AGENT_OFFICE_LIVE_MXCLI`, takes effect without a restart, and each change is in the Audit log. **Clear** goes back to those variables, then the workspace's `tools\mxcli`. This is the setting *Needs a newer mxcli* points at.
 
 ## Worktrees stay in the project
 

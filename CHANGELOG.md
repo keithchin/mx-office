@@ -13,7 +13,7 @@ Nothing waiting yet.
 - **A receipt merges the branch that carries the change.** **Review and merge** on a Developer change's receipt no longer trusts `dev/DC-n` by name: it looks at that branch, the branch of the agent the change was handed to, a merge an agent asked for, and branches whose commits name the change, and never offers a notes-only branch, a script draft that was never applied, or a commit with a failed check. When more than one could be meant, **Choose what to merge…** lists them with their checks and picks nothing for you; with none, **Why nothing to merge…** says why. In the merge panel you can approve any commit of a branch (the one an agent asked for is marked), every panel on the page follows a review at once, asks already on main show as resolved, and a conflict refusal names the files instead of showing git's command line.
 - **Stale data-impact holds get an honest way out.** A hold whose change was cancelled, replaced or already applied offers **Release stale hold** with a reason (the office checks it really guards nothing; one that still does is refused, and the release is audited). **Take a database dump now** works for a candidate's hold too. A change queue blocked behind a hold shows in Needs you with **Open the hold**. Needs you puts new items first and folds older or resolved ones behind *Show N older*.
 - **Agents' checks count.** Smoke runs and journeys sign in as the project's own test users (not the template's), `office-app journey` runs `.journey.js` files as well as `.journey.json`, every app start and every check an agent reports (`office-app check`, MCP `app_check`, marked *reported by*) is recorded at its commit, and a check that couldn't run shows as **failed** on receipts and in the merge confirmation instead of *skipped*. A refused sign-in or a run that can't start is raised to Needs you instead of leaving the agent idle.
-- **Microflow tests run without a PostgreSQL superuser.** With mxcli v0.27 or newer the office runs them on the runtime's built-in database on ports it holds; with an older mxcli it says *Needs a newer mxcli, not a database* and names the setting (Settings › Connections › Paths › mxcli).
+- **Microflow tests run without a PostgreSQL superuser.** With mxcli v0.27 or newer the office runs them on the runtime's built-in database on ports it holds; with an older mxcli it says *Needs a newer mxcli, not a database* and names the setting (🔌 Connections › Folders › mxcli).
 - **Fixes.** **Use a package file…** resolves the agent's folder against the project (no more *git isn't installed*); a Marketplace item the token can't see says it may be private to another company. The stage line survives an office restart. Processes an earlier agent session left running are stopped (matched by the pids the office recorded, never by name). Stopping a live app or instance waits until its whole process tree has ended, and no longer holds the server while it does; build logs are written without holding it either.
 
 ## 2026-10-26 · release 78 (`b4dfca4`)
@@ -639,7 +639,8 @@ Nothing waiting yet.
   each new microflow or nanoflow in its module's folder for its prefix (`ACT_` → Actions, `SUB_` → SubMicroflows,
   `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
   clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
-
+
+
 ### Changed
 - **The Model tab fills the page in Portal.** Under the page header, the Model view now runs edge to edge: the
   App Explorer against the left navigation, the details panel against the window's right edge, the drawing down to

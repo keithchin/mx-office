@@ -32,7 +32,8 @@ export class Limiter {
 
 /** The mxcli to run, or null when there is none on this machine. */
 export function findMxcli(dataDir: string, env: NodeJS.ProcessEnv = process.env): string | null {
-  const candidates = [env.AGENT_OFFICE_LIVE_MXCLI, liveAppConfig(dataDir, env).mxcli, wizardConfig(env).mxcli, 'mxcli'];
+  // liveAppConfig's order (the saved Connections setting, AGENT_OFFICE_LIVE_MXCLI, live-app.json, officeMxcli), then the office's own again (a saved path that isn't there falls through to the next that is), then PATH.
+  const candidates = [liveAppConfig(dataDir, env).mxcli, env.AGENT_OFFICE_LIVE_MXCLI, wizardConfig(env).mxcli, 'mxcli'];
   for (const c of candidates) {
     if (!c) continue;
     const found = resolveCommand(c);

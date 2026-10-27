@@ -222,7 +222,7 @@ export class LiveApp {
     const to = nextStatus(this.s.status, event);
     if (!to) return this.queue;
     if (!this.d.mxcli) {
-      this.set({ status: 'failed', phase: 'failed', by, message: `mxcli isn't installed on the office's machine (looked for "${this.d.cfg.mxcli}"; set AGENT_OFFICE_LIVE_MXCLI)` });
+      this.set({ status: 'failed', phase: 'failed', by, message: `mxcli isn't installed on the office's machine (looked for "${this.d.cfg.mxcli}"; pick it in Connections › Folders › mxcli, or set AGENT_OFFICE_MXCLI)` });
       return this.queue;
     }
     const gen = ++this.gen;

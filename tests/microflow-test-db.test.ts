@@ -25,7 +25,7 @@ test('the real failure: an older mxcli demands a superuser; said as needing a ne
   const why = testRunWhy(REAL, 'shop_test', { mxcliVersion: 'nightly-20261003' });
   assert.match(why, /^Needs a newer mxcli, not a database: mxcli nightly-20261003 makes its test database only through a PostgreSQL superuser/);
   assert.match(why, /mxcli v0\.27\.0 or newer runs the tests on the Mendix runtime's built-in database/);
-  assert.match(why, /Settings > Connections > Paths > mxcli/);
+  assert.match(why, /Connections > Folders > mxcli/);
   assert.doesNotMatch(why, /Prepare the test database|database is missing|no JUnit file/);
   // ASCII punctuation only: the reason travels through consoles that may not read UTF-8 (the mojibake in the run).
   assert.doesNotMatch(why.replace(/mxcli said:.*$/, ''), /[^ -~]/);

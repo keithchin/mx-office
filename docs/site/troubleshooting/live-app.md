@@ -46,7 +46,7 @@ Or turn on Windows **Developer Mode**, which allows symbolic links.
 
 ## "mxcli not found"
 
-Set `AGENT_OFFICE_LIVE_MXCLI` to mxcli's full path. The launcher sets it to `agent-spike\bin\mxcli.exe`; check that the file is there.
+Pick mxcli's full path in 🔌 Connections › Folders › mxcli (or set `AGENT_OFFICE_LIVE_MXCLI`). The launcher sets it to `agent-spike\bin\mxcli.exe`; check that the file is there.
 
 ## The database can't be reached
 

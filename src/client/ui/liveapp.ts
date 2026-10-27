@@ -138,7 +138,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       ? h('div.la-failed', { role: 'alert' }, h('p.la-note.bad', {}, f ? `${f.kind === 'crash' ? `The app stopped by itself at ${stamp(f.at)}` : f.kind === 'timeout' ? `It didn't come up; gave up at ${stamp(f.at)}` : f.kind === 'held' ? 'Start held: nothing was built' : `The build failed at ${stamp(f.at)}`}${f.sha ? ` (${s.branch ?? 'main'} @${short(f.sha)})` : ''}: ${f.why}` : (s.message ?? 'It failed.')), admin ? null : h('p.la-note', {}, 'An admin can restart it.'))
       : null;
     const refresh = s.refresh && !s.refresh.ok && (up || crashed) ? h('p.la-note.bad', {}, `Live app can't check for updates: ${s.refresh.error ?? 'unknown error'}${on ? `. Running ${commitLine({ ...s, main: undefined })}` : ''}.`) : null;
-    const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app (AGENT_OFFICE_LIVE_MXCLI).") : null;
+    const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app: an admin picks it in 🔌 Connections › Folders › mxcli (or sets AGENT_OFFICE_MXCLI).") : null;
     const lines = crashed && f?.lines.length ? f.lines : s.log;
     const log = s.status !== 'running' && lines.length ? h('pre.la-log', {}, lines.join('\n')) : null;
     if (url) opener.show(url, s.floor, !!s.viewPort);

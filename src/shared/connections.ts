@@ -82,6 +82,8 @@ export interface PathState {
 export interface PathsView {
   projectsDir: PathState;
   toolkitDir: PathState;
+  /** The office's own mxcli (first-run setup's, AGENT_OFFICE_MXCLI, or the workspace's): its path, '' when none is found. */
+  mxcli: PathState;
 }
 
 export interface SweepItem {

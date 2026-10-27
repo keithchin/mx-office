@@ -45,7 +45,7 @@ export function walkthroughsOf(ctx: Deps): Walkthroughs {
       },
       bootBlocked: () => {
         const c = cfg();
-        return resolveCommand(c.mxcli) ? undefined : `mxcli isn’t installed on the office’s machine (looked for "${c.mxcli}"; set AGENT_OFFICE_LIVE_MXCLI)`;
+        return resolveCommand(c.mxcli) ? undefined : `mxcli isn’t installed on the office’s machine (looked for "${c.mxcli}"; pick it in Connections › Folders › mxcli, or set AGENT_OFFICE_MXCLI)`;
       },
       // A test office never starts a real app (and a real database) by itself: only when someone asks.
       autoBlocked: (id) => (testModeOf(ctx.floors.get(id)?.dir).on ? 'this is a test office (recordings start only when an admin asks)' : undefined),

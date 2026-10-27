@@ -6,7 +6,7 @@
 // in the audit log. Tokens go through 🔌 Connections (its own routes and cards), so nothing secret is
 // ever kept or shown here. ⚙️ Settings › Connections has Run setup again.
 
-import { existsSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DEFAULT_TOOLKIT_REPO, GITHUB_OWNER, firstRunReasons, isFirstRunStep, type FirstRunStep, type FirstRunView, type SetupRecord } from '../../shared/first-run.js';
@@ -15,7 +15,7 @@ import { audit, human } from '../audit/index.js';
 import { tildify } from '../building.js';
 import { officeSettings, toolkitDirState, updateOfficeSettings } from '../connections/store.js';
 import { passwordView } from '../connections/password.js';
-import { toolkitProblem } from '../connections/paths.js';
+import { setOfficeMxcli, toolkitProblem } from '../connections/paths.js';
 import { credential } from '../connections/resolve.js';
 import { withClaudeAuth } from '../claude-auth/source.js';
 import { liveAppConfig } from '../liveapp/config.js';
@@ -108,22 +108,8 @@ export function setDefaultMendix(raw: unknown, who: Who): string | undefined {
   return undefined;
 }
 
-const untilde = (s: string) => s.replace(/^~(?=$|[\\/])/, os.homedir());
-
-/** mxcli's path ('' goes back to AGENT_OFFICE_MXCLI or where it usually is). Returns why it couldn't. */
-export function setMxcli(raw: unknown, who: Who): string | undefined {
-  const text = typeof raw === 'string' ? untilde(raw.trim().replace(/^"|"$/g, '')) : '';
-  let p: string | undefined;
-  if (text) {
-    if (!path.isAbsolute(text)) return 'Use a full path, like C:\\Tools\\mxcli\\mxcli.exe';
-    p = path.resolve(text);
-    if (isDir(p)) p = path.join(p, process.platform === 'win32' ? 'mxcli.exe' : 'mxcli');
-    if (!existsSync(p)) return `There’s no mxcli at ${tildify(p)}`;
-  }
-  updateOfficeSettings({ mxcliPath: p });
-  record(who, 'mxcliPath', 'mxcli', p ? `${who.name} set mxcli to ${tildify(p)}` : `${who.name} cleared the mxcli path`, { after: { path: p ? tildify(p) : null } });
-  return undefined;
-}
+/** mxcli's path ('' goes back to AGENT_OFFICE_MXCLI or where it usually is): the same setting as 🔌 Connections › Folders › mxcli. Returns why it couldn't. */
+export const setMxcli = (raw: unknown, who: Who): string | undefined => setOfficeMxcli(raw, who);
 
 /** Finished: the office stops opening the setup by itself. */
 export function finishSetup(who: Who) {
