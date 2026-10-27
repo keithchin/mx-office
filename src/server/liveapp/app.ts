@@ -20,6 +20,7 @@
 
 import type { ChildProcess } from 'node:child_process';
 import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
+import { logAppender } from './log-append.js';
 import path from 'node:path';
 import type { LiveAppFailure, LiveAppPrefs, LiveAppState, LiveAppStatus, LiveServed } from '../../shared/protocol.js';
 import { updateLine as updateWord, type ChangeClass } from '../../shared/liveapp/speed.js';
@@ -557,7 +558,7 @@ export class LiveApp {
   /** A line in the log file, and in the page's tail while it's starting or has failed. */
   private note(line: string, gen = this.gen) {
     try {
-      appendFileSync(this.logFile, `${line}\n`);
+      logAppender(this.logFile)(line);
     } catch {
       // The log is a convenience.
     }

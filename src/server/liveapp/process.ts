@@ -2,7 +2,7 @@
 // it, so stopping it means stopping the whole tree, or the ports stay taken; and it asks psql to
 // make the app's database when that's missing, so PostgreSQL's bin folder goes on its PATH.
 
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { childEnv } from '../workers/env.js';
@@ -11,6 +11,8 @@ import { macPgBinDir } from './pg-mac.js';
 
 const WIN = process.platform === 'win32';
 
+let pgBin: { key: string; dir: string | undefined } | undefined;
+
 /**
  * The folder psql is in, when it isn't on PATH already: AGENT_OFFICE_LIVE_PG_BIN, or the newest
  * PostgreSQL the Windows installer put under Program Files (macOS: Postgres.app or a Homebrew
@@ -18,6 +20,15 @@ const WIN = process.platform === 'win32';
  */
 export function pgBinDir(env: NodeJS.ProcessEnv = process.env): string | undefined {
   if (env.AGENT_OFFICE_LIVE_PG_BIN) return env.AGENT_OFFICE_LIVE_PG_BIN;
+  // Looked up once per PATH: every psql call and every instance start asked, each a PATH scan and a folder read on the event loop.
+  const key = `${env.PATH ?? env.Path ?? ''}|${env.ProgramFiles ?? ''}`;
+  if (env === process.env && pgBin?.key === key) return pgBin.dir;
+  const dir = findPgBin(env);
+  if (env === process.env) pgBin = { key, dir };
+  return dir;
+}
+
+function findPgBin(env: NodeJS.ProcessEnv): string | undefined {
   if (resolveCommand('psql')) return undefined;
   if (!WIN) return process.platform === 'darwin' ? macPgBinDir() : undefined;
   const root = path.join(env.ProgramFiles || 'C:\\Program Files', 'PostgreSQL');
@@ -50,11 +61,28 @@ export function stopTree(child: ChildProcess, waitMs = 15_000): Promise<void> {
       clearTimeout(timer);
       resolve();
     });
-    killTreeNow(child.pid);
+    // Not killTreeNow: a synchronous taskkill held the event loop for a second or more per stop on Windows
+    // (one of the server's 1-7 s stalls while instances and live apps stopped).
+    void killTreeAsync(child.pid);
   });
 }
 
-/** Ends a process tree at once, synchronously: also what runs as the office's own process exits. */
+/** Ends a process tree without holding the event loop (taskkill runs as a child of its own off POSIX's group kill); resolves when that's done. */
+export function killTreeAsync(pid: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!WIN) {
+      try {
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        // Gone already.
+      }
+      return resolve();
+    }
+    execFile('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, timeout: 30_000 }, () => resolve());
+  });
+}
+
+/** Ends a process tree at once, synchronously: only for when the office's own process exits (it blocks the event loop meanwhile). */
 export function killTreeNow(pid: number) {
   try {
     if (WIN) execFileSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
