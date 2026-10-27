@@ -20,6 +20,7 @@ import { needsFeedsMessage, onNeedsFeeds, pageNeedsInput } from './input';
 import type { DecisionCard } from '../../../shared/decisions/types';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
+import { foldAt } from '../../../shared/needs-order';
 
 /** Rows shown before "Show N more". */
 const FOLD_AFTER = 5;
@@ -165,16 +166,18 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     // With the team phone on the page, one row of counts that opens its Needs you section (the full list is there).
     if (hasPhone()) return void root.replaceChildren(countsRow(items));
     // A long list folds after the first few, so the Command Center isn't pushed off the screen.
-    const shown = all || items.length <= FOLD_AFTER + 1 ? items : items.slice(0, FOLD_AFTER);
+    // New items first; old ones (a day or more, or their source gone) wait behind "Show N older" (shared/needs-order.ts).
+    const at = foldAt(items, FOLD_AFTER);
+    const shown = all ? items : items.slice(0, at.show);
     const more = items.length - shown.length;
-    const fold = all && items.length > FOLD_AFTER + 1;
+    const fold = all && at.show < items.length;
     root.replaceChildren(
       h(
         'section.ny',
         { 'aria-label': 'Needs you' },
         h('header.ny-h', {}, h('b', {}, '🚨 Needs you')),
         h('ul.ny-list', {}, ...shown.map(row)),
-        more || fold ? h('button.ny-more', { type: 'button', onclick: () => ((all = !all), draw()) }, more ? `Show ${more} more ▾` : 'Show fewer ▴') : null,
+        more || fold ? h('button.ny-more', { type: 'button', onclick: () => ((all = !all), draw()) }, more ? at.label : 'Show fewer ▴') : null,
       ),
     );
   }

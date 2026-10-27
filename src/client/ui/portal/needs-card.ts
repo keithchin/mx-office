@@ -34,6 +34,7 @@ import { dispatchNotices } from '../dispatch/card';
 import { followNotices } from '../followthrough/card';
 import { duplicatesCard } from './duplicates-card';
 import { marketplaceCard } from '../marketplace/card';
+import { foldAt } from '../../../shared/needs-order';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -227,9 +228,11 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       nodes.push(d.el);
     }
     // A long list folds after the first few, so the Overview isn't one long card (and isn't all built at once).
-    const shown = all || items.length <= FOLD_AFTER + 1 ? items : items.slice(0, FOLD_AFTER);
-    more.hidden = shown.length === items.length && !(all && items.length > FOLD_AFTER + 1);
-    more.textContent = shown.length < items.length ? `Show ${items.length - shown.length} more ▾` : 'Show fewer ▴';
+    // New items first; old ones (a day or more, or their source gone) wait behind "Show N older" (shared/needs-order.ts).
+    const fold = foldAt(items, FOLD_AFTER);
+    const shown = all ? items : items.slice(0, fold.show);
+    more.hidden = shown.length === items.length && !(all && fold.show < items.length);
+    more.textContent = shown.length < items.length ? fold.label : 'Show fewer ▴';
     more.setAttribute('aria-expanded', String(all));
     const ctx = (r?: RosterView): CardCtx => ({ floor: floor ?? '', admin: !!r?.admin || !!s.roster?.admin, leadName, go: s.go, ask, done: (c, what) => {
       answered.set(c.escalation ?? c.id, { title: c.question, text: what });

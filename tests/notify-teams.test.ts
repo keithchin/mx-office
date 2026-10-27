@@ -72,7 +72,8 @@ test('the red items are the Needs you rules, minus what can wait for the Command
   const full = input({
     workers: [worker('Ada', { status: 'needs_input', activity: 'Wants permission: Bash', waitingSince: 5 }), worker('Bo', { status: 'done', waitingSince: 6 })],
     roster: roster({ escalations: [esc('e1', { urgency: 'urgent', by: 'Lead Dev', title: 'Which DB?', jeffRank: jr(1) }), esc('e2', { fyi: true })], settings: { jeff: { priority: 'on' } } as never, paused: 'Daily cap reached' }),
-    pulls: [pull(7, { checks: 'fail', author: 'Cy' })],
+    // A PR updated today: one untouched for more than a day waits behind newer items (shared/needs-order.ts).
+    pulls: [pull(7, { checks: 'fail', author: 'Cy', updatedAt: new Date().toISOString() })],
     setup: { show: true, stages: [{ id: '2', title: 'Design', status: 'MANUAL' }], questions: [], checking: false, checkout: { branch: 'x', behind: 99, defaultBranch: 'main' } },
   });
   const needs = collectNeeds(full);

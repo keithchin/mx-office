@@ -34,6 +34,7 @@ import { marketplaceCandidates } from './decisions/marketplace.js';
 import type { MarketplaceView } from './marketplace.js';
 import type { BrainAct, BrainChangeView } from './portfolios.js';
 import { liveNeeds } from './liveapp/status.js';
+import { freshFirst } from './needs-order.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -102,6 +103,8 @@ export interface NeedItem {
   card?: string;
   /** How many sources that card folds, when more than one. */
   sources?: number;
+  /** Old (a day or more) or its source gone, behind what's new (shared/needs-order.ts): the Overview folds these while there's anything new. */
+  older?: true;
   /** Notifications (Teams, phone pushes) post one row for every item sharing this key, with its words: a batch of questions is one buzz. */
   notify?: { key: string; text: string };
 }
@@ -271,7 +274,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
     if (f.id === i.floor || f.cloning || !(f.waiting > 0)) continue;
     out.push({ key: `floor-${f.id}`, kind: 'floor', icon: '🙋', text: `${f.waiting} waiting on ${f.name}`, level: 'block', action: 'Go', target: { to: 'floor', floor: f.id } });
   }
-  return foldCards(entries, i.splits && i.splits.length ? i.splits : []);
+  // New things first: old items, and ones whose source is gone, wait behind them (shared/needs-order.ts).
+  return freshFirst(foldCards(entries, i.splits && i.splits.length ? i.splits : []), i.now ?? Date.now());
 }
 
 /** How many are on this floor: the count on the 🎛️ Command Center tab (info rows show, but aren't waiting on you). */

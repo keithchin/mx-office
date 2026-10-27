@@ -160,7 +160,7 @@ export function stuckCandidates(items: readonly StuckView[], now: number): Candi
     const brdKey = s.decision?.brd ? (s.questionKey ?? `${s.decision.brd}#${s.decision.id}`) : undefined;
     const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
     const target = brdKey ? ({ to: 'questions', key: brdKey } as const) : ({ to: 'stuck', id: s.id } as const);
-    const need: NeedItem = { key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, now), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target };
+    const need: NeedItem = { key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, now), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' || s.kind === 'held' ? 'block' : 'warn', action, target };
     const unread = s.unreadAt ? `couldn't re-read the source at ${hhmm(s.unreadAt)}` : undefined;
     const { keys, mentions } = stuckKeys(s);
     const where = s.decision ? (s.decision.brd ? `stuck detection (${s.decision.brd})` : 'stuck detection (PROJECT.md / build plan)') : 'stuck detection';

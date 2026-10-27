@@ -10,8 +10,9 @@ import { store } from '../../state';
 import { h, openModal } from '../dom';
 import { setStuckView, stuckView } from './feed';
 import './stuck.css';
+import { openFindings } from '../data-impact/open';
 
-const KIND_TITLE: Record<StuckKind, string> = { 'stale-pr': 'Stuck: a pull request nobody is moving', decision: 'Decision waiting on you', failing: 'Failing for days', circles: 'Going in circles', 'blocked-row': 'Build-plan rows blocked' };
+const KIND_TITLE: Record<StuckKind, string> = { 'stale-pr': 'Stuck: a pull request nobody is moving', decision: 'Decision waiting on you', failing: 'Failing for days', circles: 'Going in circles', 'blocked-row': 'Build-plan rows blocked', held: 'Change queue held for data impact' };
 
 /** What the card is worked out from, so the tests can check it without a page. */
 export interface CardModel {
@@ -61,7 +62,7 @@ export function openStuck(id: string): void {
   const whens = [choice('after', 'After their current turn'), choice('now', 'Interrupt now')];
   const paint = () => whens.forEach((b) => (b.setAttribute('aria-checked', String(b.dataset.v === when)), b.classList.toggle('on', b.dataset.v === when)));
   paint();
-  const sends = m.actions.some((a) => a.id !== 'snooze' && a.id !== 'dismiss');
+  const sends = m.actions.some((a) => a.id !== 'snooze' && a.id !== 'dismiss' && a.id !== 'open-hold');
   const leadLine = !sends
     ? null
     : !v.lead
@@ -71,6 +72,11 @@ export function openStuck(id: string): void {
         : h('p.stuckc-note', {}, `${v.lead.name} is ready: the message goes now.`);
   const busy = (on: boolean) => content.querySelectorAll<HTMLButtonElement>('footer button').forEach((b) => (b.disabled = on || (!v.admin && b.dataset.act !== undefined)));
   const act = async (a: StuckAction) => {
+    // The hold's own dialog (ui/data-impact/): approve with a recovery step, or release it when it's stale.
+    if (a === 'open-hold' && d.hold) {
+      modal.close();
+      return void openFindings(v.floor, d.hold.env, back ?? undefined);
+    }
     if (a === 'answer' && !answer?.value.trim()) {
       status.textContent = 'Write the answer first.';
       return answer?.focus();

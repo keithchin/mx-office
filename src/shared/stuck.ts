@@ -6,9 +6,10 @@
 // team lead. Pure: the page, the server and the tests import it.
 
 /** What is stuck: a PR nobody touches, a decision only the PM can make, a test red for days, or the team busy with nothing landing. */
-export type StuckKind = 'stale-pr' | 'decision' | 'failing' | 'circles' | 'blocked-row';
+export type StuckKind = 'stale-pr' | 'decision' | 'failing' | 'circles' | 'blocked-row' | 'held';
 
-export type StuckAction = 'ask-lead' | 'answer' | 'accept' | 'blockers' | 'snooze' | 'dismiss';
+/** `open-hold` opens the data-impact hold's findings and approve dialog on the page (no message to anyone). */
+export type StuckAction = 'ask-lead' | 'answer' | 'accept' | 'blockers' | 'snooze' | 'dismiss' | 'open-hold';
 
 /** Where a fact came from: a file and line at main, or a link. */
 export interface StuckEvidence {
@@ -46,6 +47,8 @@ export interface StuckDraft {
   circles?: { activeMs: number; spend?: number; currency?: string; lastProgress?: string; lastProgressAt?: number };
   /** A client question's key in its BRD (`<file>#<id>`), for the decision card it groups under (server/questions/). */
   questionKey?: string;
+  /** A data-impact hold keeping the Developer change queue waiting (dev-changes/stuck-hold.ts): its environment, the change it holds, the ones waiting, and why the office finds it stale, when it does. */
+  hold?: { env: string; change: string; target: string; waiting: string[]; stale?: string };
 }
 
 /** An item as Needs you and its dialog show it. */
@@ -154,6 +157,11 @@ export function stuckTitle(d: StuckDraft, now: number): string {
       const say = /^rows/.test(r.rows) ? 'say' : 'says';
       return r.resolved ? `${r.rows[0].toUpperCase()}${r.rows.slice(1)} ${say} blocked on ${r.resolved}, which is resolved: update the build plan or name the real blocker` : `Build-plan ${r.rows} ${/^rows/.test(r.rows) ? 'have' : 'has'} been blocked for ${age} on: ${r.blocker || 'no blocker named'}`;
     }
+    case 'held': {
+      const x = d.hold!;
+      const waits = x.waiting.length ? `${listWords(x.waiting)} ${x.waiting.length === 1 ? 'waits' : 'wait'} in the change queue` : 'The change queue waits';
+      return x.stale ? `${waits} behind a stale data-impact hold on ${x.change} (${x.stale}): release it with a reason` : `${waits}: ${x.change} is merged but held for possible data impact for ${age}`;
+    }
     case 'circles': {
       const c = d.circles!;
       return `The team has been working for ${ageWords(c.activeMs)} over ${age} with no progress: no merged PR, no stage change and no build-plan row change.`;
@@ -172,6 +180,8 @@ export function stuckConsequence(d: StuckDraft): string {
       return 'A test that stays red stops proving anything, and new breaks hide behind it.';
     case 'blocked-row':
       return d.row!.resolved ? `The rows stay parked on a decision that was already made, so nobody builds them.` : `While it waits, build-plan ${d.row!.rows} stay parked.`;
+    case 'held':
+      return 'No queued Developer change starts until the hold is approved or released.';
     case 'circles':
       return 'Spend keeps going with nothing landing.';
   }
@@ -188,6 +198,8 @@ export function stuckNext(d: StuckDraft, lead = 'the team lead'): string {
       return d.waitsOn ? `Get PR #${d.waitsOn} merged or closed (ask ${lead}).` : `Ask ${lead} to fix it or say what it waits on.`;
     case 'blocked-row':
       return d.row!.resolved ? `Ask ${lead} to update the build plan, or name the real blocker.` : `Ask ${lead} what it waits on; if only you can clear it, it should be an escalation.`;
+    case 'held':
+      return d.hold!.stale ? 'Open the hold and choose Release stale hold, with your reason.' : 'Open the hold: take a database dump and approve it, or ask the team to change the model so no data is at risk.';
     case 'circles':
       return `Ask ${lead} for a blockers summary.`;
   }
@@ -206,6 +218,8 @@ export function stuckActions(d: StuckDraft): StuckAction[] {
       return d.decision?.workaround ? ['answer', 'accept', 'snooze', 'dismiss'] : ['answer', 'snooze', 'dismiss'];
     case 'circles':
       return ['blockers', 'snooze', 'dismiss'];
+    case 'held':
+      return ['open-hold', 'snooze', 'dismiss'];
   }
 }
 
@@ -224,6 +238,8 @@ export function actionLabel(a: StuckAction, d: StuckDraft, lead = 'the team lead
       return 'Snooze 1 day';
     case 'dismiss':
       return 'Dismiss';
+    case 'open-hold':
+      return d.hold?.stale ? 'Open the hold (stale: release it)' : 'Open the hold';
   }
 }
 
@@ -253,4 +269,4 @@ export function leadMessage(a: StuckAction, d: StuckDraft, now: number, answer =
   }
 }
 
-export const STUCK_ICON: Record<StuckKind, string> = { 'stale-pr': '⏳', decision: '❓', failing: '🔴', circles: '🔁', 'blocked-row': '🧱' };
+export const STUCK_ICON: Record<StuckKind, string> = { 'stale-pr': '⏳', decision: '❓', failing: '🔴', circles: '🔁', 'blocked-row': '🧱', held: '✋' };

@@ -17,6 +17,9 @@ import { modelOf } from '../model/index.js';
 import { mprIn } from '../model/store.js';
 import { explorerChanges } from '../app-explorer/index.js';
 import { checkCandidate, heldIn } from '../data-impact/seams.js';
+import { ownModelChange } from '../data-impact/stale.js';
+import { dataImpactOf } from '../data-impact/index.js';
+import { defaultBranch, floorRef } from '../liveapp/checkout.js';
 import { ENV_LIVE } from '../../shared/data-impact.js';
 import type { ChangeFacts, DevChange, HeldOn, StopResult } from '../../shared/dev-changes.js';
 import type { RelatedDeps } from './related.js';
@@ -86,6 +89,13 @@ export async function candidateHeld(ctx: Ctx, floor: Floor, c: DevChange, f?: Pi
   const target = targetOf(c, f?.merged?.sha);
   if (!base || !target || base === target) return false;
   if (!(await isMendix(floor.dir, target))) return false;
+  // A candidate that changes no model of its own (a notes branch that merged main in) guards nothing: what the diff
+  // finds came in from main, which the live preview's own guard holds. No hold, and an old one for it is let go.
+  const main = await defaultBranch(floor.dir).then((b) => floorRef(floor.dir, b)).catch(() => undefined);
+  if (main?.sha && (await ownModelChange(floor.dir, target, main.sha.trim()).catch(() => undefined)) === false) {
+    dataImpactOf(ctx).guard.clear(floor.id, `candidate:${c.id}`, `${target.slice(0, 7)} changes no model of its own (its model difference came in from main)`);
+    return false;
+  }
   const units = modelOf(ctx).units;
   const v = await checkCandidate(ctx, c.id, { floorId: floor.id, dir: floor.dir, base, target, units }).finally(() => units.blobs(floor.dir).close());
   return v.hold;
