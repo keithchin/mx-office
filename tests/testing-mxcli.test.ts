@@ -16,6 +16,7 @@ import { buildQualityView, parseLintJson, parseReportJson, qualityKey, ruleFailu
 import { buildTestingView } from '../src/shared/testing/view.js';
 import { evaluatePolicy } from '../src/shared/testing/policy.js';
 import type { TestRunRecord } from '../src/shared/testing/record.js';
+import { testFlagsIn } from '../src/server/testing/test-flags.js';
 import { runMicroflowTests, runQuality, NoTestsError } from '../src/server/testing/mxcli-run.js';
 import { QualityStore } from '../src/server/testing/quality-store.js';
 import { assertOfficeFolder, mprIn, testPathsIn, workDirOf } from '../src/server/testing/workfolder.js';
@@ -136,8 +137,9 @@ const a = process.argv.slice(2);
 const mode = process.env.FAKE_MXCLI_MODE || '';
 const pollute = () => { fs.mkdirSync('.ai-context/skills/widgets', { recursive: true }); fs.writeFileSync('.ai-context/skills/widgets/a.md', 'rewritten\\r\\n'); fs.mkdirSync('.claude/skills/widgets', { recursive: true }); fs.writeFileSync('.claude/skills/widgets/b.md', 'x'); fs.mkdirSync('.mxcli', { recursive: true }); fs.writeFileSync('.mxcli/catalog.db', 'db'); };
 if (a[0] === '--version') { console.log('mxcli version nightly-fake-1 (2026-10-03)'); process.exit(0); }
-fs.appendFileSync(process.env.FAKE_MXCLI_LOG, JSON.stringify({ cwd: process.cwd(), args: a }) + '\\n');
+fs.appendFileSync(process.env.FAKE_MXCLI_LOG, JSON.stringify({ cwd: process.cwd(), args: a, pg: process.env.PGPASSWORD ? 'set' : '' }) + '\\n');
 console.error('WARNING: This is a vibe-coded PoC, alpha quality, use with caution.');
+if (a[0] === 'test' && a.includes('--help')) { console.log('Flags:'); process.exit(0); }
 if (a[0] === 'test') {
   console.log('Connected to: project.mpr (Mendix 11.12.2)');
   fs.writeFileSync('MxTest-injected.txt', 'x');
@@ -193,7 +195,7 @@ function setup() {
     readFileSync(log, 'utf8')
       .split('\n')
       .filter(Boolean)
-      .map((l) => JSON.parse(l) as { cwd: string; args: string[] });
+      .map((l) => JSON.parse(l) as { cwd: string; args: string[]; pg?: string });
   return { root, floorDir, dataDir, exe, g, calls, sha: g('rev-parse', 'HEAD') };
 }
 
@@ -238,6 +240,38 @@ test('the runner: mxcli test runs in the office work folder at the commit; the r
     assert.ok(junit && existsSync(junit) && junit.startsWith(path.join(s.dataDir, 'testing', 'evidence')), 'the JUnit file is kept in the office data folder');
     assert.equal(draft.evidence.locator, `office:${path.relative(s.dataDir, junit!).replace(/\\/g, '/')}`);
     assert.ok(!existsSync(workDirOf(s.dataDir, 'f1', 'tests')), 'the work folder is wiped after');
+    untouched(s);
+  } finally {
+    rmSync(s.root, { recursive: true, force: true });
+  }
+});
+
+test("mxcli v0.27+: the run boots on the built-in database (--db-type hsqldb) on ports the office holds, with no database prep and no PostgreSQL password; an older one gets the office user's password only for its own psql", async () => {
+  const s = setup();
+  try {
+    process.env.FAKE_MXCLI_MODE = '';
+    let prepared = 0;
+    let released = 0;
+    const prepare = async () => (prepared++, { db: 'project_test', notes: [] });
+    const ports = async () => ({ ports: [8401, 8402, 8403], release: () => void released++ });
+    const flags = testFlagsIn('Flags:\n      --db-type string   ...\n      --app-port int\n      --admin-port int\n      --serve-port int\n      --mxbuild-path string');
+    assert.deepEqual(flags, { dbType: true, ports: true, mxbuildPath: true });
+    const { draft } = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'v0.27.0', sha: s.sha, actor: 'Ann', timeoutMs: 60_000, prepare, ports, flags, pgEnv: { PGPASSWORD: 'pw' } });
+    const call = s.calls().find((c) => c.args[0] === 'test')!;
+    const at = (f: string) => call.args[call.args.indexOf(f) + 1];
+    assert.equal(at('--db-type'), 'hsqldb');
+    assert.deepEqual([at('--app-port'), at('--admin-port'), at('--serve-port')], ['8401', '8402', '8403']);
+    assert.equal(prepared, 0, 'no PostgreSQL database is made for it');
+    assert.equal(released, 1, 'the ports are given back');
+    assert.equal(call.pg, '', 'no PostgreSQL password goes to it');
+    assert.equal(draft.results.length, 2);
+    // An older mxcli (no --db-type): the database prep as before, and the office user's password for its psql.
+    const old = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'nightly-x', sha: s.sha, actor: 'Ann', timeoutMs: 60_000, prepare, ports, flags: testFlagsIn('Flags:\n      --local'), pgEnv: { PGPASSWORD: 'pw' } });
+    const second = s.calls().filter((c) => c.args[0] === 'test')[1];
+    assert.ok(!second.args.includes('--db-type') && !second.args.includes('--app-port'));
+    assert.equal(prepared, 1);
+    assert.equal(second.pg, 'set');
+    assert.equal(old.draft.results.length, 2);
     untouched(s);
   } finally {
     rmSync(s.root, { recursive: true, force: true });

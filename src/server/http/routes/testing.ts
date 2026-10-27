@@ -23,6 +23,8 @@ import type { SwitchesView } from '../../../shared/testing/switches.js';
 import { floorParam } from './files.js';
 import { audit, human } from '../../audit/index.js';
 import { fixPrereq, testPrereqs } from '../../testing/prereqs.js';
+import { raiseForPm } from '../../agent-app/raise.js';
+import { testBlocker } from '../../../shared/testing/test-reason.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
@@ -142,7 +144,7 @@ export const testingRoutes = {
       if (body.what !== 'tests' && body.what !== 'quality') return send(res, 400, { error: 'what: tests or quality' });
       const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
       const who = { name: name || 'An admin', ...(session.account?.id ? { accountId: session.account.id } : {}) };
-      const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, who) : await startQuality(ctx.cfg.dataDir, floor, who);
+      const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, who, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, undefined, ask); } }) : await startQuality(ctx.cfg.dataDir, floor, who);
       if (typeof r === 'string') return send(res, 409, { error: r });
       return send(res, 202, { ok: true, commit: r.commit });
     },

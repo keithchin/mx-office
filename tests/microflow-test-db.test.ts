@@ -9,7 +9,7 @@ import test from 'node:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { mxcliErrorLine, testRunWhy } from '../src/shared/testing/test-reason.js';
+import { mxcliErrorLine, testBlocker, testRunWhy } from '../src/shared/testing/test-reason.js';
 import { OFFICE_TEST_DB, prepareTestRun } from '../src/server/testing/test-db.js';
 import { draftFromMxcliRun } from '../src/shared/testing/junit.js';
 
@@ -20,12 +20,22 @@ const REAL = {
   stderr: "Error: local runtime: ensuring database: no local PostgreSQL superuser available to create the role/database (tried a direct 'psql -U postgres' connection over the cluster socket and TCP, and non-interactive 'sudo -u postgres' both directly and via root)\n",
 };
 
-test('the real failure: no superuser for a missing test database, said with the database mxcli looks for and the fix', () => {
+test('the real failure: an older mxcli demands a superuser; said as needing a newer mxcli (one setting), never a missing database or a Prepare button', () => {
   assert.match(String(mxcliErrorLine(REAL)), /^local runtime: ensuring database: no local PostgreSQL superuser/);
-  const why = testRunWhy(REAL, 'shop_test');
-  assert.match(why, /The test database is missing: mxcli test --local looks for the database "shop_test", owned by the login role "mendix"/);
-  assert.match(why, /Prepare the test database/);
-  assert.doesNotMatch(why, /no JUnit file/);
+  const why = testRunWhy(REAL, 'shop_test', { mxcliVersion: 'nightly-20261003' });
+  assert.match(why, /^Needs a newer mxcli, not a database: mxcli nightly-20261003 makes its test database only through a PostgreSQL superuser/);
+  assert.match(why, /mxcli v0\.27\.0 or newer runs the tests on the Mendix runtime's built-in database/);
+  assert.match(why, /Settings > Connections > Paths > mxcli/);
+  assert.doesNotMatch(why, /Prepare the test database|database is missing|no JUnit file/);
+  // ASCII punctuation only: the reason travels through consoles that may not read UTF-8 (the mojibake in the run).
+  assert.doesNotMatch(why.replace(/mxcli said:.*$/, ''), /[^ -~]/);
+  // It is the one thing only a person can clear: a Needs-you ask with the setting.
+  const ask = testBlocker(`Not started: ${why}`);
+  assert.match(String(ask?.title), /until the office uses mxcli v0\.27\.0 or newer/);
+  assert.match(String(ask?.recommendation), /no database change and no superuser needed/);
+  assert.equal(testBlocker('Timed out after 16 min with no results'), undefined);
+  // On the built-in database the PostgreSQL reasons never apply.
+  assert.doesNotMatch(testRunWhy(REAL, undefined, { hsql: true }), /newer mxcli/);
   // In the record: the harness error is this, never "mxcli wrote no JUnit file" with stdout's last lines.
   const d = draftFromMxcliRun({ runId: 'mt_1', floor: 'shop', commit: 'c'.repeat(40), paths: [], environment: { runner: 'x', mxcliVersion: 'n', runtime: 'local', workFolder: '/w' }, startedAt: '', finishedAt: '', exitCode: 1, actor: 'Ann', failure: why }, undefined);
   assert.equal(d.harnessError, why.slice(0, 600));
@@ -34,6 +44,7 @@ test('the real failure: no superuser for a missing test database, said with the 
 test("the other reasons: the role's password, the fixed ports, the build, the timeout, mxcli not starting, anything else", () => {
   assert.match(testRunWhy({ code: 1, stdout: '', stderr: 'Error: FATAL: password authentication failed for user "mendix"' }), /ALTER ROLE mendix LOGIN PASSWORD 'mendix'/);
   assert.match(testRunWhy({ code: 1, stdout: '', stderr: 'Error: listen tcp 127.0.0.1:8081: bind: address already in use' }), /always uses ports 8081 and 8091/);
+  assert.match(testRunWhy({ code: 1, stdout: '', stderr: 'Error: listen tcp 127.0.0.1:8401: bind: address already in use' }, undefined, { hsql: true }), /picks other free ports each time/);
   assert.match(testRunWhy({ code: 1, stdout: '', stderr: 'Error: mxbuild failed with 2 errors' }), /didn't build/);
   assert.match(testRunWhy({ code: null, stdout: 'Starting local runtime (no Docker)...', stderr: '', killed: true, minutes: 16 }), /Timed out after 16 min .*Starting local runtime/);
   assert.match(testRunWhy({ code: null, stdout: '', stderr: '', startError: 'ENOENT spawn mxcli' }), /mxcli could not start: ENOENT/);
