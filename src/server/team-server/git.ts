@@ -8,6 +8,8 @@
 // passed through a redactor before anyone sees it. Prompts are off, so a refused token fails at once instead of
 // opening a window on the office's desktop.
 
+import os from 'node:os';
+import path from 'node:path';
 import { runCommand, type RunResult } from '../wizard/run.js';
 import { redactor } from '../wizard/admin-token.js';
 import { MENDIX_ENDPOINTS } from '../../shared/team-server.js';
@@ -17,6 +19,9 @@ export const TOKEN_VAR = 'MX_OFFICE_TEAMSERVER_TOKEN';
 
 /** The credential helper: answers `get` with user `pat` and the token from TOKEN_VAR; ignores store and erase. */
 export const HELPER = `!f() { test "$1" = get || return 0; echo username=pat; echo "password=$${TOKEN_VAR}"; }; f`;
+
+/** A hooks folder that never exists, so no hook runs where the token is (see teamServerGitEnv). */
+export const NO_HOOKS = path.join(os.tmpdir(), 'mx-office-no-hooks-here');
 
 /** HTTP settings for big first pushes (platform-link.md trap 5): buffer the pack, HTTP/1.1, no low-speed abort. */
 export const PUSH_TUNING = ['-c', 'http.postBuffer=524288000', '-c', 'http.version=HTTP/1.1', '-c', 'http.lowSpeedLimit=0', '-c', 'http.lowSpeedTime=999999'];
@@ -31,6 +36,13 @@ export function teamServerGitEnv(env: NodeJS.ProcessEnv, token: string, git = ME
     ['credential.helper', ''],
     [`credential.${host}.helper`, HELPER],
     [`credential.${host}.username`, 'pat'],
+    // Nothing the repository's own config or hooks name runs in this environment (it holds the token): the project's
+    // .git is shared with the agents' worktrees, so a hook (pre-push, reference-transaction), an fsmonitor, an askpass
+    // or a push-signing program set there could read it. Command-scoped config wins over the repository's.
+    ['core.hooksPath', NO_HOOKS],
+    ['core.fsmonitor', 'false'],
+    ['core.askPass', ''],
+    ['push.gpgSign', 'false'],
   ];
   pairs.forEach(([k, v], i) => {
     out[`GIT_CONFIG_KEY_${n + i}`] = k;
@@ -40,9 +52,9 @@ export function teamServerGitEnv(env: NodeJS.ProcessEnv, token: string, git = ME
   out[TOKEN_VAR] = token;
   out.GIT_TERMINAL_PROMPT = '0';
   out.GCM_INTERACTIVE = 'never';
-  // An askpass (VS Code's, a desktop's) would be asked when the helper's answer is refused: never.
-  delete out.GIT_ASKPASS;
-  delete out.SSH_ASKPASS;
+  // An askpass (VS Code's, a desktop's) would be asked when the helper's answer is refused: never. And no tracing
+  // that could print the Authorization header (git redacts it, unless told not to).
+  for (const k of ['GIT_ASKPASS', 'SSH_ASKPASS', 'GIT_TRACE', 'GIT_TRACE_CURL', 'GIT_TRACE_PACKET', 'GIT_CURL_VERBOSE', 'GIT_TRACE_REDACT']) delete out[k];
   return out;
 }
 

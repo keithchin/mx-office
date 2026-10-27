@@ -110,7 +110,7 @@ test('the plan: Team Server is a new project only; alone it is local only, with 
 
 test('the credential helper: the token only in that git child’s environment, git’s own helpers reset, no prompts', () => {
   const env = teamServerGitEnv({ GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.autocrlf', GIT_CONFIG_VALUE_0: 'false', GIT_ASKPASS: 'askpass.exe' }, 'secret-token-123456', 'https://git.api.mendix.com');
-  assert.equal(env.GIT_CONFIG_COUNT, '4');
+  assert.equal(env.GIT_CONFIG_COUNT, '8');
   assert.equal(env.GIT_CONFIG_KEY_0, 'core.autocrlf', 'what was there stays');
   assert.equal(env.GIT_CONFIG_KEY_1, 'credential.helper');
   assert.equal(env.GIT_CONFIG_VALUE_1, '', 'git’s credential manager neither answers nor stores');
@@ -120,6 +120,37 @@ test('the credential helper: the token only in that git child’s environment, g
   assert.equal(env.MX_OFFICE_TEAMSERVER_TOKEN, 'secret-token-123456');
   assert.equal(env.GIT_TERMINAL_PROMPT, '0');
   assert.equal(env.GIT_ASKPASS, undefined);
+  const keys = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [env[`GIT_CONFIG_KEY_${i}`], env[`GIT_CONFIG_VALUE_${i}`]]));
+  assert.ok(keys['core.hooksPath'] && !existsSync(keys['core.hooksPath']!), 'no hook of the repository runs where the token is');
+  assert.equal(keys['core.fsmonitor'], 'false');
+  assert.equal(keys['push.gpgSign'], 'false');
+});
+
+test('a hook planted in the project (its .git is shared with the agents’ worktrees) never sees the token while the office pushes to Team Server', async (t) => {
+  const fake = await fakeTeamServer();
+  const root = tmp('hooks');
+  t.after(async () => (await fake.close(), rmSync(root, { recursive: true, force: true })));
+  const id = fake.makeApp();
+  const p = project(root, 'hooked', { 'App.mpr': 'model\n' });
+  const proof = path.join(root, 'hook-ran.txt');
+  for (const hook of ['pre-push', 'reference-transaction']) {
+    writeFileSync(path.join(p.dir, '.git', 'hooks', hook), `#!/bin/sh\necho "ran: $MX_OFFICE_TEAMSERVER_TOKEN" >> "${proof.replace(/\\/g, '/')}"\nexit 0\n`);
+  }
+  const g = tsGit({ token: fake.token, env: cleanEnv(), git: fake.url });
+  const record = { projectId: id, url: `${fake.url}/${id}.git`, remote: 'teamserver', how: 'linked' as const, by: 'Probe', at: 1 };
+  git(p.dir, 'remote', 'add', 'teamserver', record.url);
+  await syncMain({ g, dir: p.dir, rec: record });
+  const env = { ...process.env, ...ID };
+  const adopt = execFileSync('git', ['commit-tree', 'HEAD^{tree}', '-p', 'HEAD', '-p', fake.head(id), '-m', 'adopt'], { cwd: p.dir, encoding: 'utf8', env }).trim();
+  git(p.dir, 'push', '-q', 'origin', `${adopt}:refs/heads/main`);
+  // The hooks do run for the test's own git (no token there): proof that they're live.
+  assert.ok(existsSync(proof) && !readFileSync(proof, 'utf8').includes(fake.token), 'the planted hooks are live for a plain git');
+  rmSync(proof, { force: true });
+  const s = await syncMain({ g, dir: p.dir, rec: record });
+  assert.equal(s.state, 'pushed', s.message);
+  // Local commands (no token in their environment) may run them as any git does; never one that holds the token.
+  assert.ok(!existsSync(proof) || !readFileSync(proof, 'utf8').includes(fake.token), 'the planted hooks never ran with the token');
+  assert.equal(fake.head(id), adopt, 'and the push went');
 });
 
 test('the Projects API: create, the job followed to the app’s id, and every refusal in words', async (t) => {
