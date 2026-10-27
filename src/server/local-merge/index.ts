@@ -26,6 +26,8 @@ import { rosterOf } from '../roster/adapter.js';
 import { AUTONOMY, needsApproval, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import type { LocalMergeBranch, LocalMergeConfirm, LocalMergeReview, LocalMergeView } from '../../shared/local-merge.js';
 import { dcsOf, impactAt, kindAt, resultsAt, somePaths, unitsAt } from './describe.js';
+import { mergeAsks, settleMergeAsks } from './asks.js';
+import { fixText } from '../../shared/text-repair.js';
 
 export { mergeLocal } from './merge.js';
 
@@ -157,7 +159,35 @@ export async function rowOf(ctx: Ctx, floor: Floor, branch: string, owner: { id?
   ]);
   const newer = review && !sameSha(review.sha, sha) ? Number((await git(['rev-list', '--count', `${review.sha}..${sha}`], floor.dir).catch(() => '0')).trim()) || 0 : 0;
   const task = owner.id ? taskOf(ctx, floor, owner.id) : undefined;
-  return { branch, sha, ahead, behind: behind || 0, subject, ...(owner.name ? { owner: owner.name } : {}), ...(dcs.length ? { dcs } : {}), ...(task ? { task } : {}), kind: what.kind, files: what.files, ...(review ? { review } : {}), ...(newer ? { newer } : {}) };
+  // Its earlier commits, so an older one (the one an agent asked for, under a newer journal commit) can be approved on its own.
+  const commits = ahead > 1 ? await commitsOn(git, floor.dir, target, sha) : [];
+  const asked = await askedOn(ctx, floor, git, sha, branch, target);
+  return { branch, sha, ahead, behind: behind || 0, subject, ...(owner.name ? { owner: owner.name } : {}), ...(dcs.length ? { dcs } : {}), ...(task ? { task } : {}), kind: what.kind, files: what.files, ...(review ? { review } : {}), ...(newer ? { newer } : {}), ...(commits.length ? { commits } : {}), ...(asked ? { asked } : {}) };
+}
+
+/** The branch's commits main hasn't got, newest first, without its head (at most 10). */
+async function commitsOn(git: Git, dir: string, target: string, sha: string): Promise<{ sha: string; subject: string }[]> {
+  const out = await git(['log', '-n11', '--format=%H%x00%s', `${target}..${sha}`], dir).catch(() => '');
+  return out
+    .split('\n')
+    .map((l) => l.split('\u0000'))
+    .filter((p) => /^[0-9a-f]{40}$/.test(p[0] ?? ''))
+    .map(([s, subject]) => ({ sha: s, subject: (subject ?? '').slice(0, 120) }))
+    .filter((c) => c.sha !== sha)
+    .slice(0, 10);
+}
+
+/** The newest commit on the branch (not on main) that an agent asked to have merged, and who. */
+async function askedOn(ctx: Ctx, floor: Floor, git: Git, head: string, branch: string, target: string): Promise<{ sha: string; by: string } | undefined> {
+  for (const a of mergeAsks(ctx, floor.id).slice(0, 20)) {
+    if (a.branches.length && !a.branches.includes(branch)) continue;
+    for (const s of a.shas) {
+      const full = await ref(git, floor.dir, s);
+      if (!full) continue;
+      if ((full === head || (await isAncestor(git, floor.dir, full, head))) && !(await isAncestor(git, floor.dir, full, target))) return { sha: full, by: a.by };
+    }
+  }
+  return undefined;
 }
 
 /** The branches the team has ahead of main, with what they are and their review. Empty for a project that isn't local only. */
@@ -171,6 +201,8 @@ export async function localMergeView(ctx: Ctx, floor: Floor): Promise<LocalMerge
   // The graph names the branches (cached up to a minute); each head, review and kind are read now.
   const listed = g.branches.filter((b) => b.name !== main && (b.worker || b.where !== 'remote')).slice(0, 12);
   const rows = await Promise.all(listed.map((b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main, { sha: b.sha, subject: b.subject })));
+  // Merge asks for commits that are on main now are marked gone (./asks.ts), at most once a minute.
+  void settleMergeAsks(ctx, floor, runGit, await targetOf(runGit, floor.dir, main), main);
   return { ...base, main, ...(mainSha ? { mainSha } : {}), branches: rows.filter((b): b is LocalMergeBranch => !!b).slice(0, 10) };
 }
 
@@ -209,7 +241,7 @@ export async function reviewLocal(
   const c = await commitOn(git, floor.dir, main, r.branch, r.sha);
   if ('error' in c) return { ok: false, ...c };
   if (c.authors.some((a) => a.toLowerCase() === by.name.trim().toLowerCase())) return { ok: false, status: 409, error: `${by.name} authored commits on ${r.branch}, so that review wouldn't be independent` };
-  const review: LocalMergeReview = { branch: r.branch, sha: c.full, verdict: r.verdict, by: by.name, ...(by.id ? { byId: by.id } : {}), at: now(), ...(r.note ? { note: r.note.replace(/\s+/g, ' ').trim().slice(0, 500) } : {}) };
+  const review: LocalMergeReview = { branch: r.branch, sha: c.full, verdict: r.verdict, by: by.name, ...(by.id ? { byId: by.id } : {}), at: now(), ...(r.note ? { note: fixText(r.note).replace(/\s+/g, ' ').trim().slice(0, 500) } : {}) };
   const b = bookOf(ctx.cfg.dataDir, floor.id);
   b.reviews.push(review);
   saveBook(ctx.cfg.dataDir, floor.id, b);

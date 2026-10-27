@@ -20,6 +20,8 @@ import { mergingWords, type LocalMergeDone } from '../../shared/local-merge.js';
 import { BRANCH_OK, bookOf, commitOn, levelOf, ref, reviewAt, saveBook, type LocalMergeDeps } from './index.js';
 import { dcsOf, kindAt } from './describe.js';
 import { tellMainNow } from './tell.js';
+import { settleMergeAsks } from './asks.js';
+import { refusalWords } from '../../shared/merge-refusal.js';
 
 /** Merges the reviewed commit `sha` of the branch into the local default branch. Never a force. */
 export async function mergeLocal(
@@ -63,8 +65,10 @@ export async function mergeLocal(
     try {
       await git([...id, 'merge', '--no-ff', '-m', msg, c.full], wt);
     } catch (err) {
+      // Which files conflict, in words; never git's own command line (it carries the merge message and its trailer).
+      const files = (await git(['diff', '--name-only', '--diff-filter=U'], wt).catch(() => '')).split('\n').map((l) => l.trim()).filter(Boolean);
       await git(['merge', '--abort'], wt).catch(() => '');
-      return { ok: false, status: 409, error: `Not merged: @${c.full.slice(0, 7)} of ${r.branch} conflicts with ${main} (${(err as Error).message.slice(0, 160)}). Ask the lead to bring ${main} into the branch, then review the new commit.` };
+      return { ok: false, status: 409, error: refusalWords(c.full, r.branch, main, files, (err as Error).message) };
     }
     merge = (await git(['rev-parse', 'HEAD'], wt)).trim();
     try {
@@ -89,6 +93,8 @@ export async function mergeLocal(
   const owner = graph.branches.find((b) => b.name === r.branch)?.worker;
   const dcs = await dcsOf(ctx, floor.id, r.branch, owner?.id);
   const told = tellMainNow(ctx, floor, { main, merge, branch: r.branch, sha: c.full, dcs, newer, reviewedBy: review.by }, owner?.id, deps);
+  // Agents' asks to merge what is on main now are marked gone (./asks.ts): the person says Resolved or Still needed.
+  await settleMergeAsks(ctx, floor, git, `refs/remotes/origin/${main}`, main, { force: true });
   const words = mergingWords(c.full, newer);
   audit.record({
     floor: floor.id,

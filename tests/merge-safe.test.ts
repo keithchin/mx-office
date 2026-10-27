@@ -133,7 +133,9 @@ test('merge-safe: the reviewed commit while the head moves, refusals, DC labels,
     commit(floorDir, 'Mx Office', 'README.md', 'app, the main way\n', 'main moves');
     git(floorDir, 'push', '-q', 'origin', 'main');
     git(floorDir, 'fetch', '-q', 'origin');
-    assert.match(pull(await mergeLocal(ctx, floor, { branch: 'office/conf-1', sha: c1 }, pat)), /conflicts with main/);
+    const conflict = pull(await mergeLocal(ctx, floor, { branch: 'office/conf-1', sha: c1 }, pat));
+    assert.match(conflict, /conflicts with main in 1 file \(README\.md\)/, 'which files conflict, in words');
+    assert.doesNotMatch(conflict, /Mx-Office-Local-Merge|Command failed|Reviewed at/, 'never git’s command line or the merge trailer');
     assert.equal(git(bare, 'log', '-1', '--format=%s', 'main'), 'main moves', 'a refusal changes nothing');
 
     // ---- The merge: exactly a1, --no-ff, as the office; a2 stays on the branch; the team is told ----

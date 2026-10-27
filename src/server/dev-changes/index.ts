@@ -27,7 +27,7 @@ import { testingStore } from '../testing/index.js';
 import { changeRequestBook } from '../change-requests/index.js';
 import { localOnlyAt } from '../local-only.js';
 import { managerOf } from '../../shared/roster/coverage.js';
-import { activeOf, changeBranch, currentChange, queuedOf, type CheckResult, type DevChange, type DevChangesView, type StripFacts } from '../../shared/dev-changes.js';
+import { activeOf, changeBranch, currentChange, queuedOf, type CheckResult, type DevChange, type DevChangesView, type DevChangeView, type StripFacts } from '../../shared/dev-changes.js';
 import { ChangeStore } from './store.js';
 import { DevChanges, type Who } from './service.js';
 import { newCandidates, pullFor, type ChangePull } from './observe.js';
@@ -300,5 +300,20 @@ export async function changesView(ctx: Ctx, floor: Floor, who: Who): Promise<Dev
   const cur = currentChange(views);
   // A local-only project's receipt offers "Review and merge @C" to admins (server/local-merge/, the same path as the panel).
   const local = localOnlyAt(floor.dir);
+  // Which branch actually carries each change on a candidate (local-merge/targets.ts): never a notes-only or gate-failed draft.
+  if (local && who.admin) await withMergeTargets(ctx, floor, views);
   return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}), policy, mayPolicy: who.admin, ...(local ? { localOnly: true, mayMerge: who.admin } : {}) };
+}
+
+/** Adds the receipt's merge targets to the changes on a candidate (newest three), for a local-only project's admins. */
+async function withMergeTargets(ctx: Ctx, floor: Floor, views: DevChangeView[]): Promise<void> {
+  const on = views.filter((c) => c.state === 'candidate').slice(-3);
+  if (!on.length) return;
+  try {
+    const { mergeTargetsFor, mergeAsks } = await import('../local-merge/targets.js');
+    const asks = mergeAsks(ctx, floor.id);
+    for (const c of on) c.mergeTargets = await mergeTargetsFor(ctx, floor, { id: c.id, ...(c.aliases ? { aliases: c.aliases } : {}), ...(c.activated?.workerId ? { workerId: c.activated.workerId } : {}) }, { asks }).catch(() => undefined);
+  } catch {
+    /* no targets: the receipt offers no merge */
+  }
 }

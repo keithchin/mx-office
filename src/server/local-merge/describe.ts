@@ -58,10 +58,11 @@ const titleOf = (text: string) => text.replace(/\n+About: [^\n]*$/, '').trim().s
 
 /**
  * The DC(s) a branch belongs to: dev/DC-n by its name, else the change handed to the worker whose worktree it is
- * (its newest hand-over), never from commit subjects (a subject that mentions another DC is not that DC).
+ * (its newest hand-over), or a change an agent asked to merge from this branch (its escalation names both), never
+ * from commit subjects (a subject that mentions another DC is not that DC).
  */
 export async function dcsOf(ctx: Ctx, floorId: string, branch: string, workerId: string | undefined): Promise<LocalMergeDc[]> {
-  let all: { id: string; text: string; activated?: { workerId?: string; taskId?: string }; previous?: { workerId?: string }[]; queue: string }[] = [];
+  let all: { id: string; text: string; activated?: { workerId?: string; taskId?: string; requestId?: string }; previous?: { workerId?: string }[]; queue: string }[] = [];
   try {
     const { devChangesOf } = await import('../dev-changes/index.js');
     all = await devChangesOf(ctx).store.all(floorId);
@@ -73,9 +74,22 @@ export async function dcsOf(ctx: Ctx, floorId: string, branch: string, workerId:
     const c = all.find((x) => x.id === named);
     return [{ id: named, title: c ? titleOf(c.text) : '' }];
   }
-  if (!workerId) return [];
-  const mine = all.filter((c) => c.activated?.workerId === workerId && (c.queue === 'active' || c.queue === 'settled'));
-  return mine.slice(-2).map((c) => ({ id: c.id, title: titleOf(c.text) }));
+  // A change an agent asked to have merged from this branch (its escalation names the branch and the change).
+  const asked: string[] = [];
+  try {
+    const { mergeAsks } = await import('./asks.js');
+    for (const a of mergeAsks(ctx, floorId).filter((x) => x.branches.includes(branch))) {
+      for (const id of a.ids) {
+        const c = all.find((x) => x.id === id || x.activated?.requestId === id);
+        if (c && !asked.includes(c.id)) asked.push(c.id);
+      }
+    }
+  } catch {
+    /* no team: none asked */
+  }
+  const mine = workerId ? all.filter((c) => c.activated?.workerId === workerId && (c.queue === 'active' || c.queue === 'settled')).slice(-2) : [];
+  const ids = [...new Set([...asked.slice(0, 3), ...mine.map((c) => c.id)])];
+  return ids.map((id) => ({ id, title: titleOf(all.find((c) => c.id === id)?.text ?? '') }));
 }
 
 /** The checks and journeys recorded at exactly `sha` (the Testing page's records). */
