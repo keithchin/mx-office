@@ -1,6 +1,9 @@
 // Journeys and smoke runs on an agent's app instance (./service.ts), with results bound to the instance's
 // commit in the test-run store (testing/store.ts, source `office-journey`): the Testing page, the live app's
 // readiness and a Developer change's Checks fact read them there for exactly that commit.
+//   * Who signs in: the project's own test users (./identity.ts: its config unless it's the toolkit template's,
+//     the journeys' personas, the instance's seed password); a refused sign-in says what to do and is raised for
+//     the PM (`onSignInFailed`). A project's .journey.js script is played by ./journey-js.ts instead.
 //   * A journey is the project's own (tests/**/*.journey.json at the commit, by its id or path) or a file the
 //     agent sends (its worktree's, maybe uncommitted: then its definition revision is "unknown"). It is played
 //     by the walkthrough recorder unfilmed (walkthroughs/recorder.ts, film: false: the toolkit journey runner's
