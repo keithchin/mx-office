@@ -9,6 +9,7 @@ import { wizardOf } from '../../wizard/index.js';
 import { floorParam } from './files.js';
 import { setupCancelsOf, unfinishedSetups } from '../../wizard/unfinished.js';
 import { teamsFor } from '../../wizard/team-from-office.js';
+import { claudeSignInFor, claudeSignInRefusal } from '../../wizard/claude-signin.js';
 
 export const wizardRoutes = {
   wizard: {
@@ -18,7 +19,8 @@ export const wizardRoutes = {
       const w = wizardOf(ctx);
       const admin = ctx.meOf(session.account?.id).admin;
       if (req.method === 'GET') {
-        if (p === '/api/wizard/info') return send(res, 200, w.info(admin));
+        // With the creating person's Claude sign-in (claude-signin.ts): hiring the team runs on it, so Ready to create says so up front.
+        if (p === '/api/wizard/info') return send(res, 200, { ...w.info(admin), claudeSignIn: await claudeSignInFor(ctx, session.account?.id, !!w.cfg.offlineDir) });
         if (p === '/api/wizard/job') {
           const job = w.job(url.searchParams.get('id') ?? '');
           return job ? send(res, 200, job) : send(res, 404, { error: 'No such setup' });
@@ -79,6 +81,9 @@ export const wizardRoutes = {
       // A Retry looks at an unsettled operation first, and one that would fail anyway (a paused project…) says so first, with what to do.
       const tried = p === '/api/wizard/retry' ? await w.retry(id) : undefined;
       if (tried && typeof tried === 'object' && 'blocker' in tried) return send(res, 409, { error: tried.blocker.text, blocker: tried.blocker });
+      // No Claude sign-in for the hires: refused before the repository, the app or anything else is made.
+      const unsigned = p === '/api/wizard/start' ? await claudeSignInRefusal(ctx, session.account?.id, !!w.cfg.offlineDir, body) : undefined;
+      if (unsigned) return send(res, 409, { error: unsigned, signIn: 'claude' });
       const r = p === '/api/wizard/start' ? w.start(body, who, session.account?.id, await teamsFor(ctx, body)) : p === '/api/wizard/retry' ? tried : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
       if (r === undefined) return send(res, 404, { error: 'Not found' });
       if (typeof r === 'string') return send(res, 400, { error: r });

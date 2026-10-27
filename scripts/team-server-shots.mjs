@@ -124,7 +124,7 @@ async function main() {
     await page.route('**/api/wizard/info*', async (route) => {
       const res = await route.fetch();
       const info = await res.json();
-      await route.fulfill({ response: res, json: { ...info, offline: false, mendixToken: true, adminToken: { ...info.adminToken, configured: true } } });
+      await route.fulfill({ response: res, json: { ...info, offline: false, mendixToken: true, adminToken: { ...info.adminToken, configured: true }, claudeSignIn: { ready: false, why: 'Sign in to Claude first (☰ → 🔐 Your sign-ins): your workers run on your own Claude plan', office: true } } });
     });
     await toAdvanced();
     check(await page.isChecked('#nw-home-teamserver'), 'with a Mendix token, Team Server is the default');
@@ -133,6 +133,22 @@ async function main() {
     await page.click('#nw-home-teamserver-github');
     await page.waitForTimeout(150);
     await shot('04-wizard-where-mirror-light');
+    // Ready to create with that answer: the code's home, the total budget field, and no Claude sign-in yet (Create waits).
+    await page.click('#nw-home-teamserver');
+    await page.click('.aw-lvl[data-level="2"]');
+    await page.click('#nw-create');
+    await page.waitForSelector('#nw-create-go');
+    await page.waitForTimeout(300);
+    const sum = (await page.textContent('.aw-sum')) ?? '';
+    check(/Mendix Team Server/.test(sum) && /Creates the app in the Mendix Portal/.test(sum), 'Ready to create says the code goes to Team Server');
+    check(/Sign in to Claude: ☰ → 🔐 Your sign-ins/.test(sum), 'and that the Claude sign-in is missing, with the fix');
+    check(await page.isDisabled('#nw-create-go'), 'Create waits for the sign-in');
+    check(!!(await page.$('#nw-sum-total')), 'a total budget field');
+    await page.fill('#nw-sum-total', '1800');
+    await page.locator('#nw-sum-total').dispatchEvent('change');
+    check(/Budget \$1,800/.test((await page.textContent('.aw-sum')) ?? ''), 'the total typed is the budget');
+    await both('09-summary-teamserver-signin', null);
+    await page.keyboard.press('Escape');
     await page.unroute('**/api/wizard/info*');
     await page.click('.nw-close').catch(() => {});
 

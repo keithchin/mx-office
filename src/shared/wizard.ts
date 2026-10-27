@@ -316,6 +316,11 @@ export interface WizardInfo {
   jobs: { id: string; repo: string; status: JobView['status'] }[];
   /** The office's autonomy policy for new projects (off unless an admin set one): the autonomy step honours it. */
   autonomyPolicy?: AutonomyPolicy;
+  /**
+   * The creating person's own Claude sign-in, which hiring the team runs on (server/wizard/claude-signin.ts): `ready`, what
+   * to do when it isn't, and whether they may use the office machine's own (admins). Undefined: none needed (no account, offline).
+   */
+  claudeSignIn?: { ready: boolean; why: string; office: boolean };
 }
 
 /** Where a toolkit project stands, for the setup panel above its board. */
