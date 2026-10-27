@@ -24,3 +24,13 @@
 .lmc-err { margin: 0 16px 10px; }
 .lmc-facts dd[data-status='impact'], .lmc-facts dd[data-status='unknown'] { color: var(--warn, inherit); }
 @media (max-width: 480px) { .lmc-facts { grid-template-columns: 1fr; } .lmc-facts dd { margin-bottom: 4px; } }
+/* The receipt's chooser (receipt.ts): every branch that may carry the change, with its gate state. */
+.mt-opts { display: grid; gap: 8px; margin: 10px 0; }
+.modal .mt-opt { display: flex; flex-direction: row; gap: 8px; align-items: flex-start; padding: 8px; border: 1px solid var(--line); border-radius: 6px; overflow-wrap: anywhere; }
+.mt-opt input { width: auto; flex: none; margin: 3px 0 0; }
+.mt-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mt-opt[data-ok='false'] { opacity: 0.75; }
+.mt-gate[data-gate='no'] { color: var(--bad-ink, inherit); }
+.lm-older { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.lm-older select { max-width: 100%; }
+.lm-asked { color: var(--muted, inherit); }

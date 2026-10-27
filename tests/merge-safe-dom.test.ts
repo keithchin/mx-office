@@ -22,6 +22,8 @@ const C = 'f476b7b'.padEnd(40, 'c');
 const N = '4e71000'.padEnd(40, 'd');
 const M = 'cc5c24c'.padEnd(40, 'e');
 const K = '2878fcb'.padEnd(40, 'f');
+const E = 'e0e1d2c'.padEnd(40, '1');
+const D = 'd0a4f7e'.padEnd(40, '2');
 
 const VIEW = {
   floor: 'f1',
@@ -32,7 +34,7 @@ const VIEW = {
   levelName: 'Guided',
   pmDecides: true,
   branches: [
-    { branch: 'dev/DC-3', sha: H, ahead: 3, behind: 0, subject: 'DC-3: WIP not reviewed', owner: 'Rhea', dcs: [{ id: 'DC-3', title: 'Rename the button to + New claim' }], kind: 'change', files: { model: 2, code: 0, notes: 1 }, review: { branch: 'dev/DC-3', sha: R, verdict: 'approve', by: 'Pat Morgan', at: 1 }, newer: 2 },
+    { branch: 'dev/DC-3', sha: H, ahead: 3, behind: 0, subject: 'DC-3: WIP not reviewed', owner: 'Rhea', dcs: [{ id: 'DC-3', title: 'Rename the button to + New claim' }], kind: 'change', files: { model: 2, code: 0, notes: 1 }, review: { branch: 'dev/DC-3', sha: R, verdict: 'approve', by: 'Pat Morgan', at: 1 }, newer: 2, commits: [{ sha: E, subject: 'Journal: DC-3 notes' }, { sha: R, subject: 'DC-3: rename the button' }], asked: { sha: R, by: 'Rhea' } },
     { branch: 'office/carl-1', sha: C, ahead: 5, behind: 1, subject: 'Phase 4 rows', owner: 'Carl', dcs: [{ id: 'DC-4', title: 'Show the claim total' }], task: 'tk-4', kind: 'change', files: { model: 4, code: 0, notes: 0 } },
     { branch: 'office/barbara-2', sha: N, ahead: 1, behind: 0, subject: 'Journal: relay of DC-3 merge escalation', owner: 'Barbara', kind: 'notes', files: { model: 0, code: 0, notes: 1 } },
   ],
@@ -52,8 +54,11 @@ async function harness(): Promise<{ js: string; css: string }> {
         store.floor = 'f1';
         store.me = { ...store.me, account: { id: 'u1', name: 'Pat Morgan' }, admin: true };
         const p = localMergePanel();
+        const p2 = localMergePanel();
         document.querySelector('.lite-main').append(p.el);
+        document.querySelector('#second').append(p2.el);
         window.__panel = p;
+        window.__panel2 = p2;
         window.__receipt = (c, may) => { const b = receiptMergeButton('f1', c, may); const host = document.querySelector('#receipt'); host.replaceChildren(); if (b) host.append(b); return !!b; };`,
       resolveDir: path.join(root, 'src/client/ui/local-merge'),
       loader: 'ts',
@@ -94,7 +99,7 @@ async function open(page: Page, h: { js: string; css: string }, theme: string, n
     return json({}, 404);
   });
   await page.goto('http://office.test/lite');
-  await page.setContent(`<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${h.css}</style></head><body class="lite"><main class="lite-main" style="padding:16px"></main><div id="receipt" style="padding:16px"></div><div id="modal-root"></div><div id="toasts"></div></body></html>`);
+  await page.setContent(`<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${h.css}</style></head><body class="lite"><main class="lite-main" style="padding:16px"></main><div id="second" style="padding:16px"></div><div id="receipt" style="padding:16px"></div><div id="modal-root"></div><div id="toasts"></div></body></html>`);
   await page.addScriptTag({ content: h.js });
 }
 
@@ -117,16 +122,26 @@ test('merge-safe in a browser: rows with DCs, notes hidden, Approve at once, the
       page.on('pageerror', (e) => errors.push(e.message));
       const net: Net = { gets: [], posts: [] };
       await open(page, h, theme, net);
+      await page.evaluate(() => (window as unknown as { __panel2: { refresh(): void } }).__panel2.refresh());
+      await page.waitForSelector('#second .lm-row[data-branch="office/carl-1"]');
       await page.evaluate(() => (window as unknown as { __panel: { refresh(): void } }).__panel.refresh());
-      await page.waitForSelector('.lm-row[data-branch="dev/DC-3"]');
+      await page.waitForSelector('.lite-main .lm-row[data-branch="dev/DC-3"]');
 
       // What a branch is; notes hidden by default.
-      assert.equal(await page.locator('.lm-row').count(), 2, 'the notes branch is hidden');
+      assert.equal(await page.locator('.lite-main .lm-row').count(), 2, 'the notes branch is hidden');
       assert.match((await text(page, '.lm-row[data-branch="dev/DC-3"]')) ?? '', /DC-3 · Rename the button to \+ New claim[\s\S]*Rhea's branch · dev\/DC-3[\s\S]*approved @3d6ca6b by Pat Morgan: ready to merge @3d6ca6b · 2 newer commits not reviewed/);
       assert.match((await text(page, '.lm-row[data-branch="office/carl-1"]')) ?? '', /DC-4 · Show the claim total[\s\S]*task tk-4[\s\S]*4 model files[\s\S]*not reviewed/);
       assert.equal(await page.getAttribute('.lm-row[data-branch="dev/DC-3"] [data-act="merge"]', 'data-sha'), R, 'Merge names the reviewed commit, not the head');
       assert.match((await text(page, '.lm-row[data-branch="dev/DC-3"] [data-act="merge"]')) ?? '', /Merge @3d6ca6b into main/);
       assert.match((await text(page, '.lm-row[data-branch="dev/DC-3"] [data-act="approve"]')) ?? '', /Approve at @9a5618a/, 'the newer head can be reviewed apart');
+      // Any commit of the branch can be approved, not only its head (the one an agent asked for is marked).
+      assert.match((await text(page, '.lm-row[data-branch="dev/DC-3"] [data-act="pick-commit"]')) ?? '', /@3d6ca6b \(Rhea asked for it\)/);
+      await page.selectOption('.lite-main .lm-row[data-branch="dev/DC-3"] [data-act="pick-commit"]', E);
+      assert.match((await text(page, '.lite-main .lm-row[data-branch="dev/DC-3"] [data-act="approve"]')) ?? '', /Approve at @e0e1d2c/);
+      await page.click('.lite-main .lm-row[data-branch="dev/DC-3"] [data-act="approve"]');
+      await page.waitForFunction(() => /Approved dev\/DC-3 at @e0e1d2c/.test(document.querySelector('#toasts')?.textContent ?? ''));
+      assert.deepEqual(net.posts.at(-1), { url: '/api/local-merge/review', body: { floor: 'f1', branch: 'dev/DC-3', sha: E, verdict: 'approve' } });
+      await page.waitForSelector('.lite-main .lm-row[data-branch="dev/DC-3"]');
       if (theme === 'portal-light' && width > 500) await shot(page, '01-panel-rows-light.png');
       await page.check('[data-act="show-notes"]');
       await page.waitForSelector('.lm-row[data-branch="office/barbara-2"]');
@@ -135,9 +150,11 @@ test('merge-safe in a browser: rows with DCs, notes hidden, Approve at once, the
 
       // Approve: the row redraws from the server's answer at once, with no second look.
       const before = net.gets.filter((g) => g.startsWith('/api/local-merge?')).length;
-      await page.click('.lm-row[data-branch="office/carl-1"] [data-act="approve"]');
-      await page.waitForFunction(() => !(document.querySelector('.lm-row[data-branch="office/carl-1"] [data-act="merge"]') as HTMLButtonElement | null)?.disabled);
-      assert.match((await text(page, '.lm-row[data-branch="office/carl-1"]')) ?? '', /approved @f476b7b by Pat Morgan: ready to merge @f476b7b/);
+      await page.click('.lite-main .lm-row[data-branch="office/carl-1"] [data-act="approve"]');
+      await page.waitForFunction(() => !(document.querySelector('.lite-main .lm-row[data-branch="office/carl-1"] [data-act="merge"]') as HTMLButtonElement | null)?.disabled);
+      assert.match((await text(page, '.lite-main .lm-row[data-branch="office/carl-1"]')) ?? '', /approved @f476b7b by Pat Morgan: ready to merge @f476b7b/);
+      // The other merge panel on the page (the Model tab's) shows the new review too, at once.
+      await page.waitForFunction(() => /approved @f476b7b/.test(document.querySelector('#second .lm-row[data-branch="office/carl-1"]')?.textContent ?? ''));
       assert.equal(net.gets.filter((g) => g.startsWith('/api/local-merge?')).length, before, 'no refresh needed');
       assert.deepEqual(net.posts.at(-1), { url: '/api/local-merge/review', body: { floor: 'f1', branch: 'office/carl-1', sha: C, verdict: 'approve' } });
 
@@ -168,7 +185,7 @@ test('merge-safe in a browser: rows with DCs, notes hidden, Approve at once, the
       await page.waitForFunction(() => /main is now @cc5c24c\. Told Carl/.test(document.querySelector('#toasts')?.textContent ?? ''));
 
       // The receipt: Review and merge @K, through the same confirm step (approve, then merge exactly K).
-      const cand = { id: 'DC-1', state: 'candidate', candidates: [{ sha: K, via: 'branch', branch: 'dev/DC-1', seenAt: 1 }] };
+      const cand = { id: 'DC-1', state: 'candidate', candidates: [{ sha: K, via: 'branch', branch: 'dev/DC-1', seenAt: 1 }], mergeTargets: { pick: { branch: 'office/carl-1', sha: K }, options: [], words: 'Carl asked to merge it' } };
       assert.equal(await page.evaluate((c) => (window as unknown as { __receipt(c: unknown, m: boolean): boolean }).__receipt(c, false), cand), false, 'not for someone who may not merge');
       assert.equal(await page.evaluate((c) => (window as unknown as { __receipt(c: unknown, m: boolean): boolean }).__receipt({ ...c, state: 'working' }, true), cand), false, 'only on a candidate');
       assert.equal(await page.evaluate((c) => (window as unknown as { __receipt(c: unknown, m: boolean): boolean }).__receipt(c, true), cand), true);
@@ -183,6 +200,33 @@ test('merge-safe in a browser: rows with DCs, notes hidden, Approve at once, the
       await page.waitForSelector('.lmc-dlg', { state: 'detached' });
       assert.deepEqual(net.posts.slice(n).map((p) => [p.url, p.body.sha]), [['/api/local-merge/review', K], ['/api/local-merge/merge', K]]);
       assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.act), 'review-merge', 'focus back on the receipt’s button');
+      // No clear pick: the chooser lists every branch with its gate state, nothing chosen; a draft or notes branch can't be picked.
+      const opt = (branch: string, sha: string, ok: boolean, kind: string, why?: string) => ({ branch, sha, head: sha, subject: `work on ${branch}`, via: ['named'], kind, files: { model: 1, code: 0, notes: 0 }, checks: [], ok, ...(why ? { why } : {}), gate: `no checks recorded at @${sha.slice(0, 7)}` });
+      const amb = { id: 'DC-9', state: 'candidate', candidates: [], mergeTargets: { options: [opt('office/carl-1', D, true, 'change'), opt('office/rhea-2', E, true, 'change'), opt('dev/DC-9', K, false, 'script', 'a script draft')], words: '2 branches may carry this change: choose the one to review and merge' } };
+      assert.equal(await page.evaluate((c) => (window as unknown as { __receipt(c: unknown, m: boolean): boolean }).__receipt(c, true), amb), true);
+      assert.match((await text(page, '#receipt')) ?? '', /Choose what to merge/);
+      await page.click('#receipt [data-act="choose-merge"]');
+      await page.waitForSelector('.mt-dlg');
+      assert.equal(await page.locator('.mt-dlg .close').count(), 1, 'close button top-right');
+      assert.equal(await page.locator('.mt-dlg input:checked').count(), 0, 'nothing chosen by default');
+      assert.equal(await page.isDisabled('.mt-dlg [data-act="choose-merge"]'), true);
+      assert.equal(await page.isDisabled('.mt-opt[data-branch="dev/DC-9"] input'), true, 'a script draft cannot be picked');
+      assert.match((await text(page, '.mt-opt[data-branch="dev/DC-9"]')) ?? '', /Not offered: a script draft/);
+      if (width > 500 && theme === 'portal-light') await shot(page, '05-receipt-chooser-light.png');
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.mt-dlg', { state: 'detached' });
+      assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.act), 'choose-merge', 'focus back on the receipt button');
+      await page.click('#receipt [data-act="choose-merge"]');
+      await page.check('.mt-opt[data-branch="office/carl-1"] input');
+      await page.click('.mt-dlg [data-act="choose-merge"]');
+      await page.waitForSelector('.lmc-dlg [data-act="confirm-merge"]');
+      assert.ok(net.gets.some((g) => g.includes(`sha=${D}`) && g.includes('branch=office%2Fcarl-1')), 'the confirm step is for the chosen commit');
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.lmc-dlg', { state: 'detached' });
+      // Nothing that may merge: the receipt says why, and offers no merge.
+      const none = { ...amb, mergeTargets: { options: [opt('dev/DC-9', K, false, 'notes', 'notes only')], words: 'Nothing to merge yet' } };
+      await page.evaluate((c) => (window as unknown as { __receipt(c: unknown, m: boolean): boolean }).__receipt(c, true), none);
+      assert.match((await text(page, '#receipt')) ?? '', /Why nothing to merge/);
       if (width < 500) {
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         assert.ok(over <= 1, `no horizontal scroll at phone width (${over})`);

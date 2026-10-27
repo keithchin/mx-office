@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import { fixDeep } from '../../shared/text-repair.js';
 import { notLeaving } from '../leave-on-merge.js';
 import { findWorker, readHireRequest, readHomeRequest, readPrRequest, workerRow, type PullsView } from '../office-workers.js';
 import { gh } from '../github.js';
@@ -79,7 +80,8 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
   if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent', '/render', '/marketplace'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate, /office/workers/subagent, /office/workers/render or /office/workers/marketplace' });
   let body: unknown;
   try {
-    body = JSON.parse((await readBody(req)) || '{}');
+    // Text an agent's shell mangled on the way (UTF-8 read as Windows-1252: "Testing â€º Prepare") is repaired before it's kept.
+    body = fixDeep(JSON.parse((await readBody(req)) || '{}'));
   } catch {
     return send(res, 400, { error: 'Send JSON' });
   }

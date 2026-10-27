@@ -49,6 +49,10 @@ export interface LocalMergeBranch {
   review?: LocalMergeReview;
   /** Commits on the branch after the reviewed one: never part of its merge. */
   newer?: number;
+  /** The branch's other commits main hasn't got (newest first, the head left out): any of them may be reviewed on its own. */
+  commits?: { sha: string; subject: string }[];
+  /** The commit an agent asked to have merged (its escalation names it), and who. */
+  asked?: { sha: string; by: string };
 }
 
 export interface LocalMergeView {

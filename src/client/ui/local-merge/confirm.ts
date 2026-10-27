@@ -99,7 +99,9 @@ export async function openMergeConfirm(o: ConfirmOpts): Promise<void> {
       try {
         if (!approved) {
           const r = await lmPost<{ branch?: LocalMergeBranch }>('/api/local-merge/review', { floor: o.floor, branch: c.branch, sha: c.sha, verdict: 'approve' });
-          o.onReviewed?.(r.branch);
+          if (o.onReviewed) o.onReviewed(r.branch);
+          // A receipt's approval: every merge panel on the page shows the new review at once.
+          else if (r.branch) window.dispatchEvent?.(new CustomEvent('mx:local-reviewed', { detail: { floor: o.floor, row: r.branch } }));
         }
         const done = await lmPost<LocalMergeDone>('/api/local-merge/merge', { floor: o.floor, branch: c.branch, sha: c.sha });
         modal.close();

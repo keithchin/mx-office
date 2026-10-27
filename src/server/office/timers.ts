@@ -24,6 +24,8 @@ import { startWalkthroughs } from '../walkthroughs/office.js';
 import { startSecurityGate } from '../security-gate/index.js';
 import { startLiveWarm } from '../liveapp/warm.js';
 import { startAgentApps } from '../agent-app/office.js';
+import { startHeldQueue } from '../dev-changes/stuck-hold.js';
+import { startAgentProcs } from '../agent-procs/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -98,6 +100,10 @@ export function startTimers(ctx: Ctx): () => void {
   const stopWarm = startLiveWarm(ctx);
   // Agents' app instances: a crashed office's leftovers cleaned up a minute after the start; every instance stopped with the office (agent-app/).
   const stopAgentApps = startAgentApps(ctx);
+  // A data-impact hold keeping the Developer change queue waiting, raised in Needs you (dev-changes/stuck-hold.ts).
+  const stopHeldQueue = startHeldQueue(ctx);
+  // What an earlier agent session left running (its background shells), stopped by the office's own recorded pids (agent-procs/).
+  const stopAgentProcs = startAgentProcs(ctx);
 
   return () => {
     stopRuns();
@@ -123,6 +129,8 @@ export function startTimers(ctx: Ctx): () => void {
     stopSecurity();
     stopWarm();
     stopAgentApps();
+    stopHeldQueue();
+    stopAgentProcs();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

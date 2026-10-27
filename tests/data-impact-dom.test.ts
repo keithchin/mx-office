@@ -164,6 +164,25 @@ test('in a browser: findings, who may approve, the approve dialog (✕, Esc, foc
     await T(`T.card.refresh()`);
     await page.waitForFunction(`document.querySelector('.di-card').innerText.includes('data impact unknown')`);
     assert.match(await T<string>(`document.querySelector('.di-card').innerText`), /The office couldn't tell what this change does to stored data: the model couldn't be read: 1 changed unit unreadable\. It holds rather than guess\./);
+    // A stale candidate hold: "Release stale hold" with a reason, chosen first; a dump can be taken for it too (env posted).
+    view = { ...HELD, env: 'candidate:DC-8', held: { ...HELD.held!, env: 'candidate:DC-8' }, stale: 'the live preview already runs @1234567, which has @abcdef1: its data was migrated then', dumpable: true };
+    await T(`T.card.refresh()`);
+    await page.waitForSelector('.di-approve');
+    await page.click('.di-approve');
+    await page.waitForSelector('.di-modal');
+    assert.match(await T<string>(`document.querySelector('.di-modal').innerText`), /This hold looks stale: the live preview already runs @1234567/);
+    assert.equal(await T<boolean>(`document.querySelector('input[name="di-recovery"][value="stale"]').checked`), true, 'the stale release is the chosen step');
+    assert.equal(await T<boolean>(`document.querySelector('.di-take').hidden`), false, 'a dump can be taken for a candidate’s hold');
+    await page.click('.di-take');
+    await page.waitForSelector('.di-dump');
+    assert.deepEqual(posted.at(-1), { floor: 'demo', action: 'dump', env: 'candidate:DC-8' });
+    await page.click('input[name="di-recovery"][value="stale"]');
+    await page.fill('.di-reason', 'DC-8 has run on the live preview since yesterday');
+    assert.match(await T<string>(`document.querySelector('.di-modal footer .btn.primary').textContent`), /Release stale hold/);
+    if (shots) await (await page.$('.di-modal'))!.screenshot({ path: path.join(shots, 'data-impact-stale.png') });
+    await page.click('.di-modal footer .btn.primary');
+    await page.waitForSelector('.di-modal', { state: 'detached' });
+    assert.deepEqual(posted.at(-1), { floor: 'demo', action: 'release', env: 'candidate:DC-8', base: BASE, target: CAND, reason: 'DC-8 has run on the live preview since yesterday' });
     // Phone width: no horizontal scroll, with the dialog open too.
     view = HELD;
     await page.setViewportSize({ width: 390, height: 800 });

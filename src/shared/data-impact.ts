@@ -83,7 +83,7 @@ export interface HeldFact {
   at: number;
 }
 
-export type Recovery = { kind: 'dump'; dump: string; path: string; size: number; sha256: string } | { kind: 'none'; statement: string };
+export type Recovery = { kind: 'dump'; dump: string; path: string; size: number; sha256: string } | { kind: 'none'; statement: string } | { kind: 'stale'; statement: string };
 
 /** The words an approver states when there's no data to keep. */
 export const NO_DATA_STATEMENT = 'No data to keep: I accept that data in these elements may be lost';
@@ -147,6 +147,10 @@ export interface DataImpactView {
   approvers: string;
   alternatives: readonly string[];
   uncertainty: string;
+  /** The hold is stale (staleReason): why, in words. Then "Release stale hold" is offered, with a reason, instead of a false "no data to keep". */
+  stale?: string;
+  /** Whether a database dump can be taken for this hold (the live preview's database, where a candidate's data lives too). */
+  dumpable?: boolean;
 }
 
 // ---- The model, as the diff needs it -------------------------------------------------------------------
@@ -300,7 +304,7 @@ export function voidWhy(a: Pick<DataImpactApproval, 'env' | 'base' | 'target'>, 
 
 /** The recovery step in words, for the record and the audit. */
 export function recoveryWords(r: Recovery): string {
-  return r.kind === 'dump' ? `database dump ${r.path} (${r.size} bytes, sha256 ${r.sha256.slice(0, 12)}…)` : `"${r.statement}"`;
+  return r.kind === 'dump' ? `database dump ${r.path} (${r.size} bytes, sha256 ${r.sha256.slice(0, 12)}…)` : r.kind === 'stale' ? `none needed, a stale hold released (${r.statement})` : `"${r.statement}"`;
 }
 
 /** Who holds the permission, in words. */

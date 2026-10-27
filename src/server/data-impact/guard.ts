@@ -96,6 +96,11 @@ export class DataImpactGuard {
     return { hold: true, why: reason, held };
   }
 
+  /** Lets the hold in `env` go when it no longer guards anything (a candidate with no model change of its own); audited. */
+  clear(floorId: string, env: string, why: string) {
+    this.release(floorId, env, why);
+  }
+
   /** The hold in `env` is over (approved, or the change no longer touches data). */
   private release(floorId: string, env: string, why: string) {
     const h = this.store.get(floorId).holds[env];

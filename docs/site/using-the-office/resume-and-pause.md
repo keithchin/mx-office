@@ -96,6 +96,8 @@ The pause is kept in `<office data>/project-run.json`, so it survives a restart.
 
 For a release or a restart, use **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** (admins, `/lite?tab=settings&section=workers`), or `POST /api/office/restart` from a script. It pauses every project, waits until no agent is mid-turn, and restarts the office. When the office is back, it resumes the projects it paused. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
 
+**Leftover agent processes.** An agent's background commands (a shell loop waiting for a port, a watcher) can outlive its terminal when the office restarts or a project is paused. The office records the terminal process it starts for each agent, and a little after it starts, then every few minutes, stops what a gone terminal left running: only processes whose parent was one of those recorded terminals and that started after it, never by name, never under a terminal that is still running. Each stop is in the [audit log](audit-log.md) (`agent-procs.stopped`, with the agent, the pids and what they ran) and the office's own log.
+
 ## Who can use them
 
 Resume, Pause, Resume all, Pause all and Restart safely are for admins (the Project Manager) only. The office refuses anyone else on every route (`POST /api/project-run`, `POST /api/office/restart`), not just by hiding the buttons. Everyone can see a project's pause, a run's progress and the preview.

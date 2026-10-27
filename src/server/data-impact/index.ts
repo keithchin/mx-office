@@ -4,6 +4,7 @@
 // and, as an admin, say who besides the office admins holds that permission (setPolicy). The routes are
 // http/routes/data-impact.ts; the live app consults `check` through liveapp/index.ts.
 
+import { fixText } from '../../shared/text-repair.js';
 import path from 'node:path';
 import { audit, human } from '../audit/index.js';
 import type { Ctx } from '../office/context.js';
@@ -78,20 +79,24 @@ export class DataImpact {
     };
   }
 
-  /** Dumps the live preview's database for the hold standing now, checks it, and records it (one at a time per project). */
-  async dump(floorId: string, by: Who): Promise<DumpRecord | string> {
-    const held = this.guard.store.get(floorId).holds[ENV_LIVE];
-    if (!held) return 'Nothing is held on the live preview';
+  /**
+   * Dumps the live preview's database for the hold standing in `env` now (the live preview's own, or a candidate's
+   * or an external push's: their data lives in the same database), checks it, and records it bound to that hold
+   * (one at a time per project).
+   */
+  async dump(floorId: string, by: Who, env: ImpactEnv = ENV_LIVE): Promise<DumpRecord | string> {
+    const held = this.guard.store.get(floorId).holds[env];
+    if (!held) return env === ENV_LIVE ? 'Nothing is held on the live preview' : `Nothing is held for ${env} any more`;
     const pg = this.guard.d.pg?.(floorId, ENV_LIVE);
-    if (!pg) return 'No database for the live preview';
+    if (!pg) return 'No database for the live preview to dump';
     let p = this.dumping.get(floorId);
     if (!p) {
       const file = path.join(this.guard.store.dumpDir(floorId), `${short(held.base)}-to-${short(held.target)}-${new Date().toISOString().replace(/[:.]/g, '-')}.dump`);
       p = (this.opts.takeDump ?? takeDump)(pg, file)
         .then((got) => {
-          const rec: DumpRecord = { id: path.basename(file, '.dump'), env: ENV_LIVE, base: held.base, target: held.target, database: pg.database, path: file, ...got, by, at: Date.now() };
+          const rec: DumpRecord = { id: path.basename(file, '.dump'), env, base: held.base, target: held.target, database: pg.database, path: file, ...got, by, at: Date.now() };
           this.guard.store.update(floorId, (r) => void r.dumps.push(rec));
-          audit.record({ floor: floorId, actor: human(by.name, by.id), action: 'data-impact.dump', target: { kind: 'database', id: pg.database, label: `dump before ${short(held.target)}` }, summary: `Took a database dump of the live preview (${pg.database}) before ${short(held.target)}: ${got.size} bytes, sha256 ${got.sha256.slice(0, 12)}…, ${got.verified}`, details: { env: ENV_LIVE, base: held.base, target: held.target, path: file, size: got.size, sha256: got.sha256, verified: got.verified }, severity: 'notice' });
+          audit.record({ floor: floorId, actor: human(by.name, by.id), action: 'data-impact.dump', target: { kind: 'database', id: pg.database, label: `dump before ${short(held.target)}` }, summary: `Took a database dump of the live preview (${pg.database}) before ${short(held.target)}: ${got.size} bytes, sha256 ${got.sha256.slice(0, 12)}…, ${got.verified}`, details: { env, base: held.base, target: held.target, path: file, size: got.size, sha256: got.sha256, verified: got.verified }, severity: 'notice' });
           this.listeners.forEach((fn) => fn(floorId));
           return rec;
         })
@@ -118,7 +123,7 @@ export class DataImpact {
     const held = this.guard.store.get(floorId).holds[env];
     if (!held) return [409, env === ENV_LIVE ? 'Nothing is held on the live preview any more' : `Nothing is held for ${env} any more`];
     if (body.base !== held.base || body.target !== held.target) return [409, `The hold changed: it is now ${short(held.base)} → ${short(held.target)}. Look again before approving`];
-    const reason = typeof body.reason === 'string' ? body.reason.replace(/\s+/g, ' ').trim().slice(0, 500) : '';
+    const reason = typeof body.reason === 'string' ? fixText(body.reason).replace(/\s+/g, ' ').trim().slice(0, 500) : '';
     if (reason.length < 3) return [400, 'Say why (a reason is required)'];
     let recovery: Recovery;
     if (typeof body.dump === 'string' && body.dump) {
@@ -130,6 +135,25 @@ export class DataImpact {
     } else if (body.noData === true) recovery = { kind: 'none', statement: NO_DATA_STATEMENT };
     else return [400, 'Choose a recovery step: a database dump, or "no data to keep"'];
     return this.guard.record(floorId, { env, base: held.base, target: held.target, recovery, reason, by: { name: by.name, ...(by.id ? { id: by.id } : {}) } });
+  }
+
+  /**
+   * Releases a stale hold (shared/data-impact-stale.ts): the office found it guards nothing any more (`stale`, worked
+   * out by the caller from the record, the live preview and git, never from the request). Recorded as an approval
+   * whose recovery step is "none needed, a stale hold released (why)", with the person's reason: it binds the same
+   * environment, baseline and target, so a new candidate is assessed again. Returns it, or [status, error].
+   */
+  releaseStale(floorId: string, by: Who, accountId: string | undefined, body: { env?: unknown; base?: unknown; target?: unknown; reason?: unknown }, stale: string | undefined): DataImpactApproval | [number, string] {
+    if (!this.mayApprove(accountId)) return [403, `You don't have the ${PERMISSION} permission. Who has it: ${this.approvers()}`];
+    const env = body.env === undefined ? ENV_LIVE : cleanEnv(body.env);
+    if (!env) return [400, 'Which environment? (live-preview, candidate:DC-n or external:<branch>)'];
+    const held = this.guard.store.get(floorId).holds[env];
+    if (!held) return [409, env === ENV_LIVE ? 'Nothing is held on the live preview any more' : `Nothing is held for ${env} any more`];
+    if (body.base !== held.base || body.target !== held.target) return [409, `The hold changed: it is now ${short(held.base)} → ${short(held.target)}. Look again`];
+    if (!stale) return [409, 'This hold still guards a change that hasn’t reached the live preview: approve it with a recovery step (a database dump, or no data to keep)'];
+    const reason = typeof body.reason === 'string' ? fixText(body.reason).replace(/\s+/g, ' ').trim().slice(0, 500) : '';
+    if (reason.length < 3) return [400, 'Say why (a reason is required)'];
+    return this.guard.record(floorId, { env, base: held.base, target: held.target, recovery: { kind: 'stale', statement: stale }, reason, by: { name: by.name, ...(by.id ? { id: by.id } : {}) } });
   }
 
   /** Who besides (or instead of) the office admins holds the permission; admins only, audited. */

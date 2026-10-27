@@ -4,7 +4,8 @@
 // pins that commit, then [Merge @abc1234 into main] opens the confirm step (./confirm.ts) and merges exactly the
 // reviewed commit, even if the branch moved on (newer commits stay for a later review). Notes-only branches
 // (journal, docs) are hidden behind "Show notes branches", and merge as notes in one confirm. After Approve the
-// row is redrawn from the server's answer at once. Admins see the buttons; everyone sees the state. Asked when
+// row is redrawn from the server's answer at once, in every merge panel on the page. Any of the branch's commits
+// can be approved, not only its head (the one an agent asked for is chosen first). Admins see the buttons; everyone sees the state. Asked when
 // the banner refreshes or a merge is done, never on a timer. Hidden for projects on GitHub.
 
 import { dcWords, filesWords, mergeStateWords, type LocalMergeBranch, type LocalMergeView } from '../../../shared/local-merge';
@@ -58,14 +59,27 @@ export function localMergePanel(): LocalMergePanel {
         notesBtn.addEventListener('click', () => void openMergeConfirm({ floor: v.floor, branch: b.branch, sha: approved ? r!.sha : b.sha, opener: notesBtn, reviewFirst: true, onReviewed: put, onDone: () => refresh() }));
         btns.push(notesBtn);
       } else {
-        if (!reviewedHead) {
-          const approve = h('button.btn', { type: 'button', 'data-act': 'approve', title: `Your review of exactly @${short(b.sha)}: Merge then takes that commit, never a newer one` }, `Approve at @${short(b.sha)}`) as HTMLButtonElement;
-          approve.addEventListener('click', () => void review(approve, v, b, 'approve'));
-          btns.push(approve);
-        }
+        // Which commit to review: the head, or an earlier one (the one an agent asked for, under a newer journal commit).
+        let at0 = b.asked && b.asked.sha !== b.sha && !(approved && r!.sha === b.asked.sha) ? b.asked.sha : b.sha;
+        const approve = h('button.btn', { type: 'button', 'data-act': 'approve' }) as HTMLButtonElement;
+        const label = () => {
+          approve.textContent = `Approve at @${short(at0)}`;
+          approve.title = `Your review of exactly @${short(at0)}: Merge then takes that commit, never a newer one`;
+          approve.dataset.sha = at0;
+          approve.hidden = approved && r!.sha === at0;
+        };
+        label();
+        approve.addEventListener('click', () => void review(approve, v, b, 'approve', at0));
+        if (b.commits?.length) {
+          const opt = (sha: string, subject: string, head = false) => h('option', { value: sha, selected: sha === at0 }, `@${short(sha)}${head ? ' (head)' : ''}${b.asked?.sha === sha ? ` (${b.asked.by} asked for it)` : ''} · ${subject.slice(0, 60)}`);
+          const pick = h('select', { 'data-act': 'pick-commit', 'aria-label': `Which commit of ${b.branch} to review` }, opt(b.sha, b.subject, true), ...b.commits.map((c) => opt(c.sha, c.subject))) as HTMLSelectElement;
+          pick.addEventListener('change', () => ((at0 = pick.value), label()));
+          btns.push(h('span.lm-older', {}, pick));
+        } else if (b.asked && b.asked.sha === b.sha) btns.push(h('small.lm-asked', {}, `${b.asked.by} asked to merge it`));
+        if (!reviewedHead || b.commits?.length) btns.push(approve);
         if (!r) {
           const changes = h('button.btn', { type: 'button', 'data-act': 'changes' }, 'Ask for changes') as HTMLButtonElement;
-          changes.addEventListener('click', () => void review(changes, v, b, 'changes'));
+          changes.addEventListener('click', () => void review(changes, v, b, 'changes', b.sha));
           btns.push(changes);
         }
         const at = approved ? r!.sha : b.sha;
@@ -86,18 +100,24 @@ export function localMergePanel(): LocalMergePanel {
   }
 
   /** Puts a row the server answered with into the view and redraws it at once (a look in flight is dropped). */
-  function put(row: LocalMergeBranch | undefined) {
-    if (!row || !view) return;
+  function apply(row: LocalMergeBranch) {
+    if (!view || !view.branches.some((x) => x.branch === row.branch)) return;
     pending++;
     view = { ...view, branches: view.branches.map((x) => (x.branch === row.branch ? row : x)) };
     draw();
   }
+  /** The same for every merge panel on the page (the Live app and Model tabs each have one), so none shows the old review. */
+  function put(row: LocalMergeBranch | undefined) {
+    if (!row) return;
+    apply(row);
+    window.dispatchEvent?.(new CustomEvent('mx:local-reviewed', { detail: { floor: view?.floor ?? store.floor, row, from: el } }));
+  }
 
-  async function review(btn: HTMLButtonElement, v: LocalMergeView, b: LocalMergeBranch, verdict: 'approve' | 'changes') {
+  async function review(btn: HTMLButtonElement, v: LocalMergeView, b: LocalMergeBranch, verdict: 'approve' | 'changes', sha: string) {
     btn.disabled = true;
     try {
-      const r = await lmPost<{ branch?: LocalMergeBranch }>('/api/local-merge/review', { floor: v.floor, branch: b.branch, sha: b.sha, verdict });
-      toast(verdict === 'approve' ? `Approved ${b.branch} at @${short(b.sha)}: Merge takes exactly that commit` : `Asked for changes on ${b.branch} at @${short(b.sha)}`);
+      const r = await lmPost<{ branch?: LocalMergeBranch }>('/api/local-merge/review', { floor: v.floor, branch: b.branch, sha, verdict });
+      toast(verdict === 'approve' ? `Approved ${b.branch} at @${short(sha)}: Merge takes exactly that commit` : `Asked for changes on ${b.branch} at @${short(sha)}`);
       if (r.branch) return put(r.branch);
     } catch (err) {
       toast((err as Error).message, 'warn');
@@ -109,7 +129,7 @@ export function localMergePanel(): LocalMergePanel {
     const floor = store.floor;
     if (!floor) return;
     const mine = ++pending;
-    fetch(`/api/local-merge?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' })
+    fetch(`/api/local-merge?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? (r.json() as Promise<LocalMergeView>) : null))
       .then((v) => {
         if (mine !== pending) return;
@@ -121,5 +141,10 @@ export function localMergePanel(): LocalMergePanel {
 
   // A merge made elsewhere (a Developer change receipt) moves main: look again.
   window.addEventListener?.('mx:local-merged', () => refresh());
+  // A review recorded by another panel (or a receipt's confirm step) on this project: the row the server answered with.
+  window.addEventListener?.('mx:local-reviewed', (e: Event) => {
+    const d = (e as CustomEvent<{ floor?: string; row?: LocalMergeBranch; from?: HTMLElement }>).detail;
+    if (d?.row && d.from !== el && d.floor === view?.floor) apply(d.row);
+  });
   return { el, refresh };
 }

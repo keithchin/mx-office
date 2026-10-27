@@ -17,6 +17,7 @@
 // stored: the four facts (dev-change-state.ts, dev-change-facts.ts), the revision strip and the check binding.
 // Pure: the page imports the types and the words.
 
+import type { MergeTargets } from './merge-target.js';
 import { sameRevision } from './testing/record.js';
 import type { ChangeFour } from './dev-change-facts.js';
 import type { ChangeStatus } from './dev-change-state.js';
@@ -361,6 +362,8 @@ export interface DevChangeView extends DevChange, ChangeStatus {
   aliases?: string[];
   /** What people said after trying it ("Looks right" / "Something's wrong"), each for the exact revision tried, oldest first. */
   reviews?: ChangeReview[];
+  /** A local-only project's receipt: the branches that may carry it and the commit it may merge (shared/merge-target.ts), for admins while it's on a candidate. */
+  mergeTargets?: MergeTargets;
 }
 
 /**
