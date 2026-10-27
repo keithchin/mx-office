@@ -1,0 +1,11 @@
+/* Where the code lives (repo-home-field.ts): four choices, one line of why each can't be picked. */
+#modal-root .nw-home { border-left: 0; border-right: 0; border-bottom: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; }
+#modal-root .nw-home legend { padding: 0; }
+#modal-root .nw-home-opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: var(--card); }
+#modal-root .nw-home-opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+#modal-root .nw-home-opt.off { cursor: default; opacity: 0.75; }
+#modal-root .nw-home-opt input { margin-top: 3px; accent-color: var(--accent); }
+#modal-root .nw-home-body { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+#modal-root .nw-home-tag { margin-left: 8px; font-size: 11px; font-weight: normal; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; }
+#modal-root .nw-home-why { font-size: 12px; color: var(--bad-ink); }
+#modal-root .nw-home-appid { margin-top: 10px; }

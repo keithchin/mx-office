@@ -160,9 +160,10 @@ test('in a browser: the autonomy step, the summary and the Team settings line, P
 
       // The summary before Create: the level, who, the approvals, spend set separately; ✕ and Esc give focus back.
       const rows: [string, string, string?][] = await page.evaluate((p) => (window as any).summary({ ...structuredClone(p), autonomy: { level: 2 } }), PLAN);
-      assert.deepEqual(rows.map((r) => r[0]), ['Project', 'Agent team autonomy', 'Still needs you', 'Spend', 'Team', 'Deployment']);
-      assert.equal(rows[1][1], '2 Guided · chosen by Alex Lee');
-      assert.match(rows[3][2]!, /budget level never changes what the team may do/);
+      // A new project's summary also says where the code lives (Code: repo-home-field.ts).
+      assert.deepEqual(rows.map((r) => r[0]), ['Project', 'Code', 'Agent team autonomy', 'Still needs you', 'Spend', 'Team', 'Deployment']);
+      assert.equal(rows[2][1], '2 Guided · chosen by Alex Lee');
+      assert.match(rows[4][2]!, /budget level never changes what the team may do/);
       await page.waitForFunction(() => document.activeElement?.id === 'nw-create-go', null, { timeout: 3000 });
       assert.ok(await page.$('.nw-modal .nw-x[aria-label="Close"]'), 'a ✕');
       await shot('summary');

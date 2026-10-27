@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: The full Settings page on the 1D view - you, workers (default worker, keep awake, restart safely, prompts), the team (autonomy, benching, cost caps), Jeff, notifications, budget, connections, deliverables, incidents, Studio, appearance and advanced - with a link to each section.
+description: The full Settings page on the 1D view - you, workers (default worker, keep awake, restart safely, prompts), the team (autonomy, benching, cost caps), Jeff, notifications, budget, connections, deliverables, incidents, Team Server, Studio, appearance and advanced - with a link to each section.
 weight: 13
 ---
 
@@ -21,6 +21,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 📄 **Documents** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
 | 🚨 **Incidents** | [section=incidents](/lite?tab=settings&section=incidents) | The detection rules and the dedupe window (admins edit them) |
 | 🧭 **Stuck detection** | [section=stuck](/lite?tab=settings&section=stuck) | On or off and the four thresholds of [stuck detection](stuck-detection.md) (admins edit them) |
+| ☁️ **Team Server** | [section=teamserver](/lite?tab=settings&section=teamserver) | Where the project's code lives in Mendix: its Portal app (with the link), the `teamserver` remote, when main last went there and **Push to Team Server now** (admins); for a local-only project, **Connect to Team Server…** (admins). See [On Mendix Team Server](../get-started/first-project.md#on-mendix-team-server) |
 | 🧱 **Studio** | [section=studio](/lite?tab=settings&section=studio) | Studio mode now, and Open in Studio Pro (admins) |
 | 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
 | 🛠️ **Advanced** | [section=advanced](/lite?tab=settings&section=advanced) | Workspace folder, the sky's clock, the office dog, where the settings files are |

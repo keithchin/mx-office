@@ -79,6 +79,7 @@ import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
 import { securityRoutes } from './security.js';
 import { pushCheckRoutes } from './push-check.js';
+import { teamServerRoutes } from './team-server.js';
 import { dataImpactRoutes } from './data-impact.js';
 import { csrfRoutes } from './csrf.js';
 
@@ -288,6 +289,8 @@ export const routes: readonly Route[] = [
   securityRoutes.act,
   pushCheckRoutes.view,
   pushCheckRoutes.reconcile,
+  teamServerRoutes.view,
+  teamServerRoutes.act,
   dataImpactRoutes.view,
   dataImpactRoutes.act,
   wizardRoutes.wizard,

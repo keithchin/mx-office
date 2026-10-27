@@ -16,6 +16,8 @@ import { testCredential } from './checks.js';
 import { changePassword, passwordView, releasePassword } from './password.js';
 import { applyAgentToken, dotFiles, readAll, resolveCredential } from './resolve.js';
 import { connectionsVault, officeSettings, openConnections, secretsHome, updateOfficeSettings } from './store.js';
+import { teamServerAt } from '../team-server/project.js';
+import { portalUrl } from '../../shared/team-server.js';
 import { pathsView } from './paths.js';
 import { sweepView } from '../worktree-sweep/index.js';
 import type { Cipher } from './vault.js';
@@ -86,7 +88,10 @@ export function connectionsView(ctx: Ctx): ConnectionsView {
     },
     credentials: CREDENTIAL_IDS.filter((id) => !CREDENTIAL_META[id].hidden).map((id) => credentialView(ctx, id)),
     importable: importable(ctx.cfg),
-    mendixFloors: [...ctx.floors.values()].map((f) => ({ id: f.id, name: f.def.name, dir: f.dir, on: !mendixOff.some((d) => same(d, f.dir)) })),
+    mendixFloors: [...ctx.floors.values()].map((f) => {
+      const ts = teamServerAt(f.dir);
+      return { id: f.id, name: f.def.name, dir: f.dir, on: !mendixOff.some((d) => same(d, f.dir)), ...(ts ? { teamServer: { projectId: ts.projectId, url: ts.url, portalUrl: portalUrl(ts.projectId) } } : {}) };
+    }),
     paths: pathsView(ctx),
     sweep: sweepView(),
     org: wizardConfig().org,

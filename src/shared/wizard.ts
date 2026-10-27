@@ -203,6 +203,13 @@ export interface ProjectPlan {
    * issue (a local file and the team's queue instead). A new project only; recorded in agent-office.project.json.
    */
   localOnly?: boolean;
+  /**
+   * On Mendix Team Server (shared/team-server.ts, server/wizard/team-server-step.ts): the setup creates the app in the
+   * Mendix Portal with the Projects API (or links the existing app `projectId` the person pasted), and the project's
+   * main goes to its Team Server repository. Without `mirror` the project is local only too (no GitHub at all); with
+   * it, GitHub carries the pull requests and the office keeps the two mains equal. A new project only.
+   */
+  teamServer?: { mirror: boolean; projectId?: string };
   /** The person's own description asked for a slice first (from the draft): Discovery picks it at CAC-1. */
   sliceAsked?: boolean;
   /**
@@ -342,6 +349,8 @@ export interface SetupView {
   head?: { branch: string; sha: string };
   /** Created with "Keep this project off GitHub" (agent-office.project.json): the Overview says "Local only: not on GitHub". */
   localOnly?: boolean;
+  /** On Mendix Team Server (agent-office.project.json `teamServer`, server/team-server/): the Overview shows the Portal app and the remote. */
+  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean };
   /** Where the project is, as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
   stage?: StageEvidence;
   /** What the team's working branch has that main hasn't, per stage: shown as "on the team's branch (not merged)" next to main's (server/wizard/branch-gates.ts). */

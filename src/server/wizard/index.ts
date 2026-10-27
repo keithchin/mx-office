@@ -33,6 +33,7 @@ import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
 import { asksForSlice } from '../../shared/discovery-migration.js';
 import { localOnlyAt } from '../local-only.js';
+import { withTeamServerView } from '../team-server/project.js';
 import { withSignoffs } from '../signoff/index.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
@@ -216,6 +217,9 @@ export class Wizard {
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
     if (had && this.book.isRunning(id)) return this.book.view(had);
+    // Team Server (team-server-step.ts) needs the Mendix token; an offline test office never calls the Portal.
+    if (plan.teamServer && this.cfg.offlineDir) return 'An offline test office never calls the Mendix Portal: pick GitHub or Local only';
+    if (plan.teamServer && !credential('mendix')) return 'There’s no Mendix token in 🔌 Connections, so the office can’t create the app in the Mendix Portal: add one (mx:app:create and Team Server scopes), or pick GitHub or Local only';
     if (plan.kind === 'new' && !plan.localOnly && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
@@ -272,7 +276,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom, adopt: job.plan.adopt, autonomy: job.plan.autonomy }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, teamServer: job.plan.teamServer, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom, adopt: job.plan.adopt, autonomy: job.plan.autonomy }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -295,7 +299,7 @@ export class Wizard {
     // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
     // So are the sign-offs given in the office and not yet recorded (server/signoff/): a small file kept in memory.
     // And whether the team still waits for its first task (first-task.ts): read now, never shared from before.
-    return this.sharedSetup(floor, now).then((v) => withFirstTask(this.ctx, floor, this.jobForFloor(floor), withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v)));
+    return this.sharedSetup(floor, now).then((v) => withFirstTask(this.ctx, floor, this.jobForFloor(floor), withSignoffs(this.ctx.cfg.dataDir, floor.id, withTeamServerView(floor.dir, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v))));
   }
 
   private sharedSetup(floor: Floor, now: number): Promise<SetupView> {

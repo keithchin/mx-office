@@ -25,7 +25,8 @@ async function mendixOf(dir: string): Promise<DeletePlan['mendix']> {
   let appId: string | undefined;
   try {
     const j = JSON.parse(await readFile(path.join(dir, 'agent-office.project.json'), 'utf8')) as Record<string, unknown>;
-    const v = j.sprintrAppId ?? j.mendixAppId ?? j.appId;
+    // A project on Team Server records its Portal app as teamServer.projectId (team-server/project.ts).
+    const v = (j.teamServer as { projectId?: unknown } | undefined)?.projectId ?? j.sprintrAppId ?? j.mendixAppId ?? j.appId;
     if (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)) appId = v.toLowerCase();
   } catch {
     // none recorded

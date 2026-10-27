@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **New projects can live on Mendix Team Server.** ✨ New project › Advanced › *Where the code lives* offers **Mendix Team Server** (the default when 🔌 Connections has a Mendix token), **Mendix Team Server + GitHub mirror**, **GitHub only** and **Local only**; a choice the office can't make says why, with a Connections link. Team Server creates the app in the Mendix Portal (Projects API, its job followed to the app's id; an existing App ID can be linked instead), makes the model with the picked Studio Pro bound to that app as `App.mpr`, and pushes main to its Team Server repository, checked with `ls-remote`. Afterwards the office pushes main there after every merge (fast-forward only, never forced) and brings Studio Pro commits back to main. The Mendix token reaches git per command only: never in a URL, `.git/config`, a process's arguments, a log or the audit log. Every create, link, push and pull is audited (`team-server.*`). The Portal app is never deleted by Cancel & undo or Delete project.
+- **Connect to Team Server** for an existing local-only project: ⚙️ Settings › ☁️ Team Server creates the Portal app (or links a pasted App ID), adds the `teamserver` remote and pushes main in one commit that keeps the history, after a confirm step that says so. The same page, the Overview and Connections › Mendix show the Portal app's link and the remote.
+- **🔌 Connections › Folders › mxcli**: the office's own mxcli (the one first-run setup picks) can now be set and cleared there, audited. The live apps, Testing and the model reader take it first, and *Needs a newer mxcli* points at it (it named a *Settings › Connections › Paths › mxcli* that never existed).
 
 ## 2026-10-27 · release 79 (`1913d6a`)
 

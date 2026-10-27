@@ -3,6 +3,7 @@
 
 import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
 import { cleanAppId } from './mendix-app.js';
+import { cleanProjectId } from '../../shared/team-server.js';
 import { isPortfolioId } from '../../shared/portfolios.js';
 import { cleanPlanDesign } from './design-step.js';
 import { cleanPlanAdopt } from '../../shared/adopt-from.js';
@@ -84,10 +85,22 @@ export function cleanPlan(raw: unknown, versions: string[], org: string, teams?:
     ...(isPortfolioId(r.portfolio) && cleanPlanAdopt(r.adopt) ? { adopt: cleanPlanAdopt(r.adopt) } : {}),
     // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
     ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
+    // On Mendix Team Server (shared/team-server.ts): a new project only; Team Server alone is also local only (no GitHub).
+    ...(kind === 'new' ? cleanTeamServer(r.teamServer) : {}),
     ...(teamFrom ? { teamFrom } : {}),
     // The autonomy step's answer (level, acknowledgement, by stage); Wizard.start checks it and records who and when.
     ...(cleanAsk(r.autonomy) ? { autonomy: cleanAsk(r.autonomy) } : {}),
   };
+}
+
+/** ProjectPlan.teamServer, cleaned: the mirror flag and an existing Portal app's id, if one was pasted. Team Server without the mirror is local only. */
+function cleanTeamServer(v: unknown): { teamServer?: ProjectPlan['teamServer']; localOnly?: true } {
+  if (!v || typeof v !== 'object') return {};
+  const r = v as Record<string, unknown>;
+  const id = cleanProjectId(r.projectId);
+  const teamServer = { mirror: r.mirror === true, ...(id ? { projectId: id } : {}) };
+  // A mirror is on GitHub, whatever else the page sent.
+  return teamServer.mirror ? { teamServer, localOnly: undefined } : { teamServer, localOnly: true };
 }
 
 const READS: ReadState[] = ['text', 'extracted', 'given', 'read', 'not-read'];

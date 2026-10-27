@@ -22,6 +22,7 @@ import { dcsOf, kindAt } from './describe.js';
 import { tellMainNow } from './tell.js';
 import { settleMergeAsks } from './asks.js';
 import { refusalWords } from '../../shared/merge-refusal.js';
+import { originNews } from '../floor-sync/bus.js';
 
 /** Merges the reviewed commit `sha` of the branch into the local default branch. Never a force. */
 export async function mergeLocal(
@@ -88,6 +89,8 @@ export async function mergeLocal(
   const cur = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], floor.dir).catch(() => '')).trim();
   const dirty = (await git(['status', '--porcelain', '--untracked-files=no'], floor.dir).catch(() => 'x')).trim();
   if (cur === main && !dirty) await git(['merge', '--ff-only', `origin/${main}`], floor.dir).catch(() => '');
+  // origin's main moved: whoever follows it hears (a project on Team Server pushes it there soon: team-server/).
+  originNews(floor.dir);
   book.merges.push({ branch: r.branch, sha: c.full, merge, into: main, by: by.name, at: now(), ...(newer ? { newer } : {}) });
   saveBook(ctx.cfg.dataDir, floor.id, book);
   const owner = graph.branches.find((b) => b.name === r.branch)?.worker;

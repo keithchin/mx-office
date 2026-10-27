@@ -8,6 +8,7 @@ import { HELD_LABEL, levelPreview } from '../../../../shared/roster/autonomy-ste
 import { SHAPES, shapeForRoles } from '../../../../shared/roster/coverage';
 import { usd } from '../../../../shared/budget/money';
 import { ENTRY_MODE_INFO, type ProjectPlan } from '../../../../shared/wizard';
+import { REPO_HOME_INFO, homeOf } from '../../../../shared/team-server';
 import { h } from '../../dom';
 import { openDialog } from './dialog';
 
@@ -25,6 +26,11 @@ export interface SummaryOpts {
 export function summaryRows(plan: ProjectPlan, me: string): [string, string, string?][] {
   const rows: [string, string, string?][] = [];
   rows.push(['Project', `${plan.owner}/${plan.name}`, `${ENTRY_MODE_INFO[plan.entry]?.label ?? plan.entry}${plan.description ? ` · ${plan.description}` : ''}`]);
+  if (plan.kind === 'new') {
+    const home = homeOf(plan);
+    const appId = plan.teamServer?.projectId;
+    rows.push(['Code', REPO_HOME_INFO[home].label, plan.teamServer ? (appId ? `Links the existing Mendix Portal app ${appId}, then pushes main to its Team Server repository.` : 'Creates the app in the Mendix Portal with this project’s name, then pushes main to its Team Server repository. The office never deletes that app.') : undefined]);
+  }
   const a = plan.autonomy;
   if (a) {
     const p = levelPreview(a.level, { autoPause: plan.budget?.autoPause });

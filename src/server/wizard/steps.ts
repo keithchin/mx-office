@@ -40,13 +40,13 @@ import { nextRecord } from '../toolkit-pin/record.js';
 import { withPortfolio } from './portfolio-step.js';
 import { withTeamFrom } from './team-from.js';
 import { withAutonomy, type AutonomyDeps } from './autonomy-step.js';
+import { withTeamServer, type TeamServerStepDeps } from './team-server-step.js';
 
 export interface FloorRef {
   id: string;
   dir: string;
 }
-
-export interface SetupDeps extends AutonomyDeps {
+export interface SetupDeps extends AutonomyDeps, TeamServerStepDeps {
   cfg: WizardConfig;
   /** The Mendix token from 🔌 Connections, for the Mendix Projects API (Phase B); never put in a worker's environment. */
   mendixToken?(): string | undefined;
@@ -180,7 +180,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     if (r.code !== 0) throw new Error(`bin/verify-model.sh exit ${r.code}, so the pre-commit hook would refuse the new app: ${r.tail.slice(-2).join(' ').slice(0, 300)}. Fix the cause and Retry`);
   };
 
-  return withAutonomy(deps, withTeamFrom(deps, withSourceFolder(withLocalOnly(deps, withPortfolio(deps, {
+  return withAutonomy(deps, withTeamFrom(deps, withSourceFolder(withTeamServer(deps, withLocalOnly(deps, withPortfolio(deps, {
     async repo(job, io) {
       const repo = repoOf(job);
       if (job.plan.kind === 'change') return { status: 'skipped', detail: `existing repository ${repo}` };
@@ -539,7 +539,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       if (err && !/already on the queue/i.test(err)) throw new Error(err);
       return { status: err ? 'skipped' : 'done', detail: err ?? `${job.discoveryFile ?? `#${job.issue}`} on ${job.plan.discovery.model}` };
     },
-  })))));
+  }))))));
 }
 
 /** Who works the Discovery issue: whoever covers Analysis on the plan's shape (the Chief Analyst, or the Solo Lead). */

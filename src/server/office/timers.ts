@@ -26,6 +26,7 @@ import { startLiveWarm } from '../liveapp/warm.js';
 import { startAgentApps } from '../agent-app/office.js';
 import { startHeldQueue } from '../dev-changes/stuck-hold.js';
 import { startAgentProcs } from '../agent-procs/index.js';
+import { startTeamServer } from '../team-server/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -104,6 +105,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopHeldQueue = startHeldQueue(ctx);
   // What an earlier agent session left running (its background shells), stopped by the office's own recorded pids (agent-procs/).
   const stopAgentProcs = startAgentProcs(ctx);
+  // Projects on Mendix Team Server: main pushed there soon after it moves, and on a slow clock (team-server/).
+  const stopTeamServer = startTeamServer(ctx);
 
   return () => {
     stopRuns();
@@ -131,6 +134,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopAgentApps();
     stopHeldQueue();
     stopAgentProcs();
+    stopTeamServer();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

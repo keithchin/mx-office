@@ -52,7 +52,7 @@ History explains why something exists; it isn't a promise about what the code do
 ## Open questions
 
 - How reliably does `--resume` bring back a Windows agent after the provider's session expired? The fallback starts fresh with only a toast. (Not verified.)
-- What should the review gate and the pushes check do on Team Server or other non-GitHub remotes? No code path exists; behaviour is untested.
+- What should the review gate and the pushes check do on Team Server or other non-GitHub remotes? The office pushes main to Team Server (`team-server/`), but the review gate and the push watch read only `origin`: a commit made in Studio Pro reaches main through the Team Server sync and is then seen as a push to main without review.
 - Power-loss durability is explicitly not claimed. Is that acceptable for the answer and hand-off stores?
 - Does an expired held message settle the hand-off it carried? (Not re-checked in this assessment.)
 - Should a Solo team's review burden be stated in the wizard and counted by the gate? (See [Proposed simplifications](proposals.md#review-safeguards).)

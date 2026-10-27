@@ -21,6 +21,7 @@ import { stuckPart } from './stuck';
 import { autonomyPolicyPart } from './autonomy-policy';
 import { portfolioPart } from './portfolio';
 import { dangerPart } from '../project-delete/danger';
+import { teamServerPart } from '../team-server/settings';
 import { rerunSetupSetting } from '../../first-run/rerun';
 
 /** Phone alerts: where each phone's own settings are (the team phone's ⚙, the phone version's). */
@@ -50,6 +51,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   incidents: () => incidentsPart(),
   stuck: () => stuckPart(),
   portfolio: () => portfolioPart(),
+  teamserver: () => teamServerPart(),
   studio: () => studioPart(),
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),

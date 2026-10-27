@@ -48,6 +48,12 @@ export interface JobState {
    * when they make something: what Cancel & undo may delete. A setup saved before it has none.
    */
   provenance?: SetupProvenance;
+  /**
+   * The Mendix Portal app of a project on Team Server (wizard/team-server-step.ts), saved as it goes: when the create
+   * was sent, the Projects API job to follow, and the app's id once it's made (or the id the person pasted). Cancel &
+   * undo never deletes it.
+   */
+  teamServer?: { sentAt?: number; jobId?: string; projectId?: string; how?: 'made' | 'linked'; unsure?: boolean };
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;
@@ -67,6 +73,8 @@ export interface StepIO {
   log(line: string): void;
   /** The setup run's operation records (the job book gives them; a step run on its own keeps them in memory). */
   ops?: JobOps;
+  /** Saves the job now, mid-step (the Team Server step records the Portal's job before it waits on it). */
+  save?(): void;
 }
 
 export type StepImpl = (job: JobState, io: StepIO) => Promise<StepResult>;
@@ -361,7 +369,7 @@ export class JobBook {
     };
     let r: StepResult;
     try {
-      r = await impl(job, { ...io, ops: this.ops.handle(job, ctx.attempt) });
+      r = await impl(job, { ...io, ops: this.ops.handle(job, ctx.attempt), save: () => this.save(job) });
     } catch (err) {
       clearInterval(watch);
       const why = this.redact((err as Error).message || String(err));

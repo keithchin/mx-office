@@ -14,14 +14,14 @@ import { briefApi } from './api';
 import { repoFrom, repoText } from '../../../../shared/brief';
 import type { Flow } from './index';
 import { portfolioField } from './portfolio-field';
-import { localOnlyField } from './local-only-field';
+import { homeProblem, repoHomeField } from './repo-home-field';
 import { designField } from './design-field';
 
 /** The intake questions the brief answers (shared/brief-map.ts) and the ones the flow decides itself. */
 export const FROM_BRIEF = [2, 4, 5, 8];
 export const DERIVED = [1, 9, 11];
 
-export type FieldId = 'owner' | 'name' | 'repo' | 'mendix' | 'byhand';
+export type FieldId = 'owner' | 'name' | 'repo' | 'mendix' | 'byhand' | 'home';
 
 /** What's wrong with the plan, field by field (empty when it can be created). */
 export function planProblems(flow: Flow): Partial<Record<FieldId, string>> {
@@ -32,6 +32,8 @@ export function planProblems(flow: Flow): Partial<Record<FieldId, string>> {
     if (n) out.name = n;
     const o = ownerProblem(d.owner);
     if (o) out.owner = o;
+    const home = homeProblem(d, flow.info);
+    if (home) out.home = home;
     if (!flow.info.offline && !flow.info.adminToken.configured && !d.createdByHand && !d.localOnly) out.byhand = 'No admin token: create the repository on GitHub yourself and tick this, or save a token';
   } else if (!d.name || !d.owner) out.repo = 'Pick the app’s repository (owner/name)';
   if (!d.mendix) out.mendix = flow.info.mendixVersions.length ? 'Pick a Studio Pro version' : 'No Studio Pro is installed on the office’s machine';
@@ -83,8 +85,8 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
           field('desc', 'Description', text(d.description, (v) => ((d.description = v), flow.touched.add('description')), { placeholder: 'One line about what it is for' })),
         ),
       );
-      // Off GitHub (local-only-field.ts): no repository there, so no admin token either.
-      parts.push(localOnlyField(d, redraw));
+      // Where the code lives (repo-home-field.ts): Team Server, Team Server + GitHub, GitHub, or local only (no admin token needed off GitHub).
+      parts.push(repoHomeField(d, flow.info, redraw, err('home')));
       if (flow.info.offline) parts.push(h('p.nw-note', {}, '🧪 Offline test office: the repository is made as a local bare git repository, and issues as files. Nothing reaches GitHub.'));
       else if (!flow.info.adminToken.configured && !d.localOnly) parts.push(adminToken(flow, redraw, err('byhand')));
     } else {
