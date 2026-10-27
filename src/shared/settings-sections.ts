@@ -28,6 +28,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'deliverables', icon: '📄', label: 'Documents', blurb: 'What the teams make before their stage: early drafts while the Chief Analyst is on Stages 0–2.', floor: true },
   { id: 'incidents', icon: '🚨', label: 'Incidents', blurb: 'The detection rules that open an incident by themselves, and how long one counts again before a new one opens.' },
   { id: 'stuck', icon: '🧭', label: 'Stuck detection', blurb: 'Tells you through Needs you when work is stuck: a pull request nobody moves, a decision waiting on you, a test failing for days, agents busy with nothing landing. On by default; admins set the thresholds, each change audited.' },
+  { id: 'teamserver', icon: '☁️', label: 'Team Server', blurb: 'Where this project’s code lives in Mendix: its Portal app and Team Server remote, when main last went there and Push now; or Connect to Team Server for a local-only project. Admins change it.', floor: true },
   { id: 'studio', icon: '🧱', label: 'Studio', blurb: 'This project’s Mendix model in Studio Pro on the office’s computer, and Studio mode (the agents’ mxcli writes paused while it’s open).', floor: true },
   { id: 'appearance', icon: '🎨', label: 'Appearance', blurb: 'The flat views’ color theme (yours), and the building’s holiday theme and map (everyone’s).' },
   { id: 'advanced', icon: '🛠️', label: 'Advanced', blurb: 'Where new projects are cloned, the sky’s clock, the office dog, and the office’s settings files.' },

@@ -120,7 +120,8 @@ export interface AppRun {
  * folder of its own). Says how it was made; throws when there was no way to, or no .mpr came of it.
  */
 export async function createApp(cfg: WizardConfig, plan: ProjectPlan, dir: string, r: AppRun): Promise<string> {
-  const name = appNameOf(plan.name);
+  // A project on Team Server names its model App.mpr, as Team Server's template does (platform-link.md trap 6).
+  const name = plan.teamServer ? 'App' : appNameOf(plan.name);
   const mx = mxPath(cfg, plan.mendix);
   let how: string;
   if (existsSync(mx)) {

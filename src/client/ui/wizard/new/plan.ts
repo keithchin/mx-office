@@ -136,7 +136,10 @@ export function planView(flow: Flow) {
     if (autonomy.problem()) return (autonomy.focus(), flow.say(autonomy.problem()!));
     if (!(await team.confirm(btn))) return flow.say('Not created: the agents stay where they are');
     // Ready to create: the summary, with the autonomy level and who chose it (create-summary.ts).
-    if (!(await createSummary({ plan: flow.plan, me: flow.me, host: el, opener: btn, changeAutonomy: () => autonomy.focus() }))) return;
+    // With the Claude sign-in hiring the team runs on, looked at again now (server/wizard/claude-signin.ts).
+    const recheck = () => wizardApi.info().then((i) => (flow.info.claudeSignIn = i.claudeSignIn));
+    await recheck().catch(() => undefined);
+    if (!(await createSummary({ plan: flow.plan, me: flow.me, host: el, opener: btn, changeAutonomy: () => autonomy.focus(), signIn: flow.info.claudeSignIn, recheck, net: flow.net }))) return;
     creating = true;
     btn.disabled = true;
     const p = flow.plan;

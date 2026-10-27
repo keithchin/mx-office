@@ -131,7 +131,7 @@ export function linuxMxbuildMessage(found: { mxbuild?: string }, pick: MxbuildPi
   const mac = platform === 'darwin';
   const parts = [`mxcli picked a Linux mxbuild${found.mxbuild ? ` (${found.mxbuild})` : ''}, which can't run on ${mac ? 'macOS' : 'Windows'}: the Mendix CDN only publishes Linux mxbuild.`];
   parts.push(`Fix: install ${ver} on the office's computer${where}, or set the mxbuild path (MXBUILD_PATH in the project's .claude/toolkit.env, pointing at ${mac ? 'Contents/modeler/mxbuild inside the Studio Pro app' : "Studio Pro's modeler\\mxbuild.exe"}).`);
-  if (pick.path && flagSupported === false) parts.push(`This mxcli (${mxcli}) is too old to be given the mxbuild path (--mxbuild-path): pick a newer mxcli in ☰ → 🚀 First-run setup, or set AGENT_OFFICE_LIVE_MXCLI.`);
+  if (pick.path && flagSupported === false) parts.push(`This mxcli (${mxcli}) is too old to be given the mxbuild path (--mxbuild-path): pick a newer mxcli in 🔌 Connections › Folders › mxcli (or ☰ → 🚀 First-run setup).`);
   for (const s of pick.skipped) parts.push(`(${s}.)`);
   return parts.join(' ');
 }

@@ -19,6 +19,7 @@ import { applyShape, rolesPicker, type WithShapes } from '../team-shape';
 import { advancedPanel } from './advanced';
 import { migrationCap } from './migration-cap';
 import { defaultLocalOnly } from './local-only-field';
+import { defaultHome } from './repo-home-field';
 import { icon } from './parts';
 import { teamFromPanel } from './team-from';
 import type { Flow } from './index';
@@ -86,8 +87,9 @@ export function teamCard(flow: Flow) {
       if (est) cache.set(key, est);
     }
     if (!flow.plan.customTeam) pick(chosen?.shape ?? rec.shape, chosen?.level ?? rec.level);
-    // Off GitHub by default for a migration with a source folder (local-only-field.ts).
+    // Where the code lives (repo-home-field.ts): Team Server when the office has a Mendix token, else a private GitHub repository.
     defaultLocalOnly(flow.plan, flow.draft);
+    defaultHome(flow.plan, flow.info);
     draw();
   }
 

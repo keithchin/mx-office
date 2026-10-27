@@ -88,7 +88,7 @@ export class ModelService {
   /** Runs mxcli with `args(mpr)` on commit `sha`, from a work folder at that commit. */
   private async mxAt(floor: GraphFloor, sha: string, args: (mpr: string) => string[]): Promise<string> {
     const mx = this.mx;
-    if (!mx) throw new Error('mxcli isn\'t on this machine (set AGENT_OFFICE_LIVE_MXCLI or AGENT_OFFICE_MXCLI)');
+    if (!mx) throw new Error('mxcli isn\'t on this machine (pick it in Connections › Folders › mxcli, or set AGENT_OFFICE_MXCLI)');
     const files = await this.filesAt(floor, sha);
     return this.work.use(this.units.blobs(floor.dir), sha, files, (mpr, cwd) => mx(args(mpr), { cwd }));
   }

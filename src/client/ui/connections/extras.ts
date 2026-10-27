@@ -40,16 +40,18 @@ export function toolsSection(run: Run): HTMLElement {
 }
 
 const SOURCE: Record<PathState['source'], string> = { settings: 'picked here', env: 'from AGENT_OFFICE_TOOLKIT_DIR', default: 'the default', 'command line': 'from --projects / AGENT_OFFICE_PROJECTS' };
+const MXCLI_SOURCE: Record<PathState['source'], string> = { ...SOURCE, env: 'from AGENT_OFFICE_MXCLI', default: 'where the workspace keeps it' };
 
-function pathRow(label: string, which: 'projectsDir' | 'toolkitDir', s: PathState, note: string, run: Run): HTMLElement {
-  const input = h('input', { type: 'text', value: s.dir, spellcheck: 'false', autocomplete: 'off', 'aria-label': label }) as HTMLInputElement;
+function pathRow(label: string, which: 'projectsDir' | 'toolkitDir' | 'mxcli', s: PathState, note: string, run: Run): HTMLElement {
+  const mx = which === 'mxcli';
+  const input = h('input', { type: 'text', value: s.dir, spellcheck: 'false', autocomplete: 'off', 'aria-label': label, ...(mx ? { placeholder: 'C:\\Tools\\mxcli\\mxcli.exe' } : {}) }) as HTMLInputElement;
   const save = () => void run(() => connectionsApi.path(which, input.value), `${label} saved`);
   input.addEventListener('keydown', (e) => e.key === 'Enter' && save());
   return h(
     'div.cx-path',
-    {},
-    h('p.cx-sub', {}, h('b', {}, label), ` (${SOURCE[s.source]})`),
-    h('div.cx-two', {}, input, h('button.btn.primary', { type: 'button', onclick: save }, 'Save'), s.source === 'settings' ? h('button.btn', { type: 'button', onclick: () => void run(() => connectionsApi.path(which, ''), `${label} back to the default`) }, 'Default') : null),
+    { id: `cx-path-${which}` },
+    h('p.cx-sub', {}, h('b', {}, label), s.dir || !mx ? ` (${(mx ? MXCLI_SOURCE : SOURCE)[s.source]})` : ''),
+    h('div.cx-two', {}, input, h('button.btn.primary', { type: 'button', onclick: save }, 'Save'), s.source === 'settings' ? h('button.btn', { type: 'button', onclick: () => void run(() => connectionsApi.path(which, ''), mx ? 'mxcli path cleared' : `${label} back to the default`) }, mx ? 'Clear' : 'Default') : null),
     s.problem ? h('p.cx-warn', {}, `⚠️ ${s.problem}`) : h('p.cx-note', {}, `✅ ${note}`),
   );
 }
@@ -61,6 +63,8 @@ export function pathsSection(view: ConnectionsView, run: Run): HTMLElement {
     h('div.cx-head', {}, h('span.cx-icon', { 'aria-hidden': 'true' }, '📁'), h('h4', {}, 'Folders')),
     pathRow('Projects folder', 'projectsDir', view.paths.projectsDir, 'New projects are cloned into <folder>/<owner>/<repo>.', run),
     pathRow('Toolkit folder', 'toolkitDir', view.paths.toolkitDir, 'The mxcli-project-toolkit clone: the wizard runs its scripts, the Playbooks point at its skills.', run),
+    // A view from an older office has no mxcli row.
+    view.paths.mxcli ? pathRow('mxcli', 'mxcli', view.paths.mxcli, 'The office’s own mxcli: live apps, microflow tests, the model reader and new apps run it. Beats AGENT_OFFICE_MXCLI and AGENT_OFFICE_LIVE_MXCLI; Clear goes back to them.', run) : null,
   );
 }
 

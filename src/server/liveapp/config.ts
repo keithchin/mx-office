@@ -5,10 +5,11 @@
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { officeSettings } from '../connections/store.js';
 import { officeMxcli } from '../wizard/config.js';
 
 export interface LiveAppConfig {
-  /** The mxcli to run (a name on PATH, or a path): AGENT_OFFICE_LIVE_MXCLI, live-app.json, else the office's own (wizard/config.ts officeMxcli), else `mxcli` on PATH. */
+  /** The mxcli to run (a name on PATH, or a path): the one picked in 🔌 Connections › Folders › mxcli (or first-run setup), else AGENT_OFFICE_LIVE_MXCLI, live-app.json, else the rest of the office's own (wizard/config.ts officeMxcli: AGENT_OFFICE_MXCLI, the workspace's), else `mxcli` on PATH. */
   mxcli: string;
   /** The ports apps may take, both ends included. Each app needs three: the app's, its admin API's and mxbuild's. */
   ports: { from: number; to: number };
@@ -49,7 +50,8 @@ const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v
 /**
  * The live apps' settings: AGENT_OFFICE_LIVE_* from `env`, then `live-app.json` in the office's data
  * folder ({ "mxcli", "ports": "8110-8199", "dbHost": "127.0.0.1:5432", "dbUser", "dbPassword", "pollSeconds", "hotReload" }).
- * With no mxcli named there, the office's own (first-run setup's, AGENT_OFFICE_MXCLI, the workspace's under `home`)
+ * mxcli is the one picked in 🔌 Connections › Folders › mxcli first (the office's one setting for it); with none there, AGENT_OFFICE_LIVE_MXCLI,
+ * live-app.json, then the office's own (AGENT_OFFICE_MXCLI, the workspace's under `home`)
  * before a bare `mxcli` on PATH, so how the office was started never changes which mxcli runs the apps.
  */
 export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.env, home = os.homedir()): LiveAppConfig {
@@ -64,7 +66,8 @@ export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.
   const [host, port] = splitHost(hostPort, d.db.port);
   const pollS = num(env.AGENT_OFFICE_LIVE_POLL_SECONDS) ?? num(file.pollSeconds);
   return {
-    mxcli: text(env.AGENT_OFFICE_LIVE_MXCLI) ?? text(file.mxcli) ?? officeMxcli(env, home)?.path ?? d.mxcli,
+    // The saved setting first, as officeMxcli has it: what an admin picks in Connections is what runs, whatever the office was started with.
+    mxcli: text(officeSettings().mxcliPath) ?? text(env.AGENT_OFFICE_LIVE_MXCLI) ?? text(file.mxcli) ?? officeMxcli(env, home)?.path ?? d.mxcli,
     ports: parseRange(env.AGENT_OFFICE_LIVE_PORTS) ?? parseRange(text(file.ports)) ?? d.ports,
     db: {
       host,

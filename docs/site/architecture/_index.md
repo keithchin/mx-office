@@ -34,7 +34,7 @@ It does two different jobs, and it helps to keep them apart:
 | **Agent runtimes** (`claude`, `codex`, … each in its own terminal) | Their session and transcript files, tool use and their own permission prompts (Claude Code's permission layer), commits in their worktree, `gh` calls (pull requests, merges) | Office records: they reach the office only through hooks and the `office-workers` CLI or MCP tools |
 | **mxcli-project-toolkit** (pinned per project) | The stage process P to 7, skills and agent definitions, `gate-check.sh`, `init-project.sh`, `sync-project.sh`, the journey runner, project hooks | Office state. The office *reads* its outputs (gate-check output, the build plan, BUILD-LOG, reports) |
 | **mxcli** | Reading and changing the Mendix model, `run --local`, `test`, `lint`, `report`, `theme` | Orchestration |
-| **External services** | GitHub (repositories, pull requests, checks, merges, comments), Mendix (token only; there is no Team Server pull-request path), the Claude API or a gateway, Postgres for the local apps, Teams webhooks, web push, Dev Tunnels or Cloudflare | Office state |
+| **External services** | GitHub (repositories, pull requests, checks, merges, comments), Mendix (the Projects API creates Portal apps and the office pushes main to Team Server; there is no Team Server pull-request path), the Claude API or a gateway, Postgres for the local apps, Teams webhooks, web push, Dev Tunnels or Cloudflare | Office state |
 | **People** (the Project Manager is the office admin; members) | Decisions, sign-offs, acceptance, merges from the PR window, hands-on work in Studio Pro, settings, credentials | How agents behave at run time |
 
 Three consequences follow from this split:

@@ -12,7 +12,7 @@ weight: 2
 |---|---|---|
 | 🤖 **GitHub token for agents** | git and gh for the office and every worker (`GH_TOKEN` / `GITHUB_TOKEN`), including the office's `mx-office/review` status, which is why an agent could post that status too | Fine-grained, owner your organization, **All repositories**, **Contents**, **Issues**, **Pull requests**: read and write |
 | 🛡️ **GitHub admin token** | Creating project repositories from the ✨ New project wizard, nothing else | Fine-grained, owner your organization, **All repositories**, **Administration** and **Contents**: read and write |
-| 🧱 **Mendix personal access token** | The Mendix platform: creating the app (`mx:app:create`), later Team Server and deploys | Scopes `mx:app:create`; `mx:deployment:read` lets **Test** list your apps |
+| 🧱 **Mendix personal access token** | The Mendix platform: creating the app in the Portal (`mx:app:create`) and Team Server's git (clone, push) for New project › Mendix Team Server and Connect to Team Server; later deploys | Scopes `mx:app:create`, `mx:modelrepository:repo:read` and `mx:modelrepository:repo:write`; `mx:deployment:read` lets **Test** list your apps |
 | ✳️ **Anthropic API key (Claude Code)** | Only when the agents run Claude Code on an API key instead of a Claude account sign-in: workers get it as `ANTHROPIC_API_KEY`, billed to that API account (first-run setup's **Use an API key** saves it here). Leave it empty when you sign in with your account. [Claude for agents](#claude-for-agents) says which source agents use | An Anthropic Console API key (`sk-ant-api…`) |
 | ⚖️ **Jev key** | Jeff · Router asks Jev by TypeSafe AI instead of Haiku | A TypeSafe AI API key |
 | 💬 **Microsoft Teams webhook** | Where the office posts its [Teams cards](../integrations/teams-notifications.md) | The workflow's HTTP POST URL (saving it in ⚙️ Settings → Notifications puts it here too) |
@@ -91,6 +91,7 @@ Set the office's commit identity there: it goes into the workers' environment as
 
 - **Projects folder**: where new projects are cloned (`<folder>/<owner>/<repo>`); the same setting as ⚙️ Settings › 🛠️ Advanced › *Workspace folder*.
 - **Toolkit folder**: the mxcli-project-toolkit clone the wizard runs and the Playbooks point at. It must contain `bin/init-project.sh`. Picked here (or in the first-run setup, which can also clone it), it beats `AGENT_OFFICE_TOOLKIT_DIR`; **Default** goes back to the variable or the first of `~/mendix-toolkit`, `~/agent-spike/mendix-toolkit` and `~/agent-spike/mxcli-project-toolkit` that is there.
+- **mxcli**: the office's own mxcli (the same setting first-run setup's mxcli step saves). The live apps, microflow tests, the Model tab, walkthroughs and the wizard run it. Give the full path of `mxcli.exe` (or its folder) and **Save**; it beats `AGENT_OFFICE_MXCLI` and `AGENT_OFFICE_LIVE_MXCLI`, takes effect without a restart, and each change is in the Audit log. **Clear** goes back to those variables, then the workspace's `tools\mxcli`. This is the setting *Needs a newer mxcli* points at.
 
 ## Worktrees stay in the project
 

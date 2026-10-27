@@ -116,7 +116,7 @@ const reasonOf = (signal: AbortSignal | undefined) => (typeof signal?.reason ===
 /** Starts the app at `spec.commit` with a fresh database; resolves once it answers HTTP. */
 export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance> {
   const { cfg } = spec;
-  if (!spec.mxcli) throw new Error(`mxcli isn't installed on the office's machine (looked for "${cfg.mxcli}"; set AGENT_OFFICE_LIVE_MXCLI)`);
+  if (!spec.mxcli) throw new Error(`mxcli isn't installed on the office's machine (looked for "${cfg.mxcli}"; pick it in Connections › Folders › mxcli, or set AGENT_OFFICE_MXCLI)`);
   const mxcli = spec.mxcli;
   const psql = spec.psql ?? realPsql;
   const dir = instanceDir(spec.dataDir, spec.floorId, spec.purpose);

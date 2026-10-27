@@ -1,0 +1,10 @@
+/* ☁️ Team Server in Settings (card.ts). */
+.ts-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 6px 0 10px; font-size: 13px; }
+.ts-facts dt { color: var(--muted); }
+.ts-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ts-facts dd.bad { color: var(--bad-ink); }
+.ts-facts code { font-size: 12px; }
+.ts-small { font-size: 12px; color: var(--muted); }
+.ts-connect { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.ts-connect input { flex: 1 1 260px; min-width: 0; }
+.ts-confirm ul { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 6px; }

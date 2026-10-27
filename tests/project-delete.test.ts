@@ -217,6 +217,29 @@ test('Delete project with the folder and the repository: the archive is made bef
   assert.equal(o.calls.audits[0].deleteRepo, true);
 });
 
+test('a project on Team Server: the plan links its Portal app, and deleting everything never calls Mendix (the Portal app and Team Server stay)', async (t) => {
+  const o = office(t, { scopes: 'repo, delete_repo' });
+  const appId = '1a2b3c4d-1111-2222-3333-444455556666';
+  writeFileSync(path.join(o.dir, 'App.mpr'), 'model');
+  writeFileSync(path.join(o.dir, 'agent-office.project.json'), JSON.stringify({ teamServer: { projectId: appId, url: `https://git.api.mendix.com/${appId}.git`, remote: 'teamserver', how: 'made', by: 'Ada', at: 1 } }));
+  // Any HTTP call at all (the Projects API, Team Server) fails the test.
+  const realFetch = globalThis.fetch;
+  const asked: string[] = [];
+  globalThis.fetch = (async (u: unknown) => {
+    asked.push(String(u));
+    throw new Error('no HTTP in a delete');
+  }) as typeof fetch;
+  t.after(() => (globalThis.fetch = realFetch));
+  const plan = (await o.svc.plan('shop')) as DeletePlan;
+  assert.equal(plan.mendix?.portalUrl, `https://sprintr.home.mendix.com/link/project/${appId}`, 'the Portal app to clean up by hand, if wanted');
+  const job = await run(o, { mode: 'delete', deleteFolder: true, deleteRepo: true });
+  assert.equal(typeof job, 'object', String(job));
+  assert.equal((await o.svc.job('shop'))!.status, 'done');
+  assert.deepEqual(asked, [], 'nothing asked of Mendix');
+  assert.ok(o.calls.gh.every((a) => !a.join(' ').includes('mendix')), 'gh only ever about GitHub');
+  assert.deepEqual(o.calls.gh.filter((a) => a.includes('DELETE')), [['api', '-X', 'DELETE', 'repos/acme/shop']]);
+});
+
 test("without delete_repo the repository can't be deleted: the plan says where to do it on GitHub, and asking anyway is refused", async (t) => {
   const o = office(t, { scopes: 'repo' });
   const plan = (await o.svc.plan('shop')) as DeletePlan;

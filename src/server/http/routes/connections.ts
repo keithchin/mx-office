@@ -69,7 +69,7 @@ export const connectionsRoutes = {
         case '/api/connections/mendix-floor':
           return answer(setMendixFloor(ctx, str(body.floor, 200), body.on === true, who));
         case '/api/connections/paths': {
-          const which = body.which === 'projectsDir' || body.which === 'toolkitDir' ? body.which : undefined;
+          const which = body.which === 'projectsDir' || body.which === 'toolkitDir' || body.which === 'mxcli' ? body.which : undefined;
           return which ? answer(setPath(ctx, which, str(body.dir, 1024), who)) : answer('Which folder?');
         }
         case '/api/connections/git-identity': {

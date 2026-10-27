@@ -125,6 +125,6 @@ The office reads the app straight from the project's git history, never from Stu
 
 **Where it keeps things:** in `.agent-office/model/`. `docs/` holds the answers (200 MB at most, least used first out). `mpr/` holds a small copy of each version of the `.mpr`. `work/` holds three folders mxcli reads, each moved from commit to commit by the files that differ. Older offices kept a full copy of every commit in `snap/`; that folder is removed on first use.
 
-The tab finds mxcli the same way the [Live app](live-app.md) does: `AGENT_OFFICE_LIVE_MXCLI`, then `AGENT_OFFICE_MXCLI`, then the workspace's `tools/mxcli`, then `PATH`. Without mxcli, the tab says so.
+The tab finds mxcli the same way the [Live app](live-app.md) does: the one picked in 🔌 Connections › Folders › mxcli, then `AGENT_OFFICE_LIVE_MXCLI`, then `AGENT_OFFICE_MXCLI`, then the workspace's `tools/mxcli`, then `PATH`. Without mxcli, the tab says so.
 
 The address keeps what's on show, so you can share it: `/lite?floor=<id>&tab=model&ref=<branch>&doc=<Module.Name>&type=microflow&changes=1` (`&zoom=100` opens at 100%).

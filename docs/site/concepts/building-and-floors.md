@@ -16,7 +16,7 @@ Each **project** is one Mendix app in one git repository, cloned on this machine
 
 - **Usually the repository is on GitHub.** The office reads its issues and pull requests with `gh`, and agents open pull requests there.
 - **A local-only project** (✨ New project › Advanced › *Keep this project off GitHub*) has its `origin` in a bare repository on this machine instead. The office refuses every GitHub call for it, and the Lead merges into `main` locally. See [Local only](../get-started/first-project.md#local-only-not-on-github).
-- **Mendix Team Server** isn't a place the office works with. It has no Team Server pull request or merge path; the Mendix token in 🔌 Connections is only passed on to the agents. Add Team Server as a remote yourself if you need it.
+- **On Mendix Team Server** (✨ New project › Advanced › *Where the code lives*, or ⚙️ Settings › ☁️ Team Server › Connect for a local-only project): the office creates the app in the Mendix Portal and pushes the project's main to its Team Server repository after every merge. Without the GitHub mirror it's local only too (no pull requests); with it, GitHub carries the pull requests. See [On Mendix Team Server](../get-started/first-project.md#on-mendix-team-server).
 
 Each project has its own:
 

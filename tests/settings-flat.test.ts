@@ -26,7 +26,7 @@ function assertFlat(href: string, section?: string) {
 }
 
 // The sections the docs and the links name, in the order of the page's list.
-const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'portfolio', 'deliverables', 'incidents', 'stuck', 'studio', 'appearance', 'advanced', 'testing', 'verification', 'danger'];
+const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'portfolio', 'deliverables', 'incidents', 'stuck', 'teamserver', 'studio', 'appearance', 'advanced', 'testing', 'verification', 'danger'];
 
 test('every documented section has one stable anchor, in order, and a flat address', () => {
   assert.deepEqual([...SETTINGS_SECTION_IDS], DOCUMENTED);
@@ -44,7 +44,7 @@ test('every documented section has one stable anchor, in order, and a flat addre
   assert.ok(!isSettingsSection('building') && !isSettingsSection(''), 'only real sections');
   // Connections stays admins-only, as in the 3D window; the floor's own sections say they need one.
   assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'admin' in s).map((s) => s.id), ['connections', 'testing', 'verification', 'danger']);
-  assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'floor' in s).map((s) => s.id), ['team', 'jeff', 'budget', 'portfolio', 'deliverables', 'studio', 'verification', 'danger']);
+  assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'floor' in s).map((s) => s.id), ['team', 'jeff', 'budget', 'portfolio', 'deliverables', 'teamserver', 'studio', 'verification', 'danger']);
 });
 
 test('the flat page has a builder for every section and anchors each one (page.ts)', () => {

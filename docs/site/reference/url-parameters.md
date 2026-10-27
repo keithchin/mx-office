@@ -52,7 +52,7 @@ An id that isn't one of these opens the project as if no tab were asked. A link 
 
 ### Settings sections
 
-`&tab=settings&section=` takes `you`, `workers` (Agents), `team`, `jeff` (Jeff · Router), `notify` (Notifications), `budget`, `connections` (admins), `portfolio` (Client), `deliverables` (Documents), `incidents`, `stuck` (Stuck detection), `studio`, `appearance`, `advanced`, `testing` (admins), `verification` (admins) and `danger` (Danger zone, admins). See [Settings](../using-the-office/settings.md). The list hides the admin sections from others, but a link to one still shows it (its actions stay admin-only).
+`&tab=settings&section=` takes `you`, `workers` (Agents), `team`, `jeff` (Jeff · Router), `notify` (Notifications), `budget`, `connections` (admins), `portfolio` (Client), `deliverables` (Documents), `incidents`, `stuck` (Stuck detection), `teamserver` (Team Server), `studio`, `appearance`, `advanced`, `testing` (admins), `verification` (admins) and `danger` (Danger zone, admins). See [Settings](../using-the-office/settings.md). The list hides the admin sections from others, but a link to one still shows it (its actions stay admin-only).
 
 ## 2D Office view (`/pixel`)
 

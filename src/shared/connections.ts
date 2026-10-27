@@ -82,6 +82,8 @@ export interface PathState {
 export interface PathsView {
   projectsDir: PathState;
   toolkitDir: PathState;
+  /** The office's own mxcli (first-run setup's, AGENT_OFFICE_MXCLI, or the workspace's): its path, '' when none is found. */
+  mxcli: PathState;
 }
 
 export interface SweepItem {
@@ -105,7 +107,8 @@ export interface ConnectionsView {
   /** Dot-files there are, with a value not in Connections yet: what Import from files would take. */
   importable: { id: CredentialId; file: string }[];
   /** Floors, and whether each one's agents get the Mendix token. */
-  mendixFloors: { id: string; name: string; dir: string; on: boolean }[];
+  /** Each project, whether its agents get the Mendix token, and its Team Server app and remote when it has one (server/team-server/). */
+  mendixFloors: { id: string; name: string; dir: string; on: boolean; teamServer?: { projectId: string; url: string; portalUrl: string } }[];
   paths: PathsView;
   sweep: SweepView;
   /** The organization new projects go in (for the token links). */

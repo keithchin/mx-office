@@ -50,7 +50,7 @@ function lastSaid(out: Pick<TestRunOutput, 'stdout' | 'stderr'>): string {
 export const MXCLI_HSQL_VERSION = 'v0.27.0';
 
 /** Where the office's mxcli is set (the one setting that moves it to a newer mxcli). */
-export const MXCLI_SETTING = 'Settings > Connections > Paths > mxcli (or AGENT_OFFICE_LIVE_MXCLI when the office starts)';
+export const MXCLI_SETTING = 'Connections > Folders > mxcli (or the AGENT_OFFICE_MXCLI environment variable when the office starts)';
 
 /** What an older mxcli's superuser demand needs, in words a person can act on (the Needs-you item says the same). */
 export function superuserWords(version?: string): string {

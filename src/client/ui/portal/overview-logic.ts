@@ -73,6 +73,8 @@ export interface DetailFacts {
   live?: { status: string; url?: string; word?: string; business?: { label: string; line: string; unknown?: readonly UnknownReason[] } };
   /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
   localOnly?: boolean;
+  /** On Mendix Team Server: the Portal app's link and the remote (shared/team-server.ts). */
+  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean };
 }
 
 export interface DetailRow {
@@ -94,10 +96,14 @@ const short = (sha: string) => sha.slice(0, 7);
 /** The Details card's rows, in the portal's order, for what the office knows (a row it doesn't know is left out). */
 /** What the Overview says for a project kept off GitHub. */
 export const LOCAL_ONLY_LABEL = 'Local only: not on GitHub';
+/** What it says for a project on Team Server without a GitHub mirror. */
+export const TEAM_SERVER_LABEL = 'Mendix Team Server: not on GitHub';
 
 export function detailRows(f: DetailFacts): DetailRow[] {
   const rows: DetailRow[] = [];
-  if (f.localOnly) rows.push({ label: 'Repository', value: LOCAL_ONLY_LABEL, sub: f.dir ?? f.repo });
+  if (f.teamServer) rows.push({ label: 'Mendix Portal app', value: f.teamServer.projectId, href: f.teamServer.portalUrl, external: true, mono: true, sub: `Team Server: ${f.teamServer.url}` });
+  if (f.teamServer && f.localOnly) rows.push({ label: 'Repository', value: TEAM_SERVER_LABEL, sub: f.dir ?? f.repo });
+  else if (f.localOnly) rows.push({ label: 'Repository', value: LOCAL_ONLY_LABEL, sub: f.dir ?? f.repo });
   else if (f.repo) rows.push({ label: 'Repository', value: f.repo, href: `https://github.com/${f.repo}`, external: true });
   else if (f.dir) rows.push({ label: 'Folder', value: f.dir, mono: true });
   if (f.branch) rows.push({ label: 'Branch', value: f.branch, mono: true, tab: 'git' });

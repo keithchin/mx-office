@@ -91,8 +91,10 @@ function mendixFloors(view: ConnectionsView, run: Run): HTMLElement | null {
     ...view.mendixFloors.map((f) => {
       const box = h('input', { type: 'checkbox', checked: f.on }) as HTMLInputElement;
       box.addEventListener('change', () => void run(() => connectionsApi.mendixFloor(f.id, box.checked), `${f.name}: ${box.checked ? 'agents get the Mendix token' : 'no Mendix token for agents'}`));
-      return h('label.cx-check', { title: f.dir }, box, ` ${f.name}`);
+      const ts = f.teamServer ? h('span.cx-note', {}, ' · Team Server: ', h('a', { href: f.teamServer.portalUrl, target: '_blank', rel: 'noopener', title: f.teamServer.url }, `Portal app ${f.teamServer.projectId.slice(0, 8)}… ↗`)) : null;
+      return h('div.cx-floor', {}, h('label.cx-check', { title: f.dir }, box, ` ${f.name}`), ts);
     }),
+    h('p.cx-note', {}, 'The Mendix token also creates Team Server apps (New project, Connect to Team Server) and pushes projects’ main to Team Server: that is the office’s own use, never the agents’.'),
   );
 }
 

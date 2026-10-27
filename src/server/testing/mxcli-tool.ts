@@ -46,7 +46,7 @@ export const looksFakeTool = (p: string) => isTestPath(p) || /fake|mock|stub/i.t
 /** The mxcli for a floor's Testing runs, or why there is none. */
 export async function mxcliFor(dataDir: string, floorDir: string, find: (dataDir: string) => string | null = findMxcli): Promise<MxTool | { why: string }> {
   const bin = find(dataDir);
-  if (!bin) return { why: "mxcli isn't on the office's machine (set AGENT_OFFICE_LIVE_MXCLI or AGENT_OFFICE_MXCLI)" };
+  if (!bin) return { why: "mxcli isn't on the office's machine (pick it in Connections › Folders › mxcli, or set AGENT_OFFICE_MXCLI)" };
   const mode = testModeOf(floorDir);
   // A test office that runs the real tools on purpose (its agents and live app run this same mxcli) runs its own checks with it too.
   if (mode.on && !looksFakeTool(bin) && !realToolsAllowed()) return { why: `Test mode is on (${mode.why}): only a fake mxcli runs here, and ${bin} is not one (set AGENT_OFFICE_TEST_ALLOW_REAL_TOOLS=1 to run the real one)` };
