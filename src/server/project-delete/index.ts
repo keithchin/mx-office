@@ -87,7 +87,7 @@ export class ProjectDeletes {
     const [worktrees, refusal, repoDelete, mendix] = await Promise.all([
       officeWorktrees(f.dir),
       folderRefusal(f.dir, this.folderRules(f)),
-      realGhInTest ? Promise.resolve({ possible: false, why: 'the office is in test mode, and test mode never deletes a real GitHub repository' } as DeletePlan['repoDelete']) : canDeleteRepo(this.deps.gh, f.repo),
+      realGhInTest ? Promise.resolve({ possible: false, why: 'the office is in test mode, and test mode never deletes a real GitHub repository' } as DeletePlan['repoDelete']) : canDeleteRepo(this.deps.gh, f.repo, f.dir),
       mendixOf(f.dir),
     ]);
     return {
@@ -188,7 +188,7 @@ export class ProjectDeletes {
     }
     if (req.deleteRepo) {
       if (this.deps.testMode() && !this.deps.ghIsFake()) return 'The office is in test mode, and test mode never deletes a real GitHub repository';
-      const can = await canDeleteRepo(this.deps.gh, f.repo);
+      const can = await canDeleteRepo(this.deps.gh, f.repo, f.dir);
       if (!can.possible) return `The repository can’t be deleted: ${can.why}`;
     }
     const work = worktreesWithWork(await officeWorktrees(f.dir));
@@ -289,6 +289,7 @@ export class ProjectDeletes {
             skipped: true,
           };
         if (d.testMode() && !d.ghIsFake()) throw new Error('test mode never deletes a real GitHub repository');
+        // Whether origin is GitHub was settled when the job was asked for (the folder may already be gone by this step).
         const can = await canDeleteRepo(d.gh, f.repo);
         if (!can.possible) throw new Error(can.why ?? 'the token can’t delete it');
         const r = await deleteRepo(d.gh, f.repo);

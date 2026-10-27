@@ -3,6 +3,7 @@
 // A token without it (a fine-grained token says nothing) can't, and the dialog sends you to the
 // repository's settings page instead. Never a Mendix Portal or Team Server app: those are left to you.
 
+import { execFile } from 'node:child_process';
 import { normalizeRepo } from '../../shared/floors.js';
 
 export type Gh = (args: string[]) => Promise<string>;
@@ -30,10 +31,26 @@ export async function tokenScopes(gh: Gh, now = Date.now()): Promise<string[] | 
 
 export const repoSettingsUrl = (repo: string) => `https://github.com/${repo}/settings`;
 
-/** Whether the office's token can delete `repo`, and why not. */
-export async function canDeleteRepo(gh: Gh, repo: string | undefined): Promise<{ possible: boolean; why?: string; settingsUrl?: string }> {
+/** The project folder's origin URL ('' when there is none or git can't say), off the event loop. */
+export function originUrl(dir: string): Promise<string> {
+  return new Promise((resolve) => execFile('git', ['-C', dir, 'remote', 'get-url', 'origin'], { windowsHide: true, timeout: 15_000 }, (err, out) => resolve(err ? '' : String(out).trim())));
+}
+
+/** Whether origin is `repo` on GitHub: a local-only or Team Server project's owner/name says nothing about GitHub. */
+export const originIsGithubRepo = (url: string, repo: string) => {
+  const m = /github\.com[:/]+([^/]+\/[^/]+?)(?:\.git)?\/?$/i.exec(url);
+  return !!m && m[1].toLowerCase() === repo.toLowerCase();
+};
+
+/**
+ * Whether the office's token can delete `repo`, and why not. With `dir`, only when the project's origin
+ * really is that repository on GitHub: a local-only or Team Server-only project shares the owner/name
+ * shape, and a same-named GitHub repository must never be deleted for it.
+ */
+export async function canDeleteRepo(gh: Gh, repo: string | undefined, dir?: string): Promise<{ possible: boolean; why?: string; settingsUrl?: string }> {
   const r = normalizeRepo(repo);
   if (!r) return { possible: false, why: 'the project has no GitHub repository' };
+  if (dir !== undefined && !originIsGithubRepo(await originUrl(dir), r)) return { possible: false, why: 'the project’s code isn’t on GitHub (its origin is on this machine or Team Server), so there is no GitHub repository to delete' };
   const settingsUrl = repoSettingsUrl(r);
   try {
     const scopes = await tokenScopes(gh);

@@ -53,7 +53,7 @@ interface Office {
 }
 
 /** A test office: its data folder, its projects folder with one project (a clone of a bare origin), a floor for it, and fake deps. */
-function office(t: { after(fn: () => void): void }, opts: { scopes?: string; testMode?: boolean; blocked?: string; local?: boolean; root?: string } = {}): Office {
+function office(t: { after(fn: () => void): void }, opts: { scopes?: string; testMode?: boolean; blocked?: string; local?: boolean; root?: string; originOnDisk?: boolean } = {}): Office {
   forgetScopes();
   const root = opts.root ?? realpathSync(mkdtempSync(path.join(os.tmpdir(), 'test-office-delete-')));
   t.after(() => removeDir(root));
@@ -68,6 +68,8 @@ function office(t: { after(fn: () => void): void }, opts: { scopes?: string; tes
   commit(dir, 'README.md', 'hi\n');
   commit(dir, '.gitignore', 'node_modules\n');
   git(dir, 'push', '-q', '-u', 'origin', 'main');
+  // Its origin as the office sees a GitHub project's (the pushes above went to the bare repository); a local-only one keeps the path.
+  if (!opts.originOnDisk) git(dir, 'remote', 'set-url', 'origin', 'https://github.com/acme/shop.git');
   // The office's data for the floor, and the project's own .agent-office.
   for (const [rel, text] of [
     ['roster/shop.json', '{"team":1}'],
@@ -470,4 +472,15 @@ test('who deleted it: the account, else the name this browser goes by, else "An 
   assert.equal(whoOf(undefined, profileBy('Guest')), 'An admin');
   assert.equal(whoOf(undefined, profileBy('  ')), 'An admin');
   assert.equal(whoOf(undefined, profileBy(undefined)), 'An admin');
+});
+
+test("a project whose origin isn't GitHub (local-only or Team Server only) never gets a GitHub delete, even with delete_repo and a same-named repository", async (t) => {
+  const o = office(t, { scopes: 'repo, delete_repo', originOnDisk: true });
+  const plan = (await o.svc.plan('shop')) as DeletePlan;
+  assert.equal(plan.repoDelete.possible, false);
+  assert.match(plan.repoDelete.why!, /isn’t on GitHub/);
+  const job = await run(o, { mode: 'delete', deleteFolder: true, deleteRepo: true });
+  assert.equal(typeof job, 'string', 'asking anyway is refused');
+  assert.match(String(job), /isn’t on GitHub/);
+  assert.deepEqual(o.calls.gh.filter((a) => a.includes('DELETE')), []);
 });
