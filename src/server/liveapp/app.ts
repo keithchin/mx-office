@@ -559,8 +559,7 @@ export class LiveApp {
   private note(line: string, gen = this.gen) {
     try {
       // The command line is written at once (readers look for it as the start begins); the build's flood goes off the event loop.
-      if (line.startsWith('$ ')) logAppender(this.logFile).now(line);
-      else logAppender(this.logFile)(line);
+      (line.startsWith('$ ') ? logAppender(this.logFile).now : logAppender(this.logFile))(line);
     } catch {
       // The log is a convenience.
     }
