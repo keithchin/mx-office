@@ -558,7 +558,9 @@ export class LiveApp {
   /** A line in the log file, and in the page's tail while it's starting or has failed. */
   private note(line: string, gen = this.gen) {
     try {
-      logAppender(this.logFile)(line);
+      // The command line is written at once (readers look for it as the start begins); the build's flood goes off the event loop.
+      if (line.startsWith('$ ')) logAppender(this.logFile).now(line);
+      else logAppender(this.logFile)(line);
     } catch {
       // The log is a convenience.
     }

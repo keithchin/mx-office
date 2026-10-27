@@ -3,12 +3,15 @@
 // several built at once on Windows. Lines are queued and appended in order, a batch at a time; a failed write
 // is dropped (the log is a convenience, the page keeps its own tail).
 
+import { appendFileSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
 
 export interface LogAppender {
   (line: string): void;
   /** Resolves once everything queued so far is written. */
   flush(): Promise<void>;
+  /** Writes what is queued and `line` at once (for the few lines a reader looks for right away: the command started). */
+  now(line: string): void;
 }
 
 const appenders = new Map<string, LogAppender>();
@@ -36,6 +39,15 @@ export function logAppender(file: string): LogAppender {
     }
   }) as LogAppender;
   fn.flush = () => drain();
+  fn.now = (line: string) => {
+    const batch = queue;
+    queue = [];
+    try {
+      appendFileSync(file, `${batch.join('')}${line}\n`);
+    } catch {
+      // The log is a convenience.
+    }
+  };
   appenders.set(file, (a = fn));
   if (appenders.size > 200) appenders.delete(appenders.keys().next().value!);
   return a;
