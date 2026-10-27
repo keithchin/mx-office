@@ -58,8 +58,22 @@ export async function download(c: MxcliCall, id: string, version: string | undef
   return withHome(async (home) => {
     const args = ['marketplace', 'download', id, ...(version ? ['--version', version] : []), '-o', out];
     const r = await run(c.mxcli, args, { cwd: c.cwd, env: childEnv(home, { MENDIX_PAT: c.token! }), timeoutMs: 180_000, allowFail: true });
-    return r.code === 0 ? undefined : `mxcli couldn’t download it: ${said(r, c.token)}`;
+    return r.code === 0 ? undefined : downloadWhy(id, said(r, c.token));
   });
+}
+
+/**
+ * A failed download in words a person can act on. The Marketplace Content API mxcli uses (marketplace-api.mendix.com/v1)
+ * serves public content and the content private to the token owner's company, so an item that isn't found, or is
+ * forbidden, is most often private to another company (or the token's user isn't in the company that owns it), or
+ * the id or version is wrong. A rejected token is said as that.
+ */
+export function downloadWhy(id: string, said: string): string {
+  const s = said.toLowerCase();
+  if (/\b401\b|unauthori[sz]ed|invalid (token|pat)|expired|not logged in|no credentials/.test(s)) return `mxcli couldn’t download it: the Mendix token was refused (expired, revoked, or not a Personal Access Token). Renew it in 🔌 Connections › Mendix, or use a package file. mxcli said: ${said}`;
+  if (/\b40[34]\b|forbidden|not found|no such (content|item)|access denied|does not exist|no version/.test(s))
+    return `mxcli couldn’t download item ${id}: the Marketplace didn’t show it to the office’s token. Company-private Marketplace content is only visible to a token whose user belongs to the company that owns it, so either the item is private to a company that token’s user isn’t in, or the id or version is wrong. Use a token of a user in that company (🔌 Connections › Mendix), or a package file. mxcli said: ${said}`;
+  return `mxcli couldn’t download it: ${said}`;
 }
 
 const pick = (o: Record<string, unknown>, keys: string[]): string | undefined => {

@@ -7,6 +7,7 @@
 
 import type http from 'node:http';
 import { execFile } from 'node:child_process';
+import path from 'node:path';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import type { Floor } from '../floor.js';
 import { send } from '../http/util.js';
@@ -28,7 +29,9 @@ export async function officeMarketplace(ctx: Ctx, floor: Floor, me: WorkerInfo, 
   const ask = readMarketplaceAsk(body);
   if (typeof ask === 'string') return send(res, 400, { error: ask });
   if (me.kind !== 'agent') return send(res, 400, { error: 'Only an agent asks this way' });
-  const folder = me.worktree?.path ?? floor.dir;
+  // A worker's worktree path may be stored relative to the project (".agent-office/worktrees/x"): always resolved
+  // against the project's folder, never the office's working directory.
+  const folder = me.worktree?.path ? path.resolve(floor.dir, me.worktree.path) : floor.dir;
   const branch = me.worktree?.branch ?? (await branchOf(folder));
   const { request: r, joined } = await s.ask(floor.id, { id: me.id, name: me.name }, folder, branch, ask);
   if (!joined) ctx.toastFloor(floor, `🧩 ${me.name} asks to add ${askWords(r)} from the Marketplace: see Needs you`);

@@ -7,7 +7,7 @@
 // The folder must still be on the branch the agent asked from. Commits carry the office's commit identity
 // (workers/git-identity.ts officeGitEnv), never a token; nothing is pushed.
 
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { findMpr } from '../liveapp/checkout.js';
 import { officeGitEnv } from '../workers/git-identity.js';
@@ -32,6 +32,9 @@ const rel = (from: string, to: string) => path.relative(from, to).split(path.sep
 
 /** Places package `file` (already checked as `pkg`) for request `r` and commits it; what it did, or why not. */
 export async function placeAndCommit(deps: PlaceDeps, r: MarketplaceRequest, file: string, pkg: PackageFacts): Promise<Placed> {
+  // Said plainly before git is asked: a folder that isn't there made Windows report git itself as missing.
+  if (!path.isAbsolute(r.folder)) return { ok: false, error: `${r.by.name}’s folder is recorded as a relative path (${r.folder}): it can ask again from its folder` };
+  if (!(await stat(r.folder).then((s) => s.isDirectory(), () => false))) return { ok: false, error: `${r.by.name}’s folder isn’t there any more (${r.folder}): nothing was changed. It can ask again from the folder it works in now.` };
   return withHome(async (home) => {
     const branch = await git(deps, r.folder, ['rev-parse', '--abbrev-ref', 'HEAD'], home);
     if (branch.code !== 0) return { ok: false, error: `${r.by.name}’s folder isn’t a git checkout any more (${r.folder})` };
