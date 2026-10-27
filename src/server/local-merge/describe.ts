@@ -10,7 +10,7 @@ import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import type { Git } from '../gitgraph/index.js';
 import { journeyIdOf, journeysIn } from '../../shared/testing/links.js';
-import { sameRevision } from '../../shared/testing/record.js';
+import { checkName, checkVerdict, sameRevision } from '../../shared/testing/record.js';
 import { classify, pathKind, type LocalMergeDc, type LocalMergeFiles, type LocalMergeKind, type LocalMergeResult } from '../../shared/local-merge.js';
 
 const pathsKept = new Map<string, Promise<string[]>>();
@@ -93,9 +93,8 @@ export async function resultsAt(ctx: Ctx, floorId: string, sha: string): Promise
         return !j;
       });
       if (!other.length && r.results.length) continue;
-      const failed = other.some((x) => x.status === 'failed');
-      const verdict = r.conclusion ?? (failed ? 'failed' : other.length && other.every((x) => x.status === 'passed') ? 'passed' : 'skipped');
-      checks.push({ name: r.suite, verdict });
+      // A run that couldn't complete (a smoke that couldn't sign in) is a failed check, never "skipped".
+      checks.push({ name: checkName(r), verdict: checkVerdict(r, other) });
     }
   } catch {
     /* no testing records: none at that commit */

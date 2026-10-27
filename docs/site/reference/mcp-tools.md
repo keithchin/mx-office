@@ -21,11 +21,12 @@ weight: 2
 | `app_stop` | none | `office-app stop` |
 | `journey_run` | journey, file, commit | `office-app journey` |
 | `app_smoke` | paths[], as | `office-app smoke` |
+| `app_check` | **name**, **result**, detail, shots[], commit | `office-app check` |
 | `app_test` | **commit**, wait | `office-app test` |
 
 ## Allowed without asking
 
-Claude Code workers may call **`list_workers`**, **`escalate`**, **`subagent`** and the app tools (**`app_start`**, **`app_status`**, **`app_stop`**, **`journey_run`**, **`app_smoke`**, **`app_test`**) without a permission prompt. The app tools only start, test and stop the office's own copy of the agent's app ([office-app](office-workers-cli.md#office-app)), so asking you for each would be engineering reaching you for nothing. The others ask first, like any tool.
+Claude Code workers may call **`list_workers`**, **`escalate`**, **`subagent`** and the app tools (**`app_start`**, **`app_status`**, **`app_stop`**, **`journey_run`**, **`app_smoke`**, **`app_check`**, **`app_test`**) without a permission prompt. The app tools only start, test and stop the office's own copy of the agent's app ([office-app](office-workers-cli.md#office-app)), so asking you for each would be engineering reaching you for nothing. The others ask first, like any tool.
 
 > [!NOTE]
 > `escalate` is on the allow list on purpose: an agent should never be stuck on a permission prompt when it's trying to reach you.

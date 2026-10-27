@@ -10,7 +10,8 @@ import { resolveCommand } from '../workers/process.js';
 import { instanceDir, startAppInstance } from '../app-instance/index.js';
 import { dropLeftovers, instanceDbStem, realPsql } from '../app-instance/db.js';
 import { liveAppBuilding } from '../walkthroughs/busy.js';
-import { runnerConfigAt } from '../walkthroughs/identity.js';
+import { identitiesFor } from './identity.js';
+import { recordAgentCheck } from './checks.js';
 import { mxcliFor } from '../testing/mxcli-tool.js';
 import { playSeed, type JourneyDeps } from './journey.js';
 import { AgentApps } from './service.js';
@@ -43,16 +44,25 @@ export function agentAppsOf(ctx: Deps): AgentApps {
       const app = await startAppInstance({ floorId: s.floorId, floorDir: s.floorDir, commit: s.commit, purpose: s.purpose, dataDir, cfg: c, mxcli: resolveCommand(c.mxcli), taken: () => liveAppsIfMade(ctx as Ctx)?.takenPorts() ?? [], busy, signal: s.signal, progress: s.progress, onPhase: s.onPhase });
       return Object.assign(app, { workspace: instanceDir(dataDir, s.floorId, s.purpose) });
     },
-    users: async (dir, commit) => {
-      const cfg = await runnerConfigAt(dir, commit);
-      if (!cfg) return [];
-      const out = [...(cfg.user ? [{ user: cfg.user, role: 'default' }] : []), ...cfg.roles.map((r) => ({ user: r.user, role: r.label ?? r.key }))];
-      return out.filter((u, i) => out.findIndex((x) => x.user === u.user) === i);
+    users: async (dir, commit, runtimeLog) => {
+      const ids = await identitiesFor(dir, commit, runtimeLog);
+      return { users: ids.users, passwords: ids.passwords };
     },
     seed: async (e) => {
       const d = await journeyDeps(ctx, e.floorId);
       return d ? playSeed(e, d) : undefined;
     },
+    // Each start is a check at its commit: "app start" passed, or couldn't run with the reason (./checks.ts).
+    onSettled: (e) =>
+      void recordAgentCheck(dataDir, {
+        floorId: e.floorId,
+        commit: e.commit,
+        worker: e.worker,
+        workspace: e.workspace,
+        suite: 'app start',
+        status: e.state === 'ready' ? 'passed' : 'error',
+        detail: e.state === 'ready' ? `answered at ${e.instance?.url ?? '?'}${e.instance?.timing?.ms ? ` after ${Math.round(e.instance.timing.ms / 1000)} s` : ''}` : (e.why ?? 'it did not start'),
+      }).catch(() => undefined),
     dropDatabases: async (floorId, purpose) => {
       await dropLeftovers(realPsql, liveAppConfig(dataDir).db, instanceDbStem(floorId, purpose));
     },

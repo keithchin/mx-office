@@ -17,16 +17,18 @@ import { ulid } from '../../shared/evidence/ids.js';
 import { outcomeWords, runtimeErrorsIn, runtimeErrorWords, SEED_JOURNEY, type RunOutcome } from '../../shared/agent-app.js';
 import { CAP_REASON, isSessionCap, TRIAL_SESSIONS } from '../../shared/liveapp/session-cap.js';
 import { IMPORTER_VERSION, UNKNOWN, type Link, type TestResult, type TestRunDraft } from '../../shared/testing/record.js';
-import { resolveIdentity, type RunnerConfig } from '../../shared/walkthroughs/identity.js';
+import { resolveIdentity, SOURCE_WORDS, type RunnerConfig } from '../../shared/walkthroughs/identity.js';
 import { scriptOf } from '../../shared/walkthroughs/script.js';
 import { DEFAULT_SETTINGS, type WalkScript } from '../../shared/walkthroughs/types.js';
 import { testingStore } from '../testing/index.js';
 import { listFiles, readFiles } from '../testing/repo.js';
 import { appShows } from '../walkthroughs/actions.js';
-import { runnerConfigAt } from '../walkthroughs/identity.js';
 import { record as realRecord, type RecordInput, type RecordResult } from '../walkthroughs/recorder.js';
 import { AppSessions, IN_APP, lockTo, VIEWPORT, type Browser } from '../walkthroughs/signin.js';
 import type { AgentApp } from './service.js';
+import { identitiesFor, JOURNEY_FILE } from './identity.js';
+import { jsJourneyId, runJsJourney } from './journey-js.js';
+import { personasIn, signInHelp, type ProjectIdentities } from '../../shared/agent-app-identity.js';
 
 export { outcomeWords };
 
@@ -37,6 +39,10 @@ export interface JourneyDeps {
   launch?: () => Promise<Browser>;
   record?: (i: RecordInput) => Promise<RecordResult>;
   runnerConfig?: (dir: string, commit: string) => Promise<RunnerConfig | undefined>;
+  /** Stand-in for journey-js.ts runJsJourney (tests). */
+  js?: typeof runJsJourney;
+  /** A sign-in the app refused: raised for the Project Manager (agent-app/raise.ts); the escalation's id. */
+  onSignInFailed?: (e: AgentApp, words: string) => string | undefined;
   /** The demo user when the project names none (the Walkthroughs setting's default). */
   demo?: { user: string; password: string };
   now?: () => number;
@@ -73,24 +79,46 @@ async function logSince(file: string, from: number): Promise<string> {
 export const sessionCapWords = (said?: string) =>
   `The app refused a new session (${said ? `“${said}”: ` : ''}${CAP_REASON}). The journey runner signs out after every journey, so other sessions hold the rest: your own browser scripts that didn't sign out, or windows left open. They end about 15 minutes after they were last used, or start the instance again (office-app stop, then start) for a clean ${TRIAL_SESSIONS}.`;
 
-/** The journey script asked for, and the revision its definition is from. */
-async function scriptFor(e: AgentApp, ask: JourneyAsk, d: JourneyDeps): Promise<{ sc: WalkScript; definition: string } | string> {
+type Script = { kind: 'json'; sc: WalkScript; definition: string } | { kind: 'js'; file: string; text?: string; id: string; persona?: string; definition: string };
+
+/** The journey asked for (a toolkit .journey.json, or a project's own .journey.js script), and the revision its definition is from. */
+async function scriptFor(e: AgentApp, ask: JourneyAsk, d: JourneyDeps): Promise<Script | string> {
   if (ask.text !== undefined) {
-    const sc = scriptOf(ask.file ?? 'journey.json', ask.text);
-    return typeof sc === 'string' ? sc : { sc, definition: UNKNOWN };
+    const file = ask.file ?? 'journey.json';
+    if (/\.journey\.c?js$|\.c?js$/i.test(file)) return { kind: 'js', file, text: ask.text, id: jsJourneyId(file, ask.text), persona: personasIn(ask.text)[0], definition: UNKNOWN };
+    const sc = scriptOf(file, ask.text);
+    return typeof sc === 'string' ? sc : { kind: 'json', sc, definition: UNKNOWN };
   }
   const want = (ask.journey ?? '').trim();
   if (!want) return 'Say which journey: its id (J-12) or its path, or send a file';
-  const files = (await listFiles(d.floorDir, e.commit, ['tests'])).filter((f) => /\.journey\.json$/i.test(f)).slice(0, 300);
+  const files = (await listFiles(d.floorDir, e.commit, ['tests'])).filter((f) => JOURNEY_FILE.test(f)).slice(0, 300);
   const texts = await readFiles(d.floorDir, e.commit, files, 512 * 1024);
   const norm = want.replace(/\\/g, '/').replace(/^\.\//, '');
-  for (const f of files) {
+  const byPath = (f: string) => f === norm || f.endsWith(`/${norm}`);
+  for (const f of files.filter((x) => /\.json$/i.test(x))) {
     const sc = scriptOf(f, texts.get(f) ?? '');
     if (typeof sc === 'string') continue;
-    if (sc.journey.toLowerCase() === norm.toLowerCase() || f === norm || f.endsWith(`/${norm}`)) return { sc, definition: e.commit };
+    if (sc.journey.toLowerCase() === norm.toLowerCase() || byPath(f)) return { kind: 'json', sc, definition: e.commit };
   }
-  return `No journey ${want} at ${e.commit.slice(0, 7)} (tests/**/*.journey.json${files.length ? `: ${files.length} there` : ': none there'}). Commit it first, or send the file (office-app journey --file <path>)`;
+  // A project's own script (tests/e2e/J-16.journey.js): by its id or its path.
+  for (const f of files.filter((x) => /\.c?js$/i.test(x))) {
+    const id = jsJourneyId(f, texts.get(f) ?? '');
+    if (id.toLowerCase() === norm.toLowerCase() || byPath(f)) return { kind: 'js', file: f, id, persona: personasIn(texts.get(f) ?? '')[0], definition: e.commit };
+  }
+  return `No journey ${want} at ${e.commit.slice(0, 7)} (tests/**/*.journey.json or *.journey.js${files.length ? `: ${files.length} there` : ': none there'}). Commit it first, or send the file (office-app journey --file <path>)`;
 }
+
+/** The project's test users for this instance (agent-app/identity.ts). */
+const idsOf = (e: AgentApp, d: JourneyDeps): Promise<ProjectIdentities> => identitiesFor(d.floorDir, e.commit, e.instance?.runtimeLog, d.runnerConfig ? { runnerConfig: d.runnerConfig } : {});
+
+/** A refused sign-in, said with who, where the account came from and what to do, and raised for the PM. */
+function signInFailure(e: AgentApp, d: JourneyDeps, failure: string, who: { user: string; from: string }, ids: ProjectIdentities): string {
+  const help = signInHelp(who.user, who.from, ids);
+  const raised = d.onSignInFailed?.(e, `${failure} ${help}`);
+  return `${failure}. ${help}${raised ? ` (raised as ${raised})` : ''}`;
+}
+
+const SIGN_IN = /couldn['’]t sign in|still on the sign-in page/i;
 
 /** Plays a journey on the agent's instance; records the result against its commit unless `keep` is false. */
 export async function runJourney(e: AgentApp, ask: JourneyAsk, d: JourneyDeps, keep = true): Promise<RunOutcome> {
@@ -98,47 +126,62 @@ export async function runJourney(e: AgentApp, ask: JourneyAsk, d: JourneyDeps, k
   if (!inst) return { suite: 'journey', commit: e.commit, status: 'error', failure: 'the instance is not running' };
   const got = await scriptFor(e, ask, d);
   if (typeof got === 'string') return { suite: 'journey', commit: e.commit, status: 'error', failure: got };
-  const { sc, definition } = got;
+  const { definition } = got;
+  const journey = got.kind === 'json' ? got.sc.journey : got.id;
+  const file = got.kind === 'json' ? got.sc.file : got.file;
+  const requirement = got.kind === 'json' ? got.sc.requirement : [];
   const now = d.now ?? Date.now;
   const runId = `oj_${ulid(now())}`;
   const startedAt = new Date(now()).toISOString();
-  const cfg = await (d.runnerConfig ?? runnerConfigAt)(d.floorDir, e.commit).catch(() => undefined);
+  const ids = await idsOf(e, d);
   const demo = d.demo ?? { user: DEFAULT_SETTINGS.demoUser, password: DEFAULT_SETTINGS.demoPassword };
-  const who = resolveIdentity(sc.identity ?? { names: [] }, cfg, demo);
+  const hint = got.kind === 'json' ? (got.sc.identity ?? { names: [] }) : got.persona ? { user: got.persona, names: [got.persona] } : { names: [] };
+  const who = resolveIdentity(hint, ids.cfg, demo);
+  const whoFrom = who.from === 'setting' ? SOURCE_WORDS.setting : who.from === 'journey' ? 'named by the journey' : 'the project’s test users';
   const from = await sizeOf(inst.runtimeLog);
-  const sessions = new AppSessions({ url: inst.url, runtimeLog: inst.runtimeLog, ...(d.launch ? { launch: d.launch } : {}) });
-  const outDir = path.join(d.dataDir, 'testing', 'evidence', e.floorId, runId);
-  let res: RecordResult;
-  try {
-    res = await (d.record ?? realRecord)({ url: inst.url, script: sc, outDir, login: { user: who.user, password: who.password }, sessions, film: false, signal: e.abort.signal, workspace: e.workspace });
-  } finally {
-    // Signed out, every time: the trial licence's sessions are few.
-    await sessions.close().catch(() => undefined);
+  let res: { status: string; steps: { n: number; caption: string; status: string; why?: string }[]; failure?: { step?: number; why: string } };
+  let signInRefused = false;
+  if (got.kind === 'js') {
+    const o = await (d.js ?? runJsJourney)({ workspace: e.workspace, file: got.file, ...(got.text !== undefined ? { text: got.text } : {}), url: inst.url, login: { user: who.user, password: who.password }, signal: e.abort.signal });
+    signInRefused = !!o.signIn;
+    res = { status: o.status, steps: o.steps, ...(o.failure ? { failure: { why: o.failure } } : {}) };
+  } else {
+    const sessions = new AppSessions({ url: inst.url, runtimeLog: inst.runtimeLog, ...(d.launch ? { launch: d.launch } : {}) });
+    const outDir = path.join(d.dataDir, 'testing', 'evidence', e.floorId, runId);
+    try {
+      res = await (d.record ?? realRecord)({ url: inst.url, script: got.sc, outDir, login: { user: who.user, password: who.password }, sessions, film: false, signal: e.abort.signal, workspace: e.workspace });
+    } finally {
+      // Signed out, every time: the trial licence's sessions are few.
+      await sessions.close().catch(() => undefined);
+    }
+    signInRefused = SIGN_IN.test(res.failure?.why ?? '') && !isSessionCap(res.failure?.why);
   }
   const log = await logSince(inst.runtimeLog, from);
   const errors = runtimeErrorsIn(log).map(runtimeErrorWords);
   const capped = isSessionCap(res.failure?.why) || /Maximum number of sessions exceeded/i.test(log);
-  const status: RunOutcome['status'] = capped || res.status === 'error' || res.status === 'cancelled' ? 'error' : res.status === 'failed' || errors.length ? 'failed' : 'passed';
+  const status: RunOutcome['status'] = capped || signInRefused || res.status === 'error' || res.status === 'cancelled' ? 'error' : res.status === 'failed' || errors.length ? 'failed' : 'passed';
+  let failure = res.failure ? (res.failure.step ? `step ${res.failure.step}: ${res.failure.why}` : res.failure.why) : undefined;
+  if (signInRefused && keep && !capped) failure = signInFailure(e, d, failure ?? `couldn't sign in as ${who.user}`, { user: who.user, from: whoFrom }, ids);
   const outcome: RunOutcome = {
-    suite: `journey ${sc.journey}`,
+    suite: `journey ${journey}`,
     commit: e.commit,
     status,
     steps: res.steps.map((s) => ({ n: s.n, caption: s.caption, status: s.status, ...(s.why ? { why: s.why } : {}) })),
-    ...(res.failure ? { failure: res.failure.step ? `step ${res.failure.step}: ${res.failure.why}` : res.failure.why } : {}),
+    ...(failure ? { failure } : {}),
     ...(errors.length ? { runtimeErrors: errors } : {}),
     ...(capped ? { sessionCap: sessionCapWords() } : {}),
-    signedOut: true,
+    signedOut: got.kind === 'json',
   };
   if (!keep) return outcome;
-  const links: Link[] = [{ target: sc.journey, basis: 'recorded', via: definition === UNKNOWN ? `${sc.file} (sent by ${e.worker})` : sc.file }, ...sc.requirement.map((r): Link => ({ target: r, basis: 'recorded', via: `${sc.file} (requirement)` }))];
+  const links: Link[] = [{ target: journey, basis: 'recorded', via: definition === UNKNOWN ? `${file} (sent by ${e.worker})` : file }, ...requirement.map((r): Link => ({ target: r, basis: 'recorded', via: `${file} (requirement)` }))];
   const results: TestResult[] =
     status === 'error'
       ? []
       : [
-          { name: sc.journey, status: status === 'passed' ? 'passed' : 'failed', ...(outcome.failure || errors.length ? { detail: [outcome.failure, ...errors.map((x) => `runtime error: ${x}`)].filter(Boolean).join(' · ').slice(0, 600) } : {}), links },
-          ...errors.map((x, i): TestResult => ({ name: `${sc.journey} runtime log ${i + 1}`, status: 'failed', detail: x, links: [links[0]] })),
+          { name: journey, status: status === 'passed' ? 'passed' : 'failed', ...(outcome.failure || errors.length ? { detail: [outcome.failure, ...errors.map((x) => `runtime error: ${x}`)].filter(Boolean).join(' · ').slice(0, 600) } : {}), links },
+          ...errors.map((x, i): TestResult => ({ name: `${journey} runtime log ${i + 1}`, status: 'failed', detail: x, links: [links[0]] })),
         ];
-  outcome.record = await keepRecord(e, d, runId, startedAt, outcome, results, definition, now, { steps: res.steps, log: errors, identity: who.user });
+  outcome.record = await keepRecord(e, d, runId, startedAt, outcome, results, definition, now, { steps: res.steps, log: errors, identity: who.user, ...(got.kind === 'js' ? { runner: 'node (the project’s journey script)' } : {}) });
   return outcome;
 }
 
@@ -150,9 +193,11 @@ export async function runSmoke(e: AgentApp, ask: { paths?: string[]; as?: string
   const now = d.now ?? Date.now;
   const runId = `os_${ulid(now())}`;
   const startedAt = new Date(now()).toISOString();
-  const cfg = await (d.runnerConfig ?? runnerConfigAt)(d.floorDir, e.commit).catch(() => undefined);
+  // The project's own test users (its config unless that is the toolkit template's, the journeys' personas, the seed password).
+  const ids = await idsOf(e, d);
   const demo = d.demo ?? { user: DEFAULT_SETTINGS.demoUser, password: DEFAULT_SETTINGS.demoPassword };
-  const who = resolveIdentity(ask.as ? { user: ask.as, names: [ask.as] } : { names: [] }, cfg, demo);
+  const who = resolveIdentity(ask.as ? { user: ask.as, names: [ask.as] } : { names: [] }, ids.cfg, demo);
+  const whoFrom = ask.as ? 'asked with --as' : who.from === 'setting' ? SOURCE_WORDS.setting : 'the project’s test users';
   const from = await sizeOf(inst.runtimeLog);
   const sessions = new AppSessions({ url: inst.url, runtimeLog: inst.runtimeLog, ...(d.launch ? { launch: d.launch } : {}) });
   const steps: NonNullable<RunOutcome['steps']> = [];
@@ -189,6 +234,8 @@ export async function runSmoke(e: AgentApp, ask: { paths?: string[]; as?: string
   const errors = runtimeErrorsIn(log).map(runtimeErrorWords);
   const capped = isSessionCap(failure) || /Maximum number of sessions exceeded/i.test(log);
   const status: RunOutcome['status'] = failure || capped ? 'error' : steps.some((s) => s.status === 'failed') || errors.length ? 'failed' : 'passed';
+  // A refused sign-in: who, from where, what to do, and raised for the PM (never a quiet idle).
+  if (failure && !capped && SIGN_IN.test(failure)) failure = signInFailure(e, d, failure, { user: who.user, from: whoFrom }, ids);
   const outcome: RunOutcome = { suite: 'smoke', commit: e.commit, status, steps, ...(failure ? { failure } : {}), ...(errors.length ? { runtimeErrors: errors } : {}), ...(capped ? { sessionCap: sessionCapWords() } : {}), signedOut: true };
   const link: Link = { target: 'smoke', basis: 'recorded', via: `office-app smoke (${e.worker})` };
   const results: TestResult[] = status === 'error' ? [] : [...steps.map((s): TestResult => ({ name: `smoke ${s.caption.replace(/^Open /, '')}`, status: s.status === 'passed' ? 'passed' : 'failed', ...(s.why ? { detail: s.why } : {}), links: [link] })), ...errors.map((x, i): TestResult => ({ name: `smoke runtime log ${i + 1}`, status: 'failed', detail: x, links: [link] }))];
@@ -214,7 +261,7 @@ async function keepRecord(e: AgentApp, d: JourneyDeps, runId: string, startedAt:
     results,
     links: [],
     actor: { kind: 'office', name: `${e.worker} (office-app)` },
-    environment: { runner: 'office journey runner (Playwright, agent instance)', mxcliVersion: d.mxcliVersion ?? 'unknown', runtime: 'local', workFolder: e.workspace },
+    environment: { runner: (evidence as { runner?: string } | undefined)?.runner ?? 'office journey runner (Playwright, agent instance)', mxcliVersion: d.mxcliVersion ?? 'unknown', runtime: 'local', workFolder: e.workspace },
     ...(o.status === 'error' ? { harnessError: [o.failure, o.sessionCap].filter(Boolean).join(' ').slice(0, 600) || 'the run did not complete' } : {}),
     importer: `${IMPORTER_VERSION}+office-journey/1`,
   };

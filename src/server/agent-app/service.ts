@@ -43,13 +43,15 @@ export interface AgentAppDeps {
   dataDir: string;
   floorDir(id: string): string | undefined;
   boot(spec: BootSpec): Promise<Booted>;
-  /** The project's test accounts at a commit (tests/e2e/project.config.js). */
-  users?(floorDir: string, commit: string): Promise<{ user: string; role?: string }[]>;
+  /** The project's test accounts at a commit for a booted instance (agent-app/identity.ts), and where their passwords come from. */
+  users?(floorDir: string, commit: string, runtimeLog?: string): Promise<{ user: string; role?: string }[] | { users: { user: string; role?: string }[]; passwords: string }>;
   /** Plays the project's seed journey on a fresh instance, when it has one: what seeded it, in words. */
   seed?(e: AgentApp): Promise<string | undefined>;
   /** Drops a recovered instance's databases (by the instance's stem). */
   dropDatabases?(floorId: string, purpose: string): Promise<void>;
   freeMemory?(): Promise<number>;
+  /** A start settled (ready, or failed): recorded as the commit's "app start" check (./checks.ts). */
+  onSettled?(e: AgentApp): void;
   now?(): number;
   leftovers?: LeftoverDeps;
   idleMs?: number;
@@ -71,6 +73,8 @@ export interface AgentApp {
   why?: string;
   seed?: string;
   users?: { user: string; role?: string }[];
+  /** Where the users' passwords come from, in words (never a password). */
+  passwords?: string;
   instance?: Booted;
   startedAt: number;
   lastUsed: number;
@@ -121,7 +125,7 @@ export class AgentApps {
       state: e.state,
       commit: e.commit,
       ...(e.state === 'ready' && e.instance ? { url: e.instance.url } : {}),
-      ...(e.users ? { users: e.users, passwords: 'tests/e2e/project.config.js' } : {}),
+      ...(e.users ? { users: e.users, passwords: e.passwords ?? 'tests/e2e/project.config.js' } : {}),
       ...(e.state === 'ready' || e.state === 'starting' ? { expires: Math.min(e.lastUsed + idle, ends), ends } : {}),
       ...(e.phase ? { phase: e.phase } : {}),
       ...(e.why ? { why: e.why } : {}),
@@ -177,7 +181,6 @@ export class AgentApps {
 
   private async boot(e: AgentApp, floorDir: string): Promise<void> {
     try {
-      const users = this.d.users?.(floorDir, e.commit).catch(() => []);
       const inst = await this.d.boot({ floorId: e.floorId, floorDir, commit: e.commit, purpose: e.purpose, signal: e.abort.signal, progress: (l) => (e.phase = l), onPhase: (p) => {
           // Waiting is said by progress() only when something is building; the phase alone would claim a live app.
           if (p !== 'waiting') e.phase = BOOT_PHASE_TITLE[p] ?? p;
@@ -187,18 +190,32 @@ export class AgentApps {
         return;
       }
       e.instance = inst;
-      e.users = (await users) ?? [];
+      const got = (await this.d.users?.(floorDir, e.commit, inst.runtimeLog).catch(() => [])) ?? [];
+      e.users = Array.isArray(got) ? got : got.users;
+      if (!Array.isArray(got)) e.passwords = got.passwords;
       await this.save();
       e.phase = 'Seeding';
       e.seed = (await this.d.seed?.(e).catch((err: Error) => `the seed journey couldn't run: ${err.message}`)) ?? 'the after-startup microflow (runs at every start)';
       e.state = 'ready';
       e.phase = undefined;
       e.lastUsed = this.now();
+      this.settled(e);
     } catch (err) {
+      const stopped = e.state === 'stopped' || e.abort.signal.aborted;
       e.state = 'failed';
       e.why = (err as Error).message.slice(0, 600);
       e.phase = undefined;
       await this.cleanup(e);
+      // Stopped or replaced on purpose isn't a failed start.
+      if (!stopped) this.settled(e);
+    }
+  }
+
+  private settled(e: AgentApp) {
+    try {
+      this.d.onSettled?.(e);
+    } catch {
+      // Recording it is a convenience.
     }
   }
 
