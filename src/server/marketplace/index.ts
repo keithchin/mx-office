@@ -19,6 +19,7 @@ export function marketplaceOf(ctx: Ctx): MarketplaceService {
       dataDir: ctx.cfg.dataDir,
       mxcli: () => officeMxcli()?.path,
       token: () => marketplaceToken(),
+      floorDir: (id) => ctx.floors.get(id)?.dir,
       identity: () => officeSettings().gitIdentity,
       tell: (floorId, workerId, text) => {
         const floor = ctx.floors.get(floorId);

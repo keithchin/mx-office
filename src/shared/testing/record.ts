@@ -129,3 +129,18 @@ export function statusOf(v: unknown): ResultStatus | undefined {
   if (/^(skip|skipped|fault|manual|pending|waived|neutral|n\/a|not run|⏭|⚠|➖)/u.test(s)) return 'skipped';
   return undefined;
 }
+
+/**
+ * A run's verdict as a check on a receipt or in the merge dialog: its own conclusion when it gave one, else
+ * failed when a result failed or the run could not complete (a harness error: a smoke that couldn't sign in
+ * is a failed check, never "skipped"), passed when every result passed, skipped otherwise. `of` limits it to
+ * some of its results (the merge dialog takes journeys out first).
+ */
+export function checkVerdict(r: Pick<TestRunRecord, 'conclusion' | 'results' | 'harnessError'>, of: readonly TestResult[] = r.results): ResultStatus {
+  if (r.conclusion) return r.conclusion;
+  if (r.harnessError || of.some((x) => x.status === 'failed')) return 'failed';
+  return of.length && of.every((x) => x.status === 'passed') ? 'passed' : 'skipped';
+}
+
+/** A run's name as a check: its suite, and "(couldn't run)" when a harness error decided it. */
+export const checkName = (r: Pick<TestRunRecord, 'suite' | 'harnessError' | 'conclusion'>) => (r.harnessError && !r.conclusion ? `${r.suite} (couldn't run)` : r.suite);

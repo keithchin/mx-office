@@ -4,6 +4,7 @@
 // than one that fails, because a failed one can be retried.
 
 import { spawn } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { spawnOff, type OffChild } from '../offloop/exec.js';
 
 export interface RunOptions {
@@ -97,6 +98,16 @@ export interface RunHooks {
 
 const HOOKS: RunHooks = { spawn: spawnOff, alive, checkMs: 2_000, graceMs: GONE_GRACE_MS };
 
+/** Whether `cwd` is missing: Windows reports a start in a folder that isn't there as ENOENT, the same as a missing program. Only asked after a failed start. */
+function cwdMissing(cwd: string | undefined): boolean {
+  if (!cwd) return false;
+  try {
+    return !statSync(cwd).isDirectory();
+  } catch {
+    return true;
+  }
+}
+
 export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks: RunHooks = HOOKS): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     let child: OffChild;
@@ -153,7 +164,7 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks:
       clearTimeout(timer);
       clearInterval(look);
       runningCommands.delete(id);
-      reject(new Error(err.code === 'ENOENT' ? `${cmd} isn't installed on the office's machine (or isn't on its PATH)` : `Couldn't run ${cmd}: ${err.message}`));
+      reject(new Error(err.code === 'ENOENT' ? (cwdMissing(opts.cwd) ? `Couldn't run ${cmd}: the folder it runs in isn't there (${opts.cwd})` : `${cmd} isn't installed on the office's machine (or isn't on its PATH)`) : `Couldn't run ${cmd}: ${err.message}`));
     });
     child.once('close', (code) => {
       clearTimeout(timer);

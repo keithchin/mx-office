@@ -90,3 +90,25 @@ export function serialTestRuntime<T>(fn: () => Promise<T>): Promise<T> {
   chain = p.catch(() => undefined);
   return p;
 }
+
+/**
+ * Three free ports (app, admin, serve) for a test runtime that can be told them (mxcli v0.27+): from the live
+ * apps' range, none an instance or live app holds, held until released. Undefined when none are free (then
+ * mxcli's own 8081/8091/6544).
+ */
+export async function testPorts(dataDir: string, env: NodeJS.ProcessEnv = process.env): Promise<{ ports: number[]; release(): void } | undefined> {
+  const { pickPorts } = await import('../liveapp/ports.js');
+  const { holdPorts, instancePorts } = await import('../app-instance/index.js');
+  const got = await pickPorts(3, liveAppConfig(dataDir, env).ports, new Set(instancePorts()));
+  return got ? { ports: got, release: holdPorts(got) } : undefined;
+}
+
+/**
+ * The environment an older mxcli's `test --local` gets (it makes `<app>_test` with `psql -U postgres`): the
+ * office's own database password, only when the office's database user IS `postgres` on this machine, so that
+ * connection can succeed with what the office already has. Nothing otherwise: no superuser is asked for.
+ */
+export function pgEnvFor(dataDir: string, env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const cfg = liveAppConfig(dataDir, env);
+  return cfg.db.user === 'postgres' && loopback(cfg.db.host) && cfg.db.password ? { PGPASSWORD: cfg.db.password, PGHOST: cfg.db.host, PGPORT: String(cfg.db.port) } : {};
+}

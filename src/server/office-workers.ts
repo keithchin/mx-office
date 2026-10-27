@@ -198,7 +198,7 @@ export const MCP_NAME = 'agent-office';
  * of the agent's app, so they never ask the Project Manager for permission (the real rebuild test's raw
  * permission prompts were engineering reaching the business PM).
  */
-const APP_TOOLS_ALLOWED = ['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test'].map((t) => `mcp__${MCP_NAME}__${t}`);
+const APP_TOOLS_ALLOWED = ['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test', 'app_check'].map((t) => `mcp__${MCP_NAME}__${t}`);
 /** What it needs from the worker's environment; Codex hands an MCP server only what it's told to. */
 const MCP_ENV = ['AGENT_OFFICE_HOOK_URL', 'AGENT_OFFICE_WORKER_ID', 'AGENT_OFFICE_HOOK_TOKEN'];
 /** Its tools that only look, which Claude Code workers may call without asking. */

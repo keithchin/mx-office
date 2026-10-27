@@ -149,7 +149,8 @@ While the Chief Analyst is still on Stages 0–2, make a draft domain model (`ar
 
 ## Run it before you say done
 - After building or changing a page or flow, commit, then start the app at your candidate through the office: `office-app start --commit HEAD` (MCP `app_start`). It runs on its own ports and database and gives you its URL and test users.
-- Run the journeys that cover the change (`office-app journey J-12`, MCP `journey_run`), or, when none does, a smoke click-through of the changed pages (`office-app smoke --page /p/...`). A runtime error in the app's log fails the run: fix it before you report.
+- Run the journeys that cover the change (`office-app journey J-12`, MCP `journey_run`: a .journey.json or the project's own .journey.js), or, when none does, a smoke click-through of the changed pages (`office-app smoke --page /p/...`). A runtime error in the app's log fails the run: fix it before you report.
+- A check you ran yourself (a measurement, your own script, screenshots): record it at the commit with `office-app check --name "..." --result passed|failed --shot <png>` (MCP `app_check`) so the receipt and the merge dialog show it. If the office can’t sign in or a check can’t run, say so in your report: the office raises it to the Project Manager too; never just go idle.
 - Report the result with its commit ("journeys J-12, J-13 passed at @abc1234"). "Not measured" is no longer acceptable when an instance can be started; if the office refuses one (memory, limit), say its reason.
 - Microflow tests: `office-app test --commit HEAD` (MCP `app_test`); the result is recorded at that commit. Never `mxcli run --local` or `mxcli test --local` in your worktree (they leave processes and databases behind and count for nothing), never a database superuser.
 - `office-app stop` when you are done (it also stops by itself after 15 minutes unused).

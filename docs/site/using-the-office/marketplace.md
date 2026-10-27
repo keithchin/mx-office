@@ -24,6 +24,10 @@ Agents never install these themselves and never get a token for it. They **ask**
 
 If the folder moved to another branch meanwhile, or a step fails, nothing is committed: the card stays, says why (*the last try failed: …*), and you can try again or another way.
 
+The agent's folder is always taken against the **project's folder**, never the folder the office happened to be started from (an agent's worktree path can be stored relative, `.agent-office/worktrees/…`; release 78 then failed with a misleading *git isn't installed* unless the office was started from the project folder). A folder that isn't there any more is said as that; *git isn't installed* now means exactly that.
+
+**Company-private Marketplace content.** The Marketplace API mxcli downloads through serves public content and the content private to the token owner's company. So *Download and add* can fetch your company's private items when the office's token belongs to a user in that company. When the Marketplace doesn't show an item to the office's token (not found, forbidden), the card says so in those words: either the item is private to a company that token's user isn't in, or the id or version is wrong; use a token of a user in that company (🔌 Connections › Mendix), or a package file. A refused token (expired, revoked) is said as that.
+
 Only the **Project Manager (an admin)** can act on the card; a member reads it. Through Phone access the office asks for the password again, as for other answers that put code into the project. Every step is in the audit log: `marketplace.request`, `marketplace.added` (with the package's sha256, the commit and the files), `marketplace.decline`, `marketplace.failed`.
 
 ## Tokens: who holds what

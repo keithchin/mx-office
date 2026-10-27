@@ -23,6 +23,8 @@ export interface MarketplaceDeps {
   now?: () => number;
   mxcli: () => string | undefined;
   token: () => { token: string } | { why: string };
+  /** A project's folder: a request's folder stored relative (by an older office) is resolved against it, never the office's working directory. */
+  floorDir?: (floor: string) => string | undefined;
   run?: Run;
   identity?: () => { name: string; email: string } | undefined;
   /** Tells the agent (the office's own message); false when it couldn't. */
@@ -39,6 +41,12 @@ const RECIPE = (r: MarketplaceRequest, p: PackageFacts) =>
   p.kind === 'widget'
     ? `Run \`mxcli widget init -p <app>.mpr\` in your folder so mxcli knows it, then \`mxcli widget describe ${p.name.toLowerCase()} -p <app>.mpr\` for its MDL properties, and use it in your MDL (pull/rebase first if your folder isn't where the commit is).`
     : `It's in the model now: \`mxcli describe module ${p.name} -p <app>.mpr\`. Check with \`mxcli check\` / \`mx check\` before using it. (Request ${r.rid}.)`;
+
+/** A request's folder as an absolute path: as it is when absolute, else against the project's folder; undefined when that isn't known. */
+export function resolveFolder(folder: string, floorDir: string | undefined): string | undefined {
+  if (path.isAbsolute(folder)) return folder;
+  return floorDir ? path.resolve(floorDir, folder) : undefined;
+}
 
 export class MarketplaceService {
   readonly store: MarketplaceStore;
@@ -171,7 +179,9 @@ export class MarketplaceService {
     if (typeof pkg === 'string') return `the ${how === 'download' ? 'download' : 'file'} isn’t usable: ${pkg}`;
     const wrong = packageMismatch(pkg, r);
     if (wrong) return wrong;
-    const placed = await placeAndCommit({ run: this.deps.run, mxcli: this.deps.mxcli(), identity: this.deps.identity?.() }, r, file, pkg);
+    const folder = resolveFolder(r.folder, this.deps.floorDir?.(r.floor));
+    if (!folder) return `${r.by.name}'s folder was recorded as "${r.folder}", relative to the project, and the office doesn't know the project's folder any more: ${r.by.name} can ask again`;
+    const placed = await placeAndCommit({ run: this.deps.run, mxcli: this.deps.mxcli(), identity: this.deps.identity?.() }, { ...r, folder }, file, pkg);
     if (!placed.ok) return placed.error;
     const next: MarketplaceRequest = { ...r, status: 'added', note: undefined, added: { how, pkg, commit: placed.commit, files: placed.files, by, at: this.now() }, done: { by, at: this.now() } };
     await this.store.put(next);

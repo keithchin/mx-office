@@ -18,7 +18,9 @@ import { NoTestsError, runMicroflowTests, runQuality } from './mxcli-run.js';
 import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
-import { prepareTestRun, serialTestRuntime } from './test-db.js';
+import { pgEnvFor, prepareTestRun, serialTestRuntime, testPorts } from './test-db.js';
+import { testFlags, type TestFlags } from './test-flags.js';
+import type { TestRunDraft } from '../../shared/testing/record.js';
 import { pickMxbuild } from '../liveapp/mxbuild.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
 import { execFileOffP } from '../offloop/exec.js';
@@ -78,6 +80,10 @@ export interface MxDeps {
   auto?: boolean;
   /** Stand-in for test-db.ts prepareTestRun (tests); the real one otherwise. */
   prepare?: (mprBase: string) => Promise<{ db: string; notes: string[] } | { why: string }>;
+  /** Stand-in for test-flags.ts testFlags (tests). */
+  flags?: (bin: string) => Promise<TestFlags>;
+  /** Hears each finished run's record (the callers raise what only a person can clear: agent-app/raise.ts). */
+  onDone?: (draft: TestRunDraft) => void;
 }
 
 /** Who starts a microflow test run, and on which commit (default: main's newest). */
@@ -134,7 +140,13 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
   const done = (async () => {
     try {
       const prepare = deps.prepare ?? ((base: string) => prepareTestRun(base, { dataDir }));
-      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(deps.now ? { now: deps.now } : {}) });
+      const flags = await (deps.flags ?? testFlags)(tool.bin).catch(() => undefined);
+      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
+      try {
+        deps.onDone?.(draft);
+      } catch {
+        // A listener's trouble isn't the run's.
+      }
       const [rec] = await testingStore(dataDir, floor.id).ingest([draft]);
       slot.record = rec?.id;
       slot.harness = draft.harnessError;

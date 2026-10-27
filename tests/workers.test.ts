@@ -1189,7 +1189,7 @@ test("every Claude worker gets the office's MCP server, and office-workers on it
   assert.deepEqual(server.args.slice(1), ['mcp']);
   assert.ok(server.args[0].endsWith(path.join('bin', 'office-workers.js')));
   // Looking is allowed without asking; hiring and sending home aren't.
-  assert.deepEqual(JSON.parse(readFileSync(path.join(f.data, 'claude-hooks.json'), 'utf8')).permissions, { allow: ['mcp__agent-office__list_workers', 'mcp__agent-office__escalate', 'mcp__agent-office__subagent', ...['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test'].map((t) => `mcp__agent-office__${t}`)] });
+  assert.deepEqual(JSON.parse(readFileSync(path.join(f.data, 'claude-hooks.json'), 'utf8')).permissions, { allow: ['mcp__agent-office__list_workers', 'mcp__agent-office__escalate', 'mcp__agent-office__subagent', ...['app_start', 'app_status', 'app_stop', 'journey_run', 'app_smoke', 'app_test', 'app_check'].map((t) => `mcp__agent-office__${t}`)] });
 
   const desk = await workers.spawn('desk-2', 'Ada', 'Fix login');
   assert.equal(typeof desk, 'object');

@@ -8,6 +8,7 @@
 //   POST /office/app/smoke {paths, as}  a smoke click-through on it, recorded against its commit
 //   POST /office/app/test {commit}      the microflow tests at that commit (testing/mxcli-office.ts), JUnit recorded there
 //   GET  /office/app/test               that run's state, and its record once it's in
+//   POST /office/app/check {name, result, detail, shots, commit}   a check it ran itself, recorded at the commit as reported by it (./checks.ts)
 
 import type http from 'node:http';
 import type { Ctx } from '../office/context.js';
@@ -19,8 +20,11 @@ import { testingStore } from '../testing/index.js';
 import { outcomeWords, viewLine } from '../../shared/agent-app.js';
 import { agentAppsOf, journeyDeps } from './office.js';
 import { runJourney, runSmoke } from './journey.js';
+import { raiseForPm } from './raise.js';
+import { recordAgentCheck } from './checks.js';
+import { testBlocker } from '../../shared/testing/test-reason.js';
 
-const ACTIONS = ['', '/start', '/stop', '/journey', '/smoke', '/test'];
+const ACTIONS = ['', '/start', '/stop', '/journey', '/smoke', '/test', '/check'];
 
 const strs = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 300)).slice(0, max) : []);
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined);
@@ -39,7 +43,7 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
     return send(res, 200, { app: app ?? null, line: viewLine(app), test: testRunOf(floor.id) });
   }
   if (req.method === 'GET' && action === '/test') return send(res, 200, await testState(ctx, floor.id));
-  if (req.method !== 'POST') return send(res, 405, { error: 'GET /office/app or /office/app/test, or POST to /office/app/start, /stop, /journey, /smoke or /test' });
+  if (req.method !== 'POST') return send(res, 405, { error: 'GET /office/app or /office/app/test, or POST to /office/app/start, /stop, /journey, /smoke, /test or /check' });
   let body: Record<string, unknown>;
   try {
     body = (JSON.parse((await readBody(req)) || '{}') ?? {}) as Record<string, unknown>;
@@ -72,6 +76,13 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
     if (typeof e === 'string') return send(res, 409, { error: e });
     const d = await journeyDeps(ctx, floor.id);
     if (!d) return send(res, 410, { error: 'This project closed' });
+    // A sign-in the app refused reaches the PM as a Needs-you item, never as the agent going quietly idle.
+    d.onSignInFailed = (_e, words) =>
+      raiseForPm(ctx, floor, me.id, {
+        title: `${me.name}'s checks on its app instance can't sign in`,
+        details: words,
+        recommendation: 'Tell the agent which test account and password the app is seeded with (or name them in tests/e2e/project.config.js), then it runs the check again.',
+      });
     const o =
       action === '/journey'
         ? await runJourney(e, { ...(str(body.journey, 300) ? { journey: str(body.journey, 300) } : {}), ...(typeof body.text === 'string' ? { text: body.text.slice(0, 512 * 1024), file: str(body.file, 300) ?? 'journey.json' } : {}) }, d)
@@ -80,10 +91,21 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
     audit.record({ floor: floor.id, actor: who, action: 'agent-app.run', target: { kind: 'commit', id: e.commit, label: `@${e.commit.slice(0, 7)}` }, summary: `${o.suite} on its app instance @${e.commit.slice(0, 7)}: ${o.status}`, details: { record: o.record, runtimeErrors: o.runtimeErrors?.length ?? 0 }, severity: o.status === 'passed' ? 'info' : 'warning' });
     return send(res, 200, { outcome: o, words: outcomeWords(o) });
   }
+  if (action === '/check') {
+    const name = (str(body.name, 160) ?? '').replace(/\s+/g, ' ').trim();
+    const result = body.result;
+    if (!name) return send(res, 400, { error: 'Say what you checked: --name "P3 header at 390 px as nadia"' });
+    if (result !== 'passed' && result !== 'failed') return send(res, 400, { error: 'result is passed or failed' });
+    const commit = body.commit ? await resolve(str(body.commit, 200)) : apps.view(floor.id, me.id, false)?.commit;
+    if (!commit) return send(res, 400, { error: 'Say at which commit (--commit <sha>): you have no app instance to take it from' });
+    const r = await recordAgentCheck(ctx.cfg.dataDir, { floorId: floor.id, commit, worker: me.name, suite: `check: ${name} (reported by ${me.name})`, status: result, ...(str(body.detail, 600) ? { detail: str(body.detail, 600) } : {}), shots: strs(body.shots, 5), reported: true });
+    audit.record({ floor: floor.id, actor: who, action: 'agent-app.check', target: { kind: 'commit', id: commit, label: `@${commit.slice(0, 7)}` }, summary: `Reported a check at ${commit.slice(0, 7)}: ${name}: ${result}`, details: { record: r.record, shots: r.kept.length }, severity: result === 'passed' ? 'info' : 'warning' });
+    return send(res, 200, { record: r.record, line: `Recorded at ${commit.slice(0, 7)} as reported by you: ${name}: ${result.toUpperCase()}${r.kept.length ? ` (${r.kept.length} screenshot${r.kept.length === 1 ? '' : 's'} kept)` : ''}${r.skipped.length ? `; not kept (only .png/.jpg/.webp up to 5 MB, by full path): ${r.skipped.join(', ')}` : ''}. It shows in the change's Checks and the merge dialog.` });
+  }
   // /test: the microflow tests at a commit, through the office's own runner.
   const commit = await resolve(str(body.commit, 200));
   if (!commit) return send(res, 400, { error: `The project's repository has no commit ${String(body.commit ?? 'main')}` });
-  const r = await startMicroflowTests(ctx.cfg.dataDir, floor, { name: me.name, agentId: me.id, commit });
+  const r = await startMicroflowTests(ctx.cfg.dataDir, floor, { name: me.name, agentId: me.id, commit }, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, me.id, ask); } });
   if (typeof r === 'string') return send(res, 409, { error: r });
   void r.done.catch(() => undefined);
   return send(res, 200, { started: r.commit, line: `Microflow tests started at ${r.commit.slice(0, 7)} in the office's work folder: office-app test --wait (or GET /office/app/test) says when they're done` });

@@ -18,7 +18,8 @@
 // its address; the credentials stay here.
 
 import type { ChildProcess } from 'node:child_process';
-import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
+import { mkdirSync, statSync, truncateSync } from 'node:fs';
+import { logAppender } from '../liveapp/log-append.js';
 import http from 'node:http';
 import path from 'node:path';
 import { BOOT_PHASE_TITLE, durationWords, type BootPhase, type BootTiming } from '../../shared/app-instance.js';
@@ -90,6 +91,14 @@ export interface AppInstance {
 const claimed = new Set<number>();
 export const instancePorts = (): ReadonlySet<number> => claimed;
 
+/** Holds `ports` for another runtime the office starts (a microflow test run) so the live apps and instances leave them alone; gives their release. */
+export function holdPorts(ports: readonly number[]): () => void {
+  for (const p of ports) claimed.add(p);
+  return () => {
+    for (const p of ports) claimed.delete(p);
+  };
+}
+
 /** Workspaces an instance runs in now: one start per workspace at a time. */
 const inUse = new Set<string>();
 
@@ -123,12 +132,13 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
   }
   const db = cfg.db;
   const lines: string[] = [];
+  const log = logAppender(logFile);
   const note = (line: string) => {
     const l = db.password ? line.replaceAll(db.password, '***') : line;
     lines.push(l.length > 400 ? `${l.slice(0, 400)}…` : l);
     if (lines.length > 40) lines.splice(0, lines.length - 40);
     try {
-      appendFileSync(logFile, `${l}\n`);
+      log(l);
     } catch {
       // The log is a convenience.
     }
@@ -159,6 +169,7 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
     if (dbMade) await dropDb(psql, db, dbName).catch((err: Error) => note(`couldn't drop ${dbName}: ${err.message}`));
     inUse.delete(key);
     note(`stopped; ${dbName || 'no database'} dropped (the workspace stays for the next run)`);
+    await log.flush();
   };
   const onAbort = () => void stop();
   spec.signal?.addEventListener('abort', onAbort, { once: true });
@@ -208,6 +219,7 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
     timing = await startOnce(spec.signal, spec.progress, clock).then((t) => ({ ...t, workspace: ws.how }));
     await markWorkspace(dir, ws, true);
     note(`answering on ${ports[0]} (${dbName}) after ${durationWords(timing.ms)}${timing.bundleMs !== undefined ? `; the bundle took ${durationWords(timing.bundleMs)}` : ''}`);
+    await log.flush();
     return {
       get url() {
         return `http://127.0.0.1:${appPort}/`;
@@ -248,6 +260,7 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
           progress?.('Starting the same build again on a fresh database…');
           timing = await startOnce(signal, progress, c).then((t) => ({ ...t, workspace: 'reused' as const }));
           note(`answering on ${ports[0]} (${dbName}) after ${durationWords(timing.ms)}`);
+          await log.flush();
         } catch (err) {
           note(`✖ ${(err as Error).message}`);
           await stop();

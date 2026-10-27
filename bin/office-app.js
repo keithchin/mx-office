@@ -21,15 +21,23 @@ export const APP_USAGE = `  office-app start [--commit <sha|main|HEAD>] [--no-wa
   office-app status                             your instance now
   office-app journey <J-id|path> [--commit <sha>]
                                                 play a journey on it (the project's at that commit by id
-                                                or path, or a file of yours); signs out after; runtime
-                                                errors in the app's log fail it; recorded at the commit
+                                                or path, or a file of yours): a toolkit .journey.json, or
+                                                a .journey.js script run with node against the instance
+                                                (APP_URL, TEST_USER/TEST_PASS set); runtime errors in the
+                                                app's log fail it; recorded at the commit
   office-app smoke [--page /p/addr]... [--as <user>]
-                                                open pages (default the home page) as a test user; an
-                                                error dialog or runtime error fails it; recorded
+                                                open pages (default the home page) as one of the
+                                                project's test users (its config, its journeys' personas,
+                                                the seed password); an error dialog or runtime error fails
+                                                it; a refused sign-in is raised to the PM; recorded
+  office-app check --name "<what>" --result passed|failed [--detail "..."] [--shot <png>]... [--commit <sha>]
+                                                record a check you ran yourself (a measurement, your own
+                                                script, screenshots) at your instance's commit, labelled
+                                                as reported by you: it shows in the change's Checks
   office-app test [--commit <sha|main|HEAD>] [--no-wait]
                                                 the microflow tests (tests/*.test.mdl) at that commit, run
-                                                by the office (its test database, no superuser); the
-                                                JUnit result is recorded at that commit
+                                                by the office (mxcli's built-in database, no superuser);
+                                                the JUnit result is recorded at that commit
   office-app stop                               stop your instance (its processes and database go)`;
 
 const ENV = ['AGENT_OFFICE_HOOK_URL', 'AGENT_OFFICE_WORKER_ID', 'AGENT_OFFICE_HOOK_TOKEN'];
@@ -63,10 +71,15 @@ export function parseApp(argv) {
     else if (flag === '--page' || flag === '--path') out.pages.push(val());
     else if (flag === '--as') out.as = val();
     else if (flag === '--file') out.file = val();
+    else if (flag === '--name') out.name = val();
+    else if (flag === '--result') out.result = val();
+    else if (flag === '--detail') out.detail = val();
+    else if (flag === '--shot') (out.shots ??= []).push(val());
     else if (a.startsWith('-')) throw new AppUsageError(`Unknown option: ${flag}`);
     else words.push(a);
   }
-  if (!['start', 'status', 'stop', 'journey', 'smoke', 'test'].includes(cmd)) throw new AppUsageError(`Unknown command: ${cmd}`);
+  if (!['start', 'status', 'stop', 'journey', 'smoke', 'test', 'check'].includes(cmd)) throw new AppUsageError(`Unknown command: ${cmd}`);
+  if (cmd === 'check' && (!out.name || !['passed', 'failed'].includes(out.result))) throw new AppUsageError('check needs --name "<what you checked>" and --result passed|failed');
   if (cmd === 'journey') {
     if (!out.file && words.length !== 1) throw new AppUsageError('journey takes one journey: its id (J-12), its path in the repository, or a file of yours');
     if (words[0]) out.journey = words[0];
@@ -154,6 +167,12 @@ async function runTests(commit, wait, io, say = () => {}) {
   }
 }
 
+/** A check's body: screenshots by full path (the office copies them into its evidence). */
+function checkBody(cmd, cwd) {
+  const abs = (p) => (/^([a-z]:)?[\\/]/i.test(p) ? p : `${cwd}/${p}`.replace(/\\/g, '/'));
+  return { name: cmd.name, result: cmd.result, ...(cmd.detail ? { detail: cmd.detail } : {}), shots: (cmd.shots ?? []).map(abs), ...(cmd.commit ? { commit: cmd.commit } : {}) };
+}
+
 function journeyBody(cmd, cwd) {
   const p = cmd.file ?? (cmd.journey && /\.json$/i.test(cmd.journey) && existsSync(`${cwd}/${cmd.journey}`) ? cmd.journey : undefined);
   if (p) return { file: p.replace(/\\/g, '/'), text: readFileSync(p.match(/^([a-z]:)?[\\/]/i) ? p : `${cwd}/${p}`, 'utf8'), ...(cmd.commit ? { commit: cmd.commit } : {}) };
@@ -177,7 +196,7 @@ export const APP_TOOLS = [
   {
     name: 'journey_run',
     title: 'Run a journey on your app instance',
-    description: `Plays a journey (tests/**/*.journey.json, the toolkit's shape) on your running app instance: the project's own at the instance's commit by id (J-12) or path, or a file of yours (file, a path from your working folder). ${RUNTIME_NOTE}`,
+    description: `Plays a journey on your running app instance: a toolkit tests/**/*.journey.json, or a project's own tests/**/*.journey.js script (run with node against the instance, APP_URL and TEST_USER/TEST_PASS set): the project's own at the instance's commit by id (J-12) or path, or a file of yours (file, a path from your working folder). ${RUNTIME_NOTE}`,
     inputSchema: { type: 'object', properties: { journey: { type: 'string', description: 'The journey id or its path in the repository.' }, file: { type: 'string', description: 'A journey file of yours, instead.' }, commit: { type: 'string', description: 'The commit you expect the instance to run (checked).' } }, additionalProperties: false },
     annotations: { destructiveHint: false, openWorldHint: false },
   },
@@ -185,7 +204,14 @@ export const APP_TOOLS = [
     name: 'app_smoke',
     title: 'Smoke-test pages on your app instance',
     description: `Signs in as a test user and opens each page address (default the home page) on your running instance; an error dialog or a runtime error fails it. For the pages you changed when no journey covers them. ${RUNTIME_NOTE}`,
-    inputSchema: { type: 'object', properties: { paths: { type: 'array', items: { type: 'string' }, description: "Page addresses ('/p/claims'), at most 20." }, as: { type: 'string', description: 'A test user (default: the project config\'s default).' } }, additionalProperties: false },
+    inputSchema: { type: 'object', properties: { paths: { type: 'array', items: { type: 'string' }, description: "Page addresses ('/p/claims'), at most 20." }, as: { type: 'string', description: "A test user (default: the project's own: its config, else its journeys' personas with the seed password)." } }, additionalProperties: false },
+    annotations: { destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'app_check',
+    title: 'Record a check you ran yourself',
+    description: "Records a check you ran yourself on your app instance (a measurement, your own browser script, screenshots) against its commit, labelled as reported by you, so the change's receipt and the merge dialog show it with pass or fail. Prefer journey_run / app_smoke when they can do the check: those the office runs and watches.",
+    inputSchema: { type: 'object', properties: { name: { type: 'string', description: "What you checked ('P3 header at 390 px as the requestor')." }, result: { type: 'string', enum: ['passed', 'failed'] }, detail: { type: 'string', description: 'What you saw, in a line or two.' }, shots: { type: 'array', items: { type: 'string' }, description: 'Screenshot files (.png/.jpg/.webp, full paths), at most 5.' }, commit: { type: 'string', description: "The commit (default: your instance's)." } }, required: ['name', 'result'], additionalProperties: false },
     annotations: { destructiveHint: false, openWorldHint: false },
   },
   {
@@ -216,6 +242,10 @@ export async function runAppTool(name, args, io) {
   if (name === 'app_smoke') {
     const r = await appCall('/smoke', { paths: a.paths ?? [], ...(a.as ? { as: a.as } : {}) }, io, 10 * 60_000);
     return { text: r.words, isError: r.outcome?.status !== 'passed' };
+  }
+  if (name === 'app_check') {
+    const r = await appCall('/check', checkBody({ name: a.name, result: a.result, detail: a.detail, shots: a.shots, commit: a.commit }, cwd), io);
+    return { text: r.line };
   }
   if (name === 'app_test') {
     const r = await runTests(revOf(a.commit, cwd).commit, a.wait !== false, io);
@@ -255,6 +285,11 @@ export async function appMain(argv, io = {}) {
       const r = await runTests(rev.commit, cmd.wait, ctx, cmd.json ? undefined : err);
       out(cmd.json ? JSON.stringify(r.state ?? r, null, 2) : r.words);
       return r.ok ? 0 : 1;
+    }
+    if (cmd.cmd === 'check') {
+      const r = await appCall('/check', checkBody(cmd, ctx.cwd), ctx);
+      out(cmd.json ? JSON.stringify(r, null, 2) : r.line);
+      return 0;
     }
     const r = cmd.cmd === 'journey' ? await appCall('/journey', journeyBody(cmd, ctx.cwd), ctx, 20 * 60_000) : await appCall('/smoke', { paths: cmd.pages, ...(cmd.as ? { as: cmd.as } : {}) }, ctx, 10 * 60_000);
     out(cmd.json ? JSON.stringify(r.outcome, null, 2) : r.words);

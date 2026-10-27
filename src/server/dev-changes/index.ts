@@ -24,6 +24,7 @@ import { contains } from '../tasks/git.js';
 import { git } from '../asks/sources.js';
 import { modelOf } from '../model/index.js';
 import { testingStore } from '../testing/index.js';
+import { checkName, checkVerdict } from '../../shared/testing/record.js';
 import { changeRequestBook } from '../change-requests/index.js';
 import { localOnlyAt } from '../local-only.js';
 import { managerOf } from '../../shared/roster/coverage.js';
@@ -264,9 +265,7 @@ async function checksOf(ctx: Ctx, floorId: string, all: readonly DevChange[], pu
   for (const r of recs) {
     const rev = r.testedRevision?.toLowerCase();
     if (!rev || ![...shas].some((s) => s.startsWith(rev) || rev.startsWith(s))) continue;
-    const failed = r.results.some((x) => x.status === 'failed');
-    const verdict = r.conclusion ?? (failed ? 'failed' : r.results.length && r.results.every((x) => x.status === 'passed') ? 'passed' : 'skipped');
-    out.push({ revision: r.testedRevision, name: r.suite, verdict });
+    out.push({ revision: r.testedRevision, name: checkName(r), verdict: checkVerdict(r) });
   }
   return out;
 }

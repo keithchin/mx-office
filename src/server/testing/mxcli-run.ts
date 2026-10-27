@@ -19,6 +19,7 @@ import { stripNoise } from '../model/mxcli.js';
 import { execFileOffP, type OffError } from '../offloop/exec.js';
 import { testRunWhy } from '../../shared/testing/test-reason.js';
 import { checkoutAt, disposeFolder, testPathsIn, workDirOf } from './workfolder.js';
+import { NO_FLAGS, type TestFlags } from './test-flags.js';
 
 export interface MxOut {
   code: number | null;
@@ -82,7 +83,20 @@ export interface TestRunOpts {
   serial?: <T>(fn: () => Promise<T>) => Promise<T>;
   /** The mxbuild for the app (liveapp/mxbuild.ts pickMxbuild, as the live app and the app instances pick it): handed to mxcli as MXCLI_MXBUILD_PATH. */
   mxbuildFor?: (mprPath: string) => string | undefined;
+  /**
+   * What this mxcli's `test` can be told (test-flags.ts). With `--db-type` the run boots on the runtime's built-in
+   * database (`--db-type hsqldb`): no PostgreSQL, no superuser, and `prepare` isn't needed; with the port flags it
+   * runs on ports the office picks (`ports`). Without them, the older route: `prepare` and the fixed ports.
+   */
+  flags?: TestFlags;
+  /** Three free ports (app, admin, serve) held for the run, and their release; undefined when none are free. */
+  ports?: () => Promise<{ ports: number[]; release(): void } | undefined>;
+  /** Extra environment for the older route (PGPASSWORD of the office's own database user, when that user is mxcli's `postgres`). */
+  pgEnv?: Record<string, string>;
 }
+
+/** How the run boots its runtime, in words for the record. */
+export const routeWords = (hsql: boolean) => (hsql ? "the runtime's built-in database (--db-type hsqldb: no PostgreSQL needed)" : 'PostgreSQL (<app>_test)');
 
 export class NoTestsError extends Error {}
 
@@ -126,20 +140,30 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
     const minutes = Math.max(1, Math.round(o.timeoutMs / 60_000));
     const args = ['test', ...paths, '-p', wf.mpr, '--local', '--require-assertions', '--junit', junitFile, '--timeout', `${minutes}m`];
     const base = path.basename(wf.mpr).replace(/\.mpr$/i, '');
-    const run = async () => {
-      const ready = o.prepare ? await o.prepare(base) : undefined;
+    const flags = o.flags ?? NO_FLAGS;
+    // mxcli v0.27+: the built-in database, so nobody needs a PostgreSQL superuser (or any PostgreSQL at all).
+    const hsql = flags.dbType;
+    if (hsql) args.push('--db-type', 'hsqldb');
+    const run = async (): Promise<{ ready?: { db: string; notes: string[] } | { why: string }; out?: MxOut }> => {
+      const ready = hsql ? { db: '', notes: [`ran on ${routeWords(true)}`] } : o.prepare ? await o.prepare(base) : undefined;
       if (ready && 'why' in ready) return { ready };
+      const held = hsql && flags.ports && o.ports ? await o.ports() : undefined;
+      const a = held ? [...args, '--app-port', String(held.ports[0]), '--admin-port', String(held.ports[1]), '--serve-port', String(held.ports[2])] : args;
       const mxbuild = o.mxbuildFor?.(path.join(wf.dir, wf.mpr));
-      return { ready, out: await runMx(o.bin, args, wf.dir, o.timeoutMs + 60_000, mxbuild ? { MXCLI_MXBUILD_PATH: mxbuild, MXBUILD_PATH: mxbuild } : {}) };
+      try {
+        return { ready, out: await runMx(o.bin, a, wf.dir, o.timeoutMs + 60_000, { ...(hsql ? {} : (o.pgEnv ?? {})), ...(mxbuild ? { MXCLI_MXBUILD_PATH: mxbuild, MXBUILD_PATH: mxbuild } : {}) }) };
+      } finally {
+        held?.release();
+      }
     };
     const got = await (o.serial ?? (<T>(fn: () => Promise<T>) => fn()))(run);
     if (got.ready && 'why' in got.ready) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${got.ready.why}` }), undefined) };
     const out = got.out!;
-    const db = got.ready && 'db' in got.ready ? got.ready.db : undefined;
+    const db = got.ready && 'db' in got.ready && got.ready.db ? got.ready.db : undefined;
     const junit = await readFile(junitFile, 'utf8').catch(() => undefined);
     const mendix = mendixOf(`${out.stdout}\n${out.stderr}`);
     // No results: why, in mxcli's words and what they mean (shared/testing/test-reason.ts), never "no JUnit file" alone.
-    const failure = junit === undefined ? testRunWhy({ ...out, minutes: minutes + 1 }, db) : undefined;
+    const failure = junit === undefined ? testRunWhy({ ...out, minutes: minutes + 1 }, db, { mxcliVersion: o.mxcliVersion, hsql }) : undefined;
     const env = envelope({
       commit: wf.commit,
       paths,
