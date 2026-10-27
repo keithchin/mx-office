@@ -81,7 +81,7 @@ export class Wizard {
     this.book = new JobBook(dir, redactor([]), flowsOf(ctx), { ops: new OperationStore(path.join(dir, 'operations'), { onChange: auditOperation }) });
     // A setup the office stopped in the middle of an operation is looked at once now (reconcile.ts).
     setImmediate(() => void reconcileOnStart(this.book, this.lookup()));
-    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then((r) => r.stdout));
+    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then((r) => r.stdout), { keepFile: path.join(dir, 'gate-runs.json') });
     // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
     useGateLock((dir) => this.gates.busy(dir) || toolkitBusy(dir));
   }

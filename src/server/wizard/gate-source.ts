@@ -17,7 +17,7 @@
 // With no remote, the panel reads the folder as before (setup.ts).
 
 import { execFileOff } from '../offloop/exec.js';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { signal } from '../incidents/signals.js';
@@ -94,6 +94,8 @@ export interface GateSourceOptions {
   fetch: boolean;
   /** At most this many gate-checks at once across the office (each is a bash and a worktree). */
   concurrency: number;
+  /** Where each floor's latest good run is kept between office starts (none: memory only). */
+  keepFile?: string;
 }
 
 const DEFAULTS: GateSourceOptions = { throttleMs: 3 * 60_000, failMs: 10 * 60_000, fetchMs: 90_000, timeoutMs: 5 * 60_000, fetch: true, concurrency: 2 };
@@ -184,6 +186,9 @@ export class GateSource {
   private lastRun = new Map<string, number>();
   private looking = new Set<string>();
   private slots: Slots;
+  /** The kept runs read back from `keepFile` (once per office). */
+  private restored?: Promise<void>;
+  private saving: Promise<unknown> = Promise.resolve();
   /** Stops hearing originNews (tests). */
   readonly stop: () => void;
 
@@ -217,6 +222,8 @@ export class GateSource {
   async read(dir: string, fetch = true): Promise<GateFiles | undefined> {
     const info = await branchInfo(dir);
     if (!info) return undefined;
+    // After a restart: the last good checks come back from disk, so the stage isn't "Stage 1" until a new run ends.
+    await this.restore();
     // Not waited for: the next look sees what it brought.
     if (fetch) void this.fetch(dir, info.def).then(() => undefined);
     const cached = await this.filesAt(dir, info.sha, this.files);
@@ -309,6 +316,37 @@ export class GateSource {
     const runs = this.runsOf(dir);
     runs.good = [{ sha, at: this.now(), ...(fromHtml.length ? { html } : {}), verdicts }, ...runs.good.filter((g) => g.sha !== sha)].slice(0, KEEP_RUNS);
     if (runs.failed?.sha === sha) runs.failed = undefined;
+    this.keep();
+  }
+
+  /** Reads the kept runs back once (a restart lost them: the stage line said "Stage 1" during a build until gate-check ran again). */
+  private restore(): Promise<void> {
+    const file = this.opts.keepFile;
+    if (!file) return Promise.resolve();
+    this.restored ??= readFile(file, 'utf8')
+      .then((t) => {
+        const kept = JSON.parse(t) as Record<string, GateRun>;
+        for (const [dir, g] of Object.entries(kept ?? {})) {
+          if (!g || typeof g.sha !== 'string' || !Array.isArray(g.verdicts) || this.runs.get(dir)?.good.length) continue;
+          this.runsOf(dir).good = [{ sha: g.sha, at: Number(g.at) || 0, verdicts: g.verdicts }];
+        }
+      })
+      .catch(() => undefined);
+    return this.restored;
+  }
+
+  /** Keeps each floor's latest good run (its verdicts, not its dashboard) on disk, off the event loop. */
+  private keep() {
+    const file = this.opts.keepFile;
+    if (!file) return;
+    const out: Record<string, GateRun> = {};
+    for (const [dir, r] of this.runs) if (r.good[0]) out[dir] = { sha: r.good[0].sha, at: r.good[0].at, verdicts: r.good[0].verdicts };
+    this.saving = this.saving
+      .then(async () => {
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, JSON.stringify(out));
+      })
+      .catch(() => undefined);
   }
 
   /** `go` in a detached worktree of `sha` made under the system's temp folder, removed afterwards whatever happens. */
