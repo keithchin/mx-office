@@ -105,6 +105,8 @@ function world(
   git(dir, 'add', '.');
   git(dir, ...ENV, 'commit', '-q', '-m', 'app');
   git(dir, 'push', '-q', '-u', 'origin', 'main');
+  // Its origin as the office sees a GitHub project's (the push above went to the bare repository standing in for GitHub).
+  git(dir, 'remote', 'set-url', 'origin', 'https://github.com/acme/shop.git');
   for (const [rel, text] of [
     ['roster/shop.json', '{"team":1}'],
     ['budget/shop.json', '{"ledger":{}}'],
