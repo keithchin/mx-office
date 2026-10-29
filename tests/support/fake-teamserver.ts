@@ -30,6 +30,8 @@ export interface FakeTeamServer {
   creates: { name: string; summary?: string }[];
   /** The Deploy API's answer per app id (the body as sent), and a status to answer instead. */
   environments: Record<string, unknown>;
+  /** GET /api/v4/apps/<id>'s answer per app id. */
+  apps: Record<string, unknown>;
   envStatus?: number;
   /** Makes an app's repository with the template (an existing app, for linking). */
   makeApp(id?: string): string;
@@ -80,6 +82,7 @@ export async function fakeTeamServer(token = 'fake-mendix-pat-0123456789abcdef')
     steps: ['scheduled', 'running'],
     creates: [],
     environments: {},
+    apps: {},
     makeApp,
     head: (projectId, ref = 'main') => git(path.join(root, `${projectId}.git`), ['rev-parse', ref]),
     close: () => new Promise((done) => server.close(() => (rmSync(root, { recursive: true, force: true }), done()))),
@@ -89,6 +92,12 @@ export async function fakeTeamServer(token = 'fake-mendix-pat-0123456789abcdef')
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     fake.requests.push({ method: req.method ?? 'GET', url: req.url ?? '', ...(req.headers.authorization ? { auth: req.headers.authorization } : {}) });
     const env = /^\/api\/v4\/apps\/([\w-]+)\/environments$/.exec(url.pathname);
+    const appAt = /^[/]api[/]v4[/]apps[/]([0-9a-zA-Z_-]+)$/.exec(url.pathname);
+    if (appAt) {
+      if (req.headers.authorization !== `MxToken ${token}`) return send(res, 401, { error: { message: 'Unauthorized' } });
+      const body = fake.apps[appAt[1]];
+      return body === undefined ? send(res, 404, { error: { message: 'Not Found' } }) : send(res, 200, body);
+    }
     if (env) {
       if (req.headers.authorization !== `MxToken ${token}`) return send(res, 401, { error: { message: 'Unauthorized' } });
       if (fake.envStatus) return send(res, fake.envStatus, { error: { message: 'refused' } });

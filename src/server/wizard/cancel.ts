@@ -23,6 +23,7 @@ import { SETUP_STEPS, type StepId, type StepStatus } from '../../shared/wizard.j
 import { writeJsonAtomic } from '../flow/store.js';
 import type { DeleteJobView, DeletePlan } from '../../shared/project-delete.js';
 import { removeTree } from '../project-delete/fsops.js';
+import { removeStudioCopy, studioCopyPlan } from '../project-delete/studio-copy.js';
 import { canDeleteRepo, deleteRepo, repoSettingsUrl, type Gh } from '../project-delete/repo.js';
 import type { JobState } from './job.js';
 import { readProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
@@ -256,6 +257,8 @@ export class SetupCancels {
     const did = s.steps.filter((x) => x.status === 'done' || x.status === 'skipped').map((x) => `${SETUP_STEPS.find((d) => d.id === x.id)?.label ?? x.id}${x.detail ? `: ${x.detail}` : ''}${x.status === 'skipped' ? ' (nothing to do)' : ''}`);
     const blocked = this.blocked(s);
     const bare = localBareMade(s.steps);
+    // A Team Server project's Studio copy, when the office made it for this project: it goes with the folder.
+    const copy = await studioCopyPlan(s.dir, this.rules(s.dir));
     return {
       id: s.id,
       repo: s.repo,
@@ -274,6 +277,7 @@ export class SetupCancels {
       },
       repoDelete,
       ...(bare ? { localBare: { path: bare, exists: existsSync(path.join(bare, 'HEAD')) } } : {}),
+      ...(copy ? { studioCopy: copy } : {}),
       mendix: { mpr: exists && (await hasMpr(s.dir)) },
       ...(blocked ? { blocked } : {}),
       ...(old && old.status !== 'done' ? { unfinished: view(old) } : {}),
@@ -405,7 +409,8 @@ export class SetupCancels {
         const auth = await this.folderAuth(s);
         if (!auth.ok) return { detail: `kept ${s.dir}: not deleted, because ${auth.why}`, skipped: true };
         await this.deleteFolderOp(s, auth.op, () => removeTree(s.dir));
-        return { detail: `deleted ${s.dir}` };
+        const copy = await removeStudioCopy(s.dir, this.rules(s.dir));
+        return { detail: `deleted ${s.dir}${copy ? `; ${copy}` : ''}` };
       }
       case 'repo': {
         if (rec.deleteRepo && legacyVia) return { detail: `deleted ${s.repo} (with the project)` };

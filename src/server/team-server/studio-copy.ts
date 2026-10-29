@@ -11,7 +11,7 @@
 // targets.ts), so the agents' mxcli writes pause while Studio Pro has it open, and commits made there (a Publish's
 // automatic commit too) reach main through the sync's fast-forward pull (./sync.ts), sooner while Studio Pro is open.
 
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { STUDIO_PUBLISH_HINTS, type TeamServerRecord } from '../../shared/team-server.js';
 import type { StudioTarget } from '../../shared/studio-target.js';
@@ -30,6 +30,27 @@ export function studioTargetFor(dir: string, rec: Pick<TeamServerRecord, 'url'>)
   return { kind: 'teamserver', dir: at, ready: existsSync(path.join(at, '.git')), origin: rec.url, hints: STUDIO_PUBLISH_HINTS };
 }
 
+/** The file in the copy's .git that says the office made it, and for which project. */
+export const STUDIO_COPY_MARK = 'mx-office-studio-copy.json';
+
+const norm = (p: string) => (process.platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p));
+
+/**
+ * The project's Studio copy, only when the office made it for exactly this project: at `studioCopyDir(dir)`, a real
+ * folder (no link), a git checkout whose .git holds the office's mark naming this project. Anything else: undefined,
+ * so project delete and Cancel & undo never touch it.
+ */
+export function officeStudioCopyOf(dir: string): string | undefined {
+  const copy = studioCopyDir(dir);
+  try {
+    if (!lstatSync(copy).isDirectory() || !lstatSync(path.join(copy, '.git')).isDirectory()) return undefined;
+    const mark = JSON.parse(readFileSync(path.join(copy, '.git', STUDIO_COPY_MARK), 'utf8')) as { madeBy?: unknown; project?: unknown };
+    return mark.madeBy === 'mx-office' && typeof mark.project === 'string' && norm(mark.project) === norm(dir) ? copy : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 /** Makes the copy, or brings it up to date when that's safe. Never throws: an error is its words (token-free). */
@@ -46,6 +67,8 @@ export async function prepareStudioCopy(d: { g?: TsGit; dir: string; rec: Pick<T
       if (r.code !== 0) return { error: `Couldn’t make the Studio copy from Team Server: ${gitRefusalWords(r.tail.join(' ') || `git clone exit ${r.code}`)}` };
       // The Studio Pro history notes (it reads the model's version from them).
       await g.auth(copy, ['fetch', '--quiet', 'origin', `+${NOTES}:${NOTES}`], { timeoutMs: FETCH_MS, allowFail: true });
+      // Proof that the office made it, for project delete and Cancel & undo (officeStudioCopyOf): nothing else is ever theirs to delete.
+      writeFileSync(path.join(copy, '.git', STUDIO_COPY_MARK), `${JSON.stringify({ madeBy: 'mx-office', project: path.resolve(d.dir), at: Date.now() }, null, 2)}\n`);
       return { dir: copy, note: `Made the Studio copy at ${copy} from Team Server (its origin is Team Server).` };
     }
     if (!g) return { dir: copy, note: 'No Mendix token in 🔌 Connections, so the office couldn’t bring the Studio copy up to date: Pull in Studio Pro first.' };

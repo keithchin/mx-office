@@ -19,7 +19,10 @@ import { pushNotes, syncMain } from '../src/server/team-server/sync.js';
 import { forgetTeamServer, withTeamServerView } from '../src/server/team-server/project.js';
 import { TeamServerOffice, teamServerStudioTarget } from '../src/server/team-server/index.js';
 import { prepareStudioCopy, studioCopyDir } from '../src/server/team-server/studio-copy.js';
-import { environmentsOf, forgetEnvironments, loadEnvironments } from '../src/server/team-server/environments.js';
+import { appOf, environmentsOf, forgetEnvironments, loadEnvironments } from '../src/server/team-server/environments.js';
+import { officeStudioCopyOf } from '../src/server/team-server/studio-copy.js';
+import { removeStudioCopy, studioCopyPlan } from '../src/server/project-delete/studio-copy.js';
+import { cancelConsequences, type CancelPlan } from '../src/shared/setup-cancel.js';
 import { studioFolderOf, studioTargetOf } from '../src/server/studio/targets.js';
 import { studioRouteDeps, studioRoutes } from '../src/server/http/routes/studio.js';
 import { StudioWatch, markerPath, type WatchDeps } from '../src/server/studio/watch.js';
@@ -84,6 +87,19 @@ function tsProject(fake: FakeTeamServer, root: string, name: string) {
     },
   };
 }
+
+/** The real Deploy API v4 answers' shapes (seen on the real API), with neutral values. */
+const DEPLOY_ENVIRONMENTS = (appId: string) => ({
+  Environments: [{ id: '0f0e0d0c-0000-4000-8000-000000000001', appId, name: 'Sandbox', state: 'running', isProduction: false, url: 'https://records-sandbox.mxapps.io', planName: 'free', regionRestricted: false }],
+  pagination: { offset: 0, limit: 100, size: 1 },
+});
+const DEPLOY_APP = (appId: string) => ({ id: appId, name: 'records', licenseType: 'free', subdomain: 'records', region: 'Free Apps', technicalContact: { name: 'Pat Example', email: 'pat@example.test' } });
+
+test('the Deploy API v4 fixture: the real wrapped shape is read exactly', () => {
+  assert.deepEqual(environmentsOf(DEPLOY_ENVIRONMENTS('a1')), [{ name: 'Sandbox', state: 'running', url: 'https://records-sandbox.mxapps.io', planName: 'free', isProduction: false }]);
+  assert.deepEqual(appOf(DEPLOY_APP('a1')), { licenseType: 'free', region: 'Free Apps', subdomain: 'records' });
+  assert.deepEqual(environmentsOf({ Environments: [], pagination: { offset: 0, limit: 100, size: 0 } }), []);
+});
 
 function assertTokenFree(fake: FakeTeamServer, dirs: string[], calls: { args: string[] }[] = []) {
   for (const d of dirs) {
@@ -166,6 +182,25 @@ test('Edit in Studio Pro on a Team Server project: a Studio copy whose origin is
   assert.match((await prepareStudioCopy({ dir: path.join(root, 'nothing-yet'), rec: p.record }) as { error: string }).error, /No Mendix token/);
 
   assertTokenFree(fake, [p.dir, copy], rec.calls);
+
+  // Project delete and Cancel & undo: only the copy the office made for exactly this project, under the folder guards.
+  assert.equal(officeStudioCopyOf(p.dir), copy, 'the office’s mark is in its .git');
+  const rules = { home: root, dataDir: path.join(root, 'data'), local: false, testMode: false };
+  assert.match((await studioCopyPlan(p.dir, { ...rules, home: path.join(root, 'elsewhere') }))?.why ?? '', /isn’t inside the office’s projects folder/);
+  assert.equal(await removeStudioCopy(p.dir, { ...rules, home: path.join(root, 'elsewhere') }), `kept the Studio copy ${copy} (it isn’t inside the office’s projects folder (${path.join(root, 'elsewhere')}))`);
+  assert.ok(existsSync(copy));
+  const plan = { dir: p.dir, studioCopy: { path: copy, deletable: true }, repoDelete: { offline: true }, mendix: { mpr: false } } as unknown as CancelPlan;
+  assert.ok(cancelConsequences(plan, { deleteFolder: true, deleteRepo: false }).some((l) => l.includes(`Studio copy ${copy}`) && /deleted, for good/.test(l)));
+  assert.ok(cancelConsequences(plan, { deleteFolder: false, deleteRepo: false }).some((l) => /kept \(it goes only with the folder\)/.test(l)));
+  assert.equal(await removeStudioCopy(p.dir, rules), `deleted the Studio copy ${copy}`);
+  assert.ok(!existsSync(copy) && !existsSync(path.dirname(copy)), 'and the empty .studio-pro folder');
+  // A copy the office didn't make (no mark, or another project's) is never its to delete.
+  mkdirSync(path.join(copy, '.git'), { recursive: true });
+  assert.equal(officeStudioCopyOf(p.dir), undefined);
+  writeFileSync(path.join(copy, '.git', 'mx-office-studio-copy.json'), JSON.stringify({ madeBy: 'mx-office', project: path.join(root, 'another') }));
+  assert.equal(officeStudioCopyOf(p.dir), undefined);
+  assert.equal(await removeStudioCopy(p.dir, rules), '');
+  assert.ok(existsSync(copy));
 });
 
 test('the Studio copy’s route: Edit in Studio Pro opens the copy the target gets ready, not the project’s folder', async () => {
@@ -228,15 +263,19 @@ test('the cloud environments: read with the Deploy API (token only in the header
   t.after(async () => (await fake.close(), rmSync(root, { recursive: true, force: true })));
   forgetEnvironments();
   const p = tsProject(fake, root, 'records');
-  fake.environments[p.id] = { environments: [{ name: 'Sandbox', state: 'Running', url: 'https://records-sandbox.mxapps.io', planName: 'Free App', isProduction: false }] };
+  // Exactly the shape the real Deploy API v4 answers (capital E, paging beside it), with neutral values.
+  fake.environments[p.id] = DEPLOY_ENVIRONMENTS(p.id);
+  fake.apps[p.id] = DEPLOY_APP(p.id);
   const ts = new TeamServerOffice({ dataDir: path.join(root, 'data'), token: () => fake.token, env: cleanEnv, endpoints: fake.endpoints, reachable: async () => true });
   const floor = { id: 'records', dir: p.dir };
   const e = await ts.environments(floor);
-  assert.deepEqual(e?.list, [{ name: 'Sandbox', state: 'Running', url: 'https://records-sandbox.mxapps.io', planName: 'Free App', isProduction: false }]);
+  assert.deepEqual(e?.list, [{ name: 'Sandbox', state: 'running', url: 'https://records-sandbox.mxapps.io', planName: 'free', isProduction: false }]);
+  assert.deepEqual(e?.app, { licenseType: 'free', region: 'Free Apps', subdomain: 'records' }, 'the licence type, never the technical contact');
+  assert.ok(!JSON.stringify(e).includes('pat@example.test'));
   await ts.environments(floor);
   const asked = fake.requests.filter((r) => r.url.startsWith('/api/v4/'));
-  assert.equal(asked.length, 1, 'cached: one read');
-  assert.equal(asked[0].url, `/api/v4/apps/${p.id}/environments`);
+  assert.equal(asked.length, 2, 'cached: one read (the environments and the app)');
+  assert.deepEqual(asked.map((r) => r.url).sort(), [`/api/v4/apps/${p.id}`, `/api/v4/apps/${p.id}/environments`]);
   assert.equal(asked[0].auth, `MxToken ${fake.token}`, 'the token only in the Authorization header');
   assert.equal(ts.view(floor, true).environments?.list[0].url, 'https://records-sandbox.mxapps.io');
   assert.equal(environmentWords(e!.list[0]), 'Sandbox · running · https://records-sandbox.mxapps.io');
@@ -247,12 +286,14 @@ test('the cloud environments: read with the Deploy API (token only in the header
   const cloud = rows.find((r) => r.label === 'Mendix Cloud');
   assert.equal(cloud?.value, 'Sandbox · running · https://records-sandbox.mxapps.io');
   assert.equal(cloud?.href, 'https://records-sandbox.mxapps.io');
+  assert.equal(cloud?.sub, 'Licence: free · plan free');
 
   // A refusal is said, and the last good list stays beside it.
   fake.envStatus = 403;
   const refused = await ts.environments(floor, true);
   assert.match(refused?.error ?? '', /refused the Mendix token \(403\).*mx:deployment:read/);
   assert.equal(refused?.list.length, 1);
+  assert.equal(refused?.app?.licenseType, 'free', 'the app’s licence kept beside the error too');
   // A plain array answer and odd entries; a dead API in words, with no token in them.
   assert.deepEqual(environmentsOf([{ name: 'Acceptance', state: 'Stopped', url: 'javascript:alert(1)' }, { nope: true }]), [{ name: 'Acceptance', state: 'Stopped' }]);
   const dead = await loadEnvironments({ token: fake.token, endpoints: { ...fake.endpoints, deployApi: 'http://127.0.0.1:1/api/v4' } }, 'another-app');

@@ -50,11 +50,27 @@ function cleanEnvironment(v: unknown): CloudEnvironment | undefined {
   };
 }
 
-/** The list in the API's answer: an array, or one under `environments`, `items` or `data`. */
+/**
+ * The list in the API's answer. Deploy API v4 wraps it with a capital E, beside its paging:
+ * `{"Environments":[{id, appId, name, state, isProduction, url, planName, regionRestricted}], "pagination":{…}}`
+ * (seen on the real API). A bare array, or one under `environments`, `items` or `data`, is read too.
+ */
 export function environmentsOf(body: unknown): CloudEnvironment[] {
   const b = body as Record<string, unknown> | unknown[] | undefined;
-  const arr = Array.isArray(b) ? b : Array.isArray(b?.environments) ? b.environments : Array.isArray(b?.items) ? b.items : Array.isArray(b?.data) ? b.data : [];
+  const arr = Array.isArray(b) ? b : (['Environments', 'environments', 'items', 'data'].map((k) => b?.[k]).find(Array.isArray) ?? []);
   return (arr as unknown[]).map(cleanEnvironment).filter((e): e is CloudEnvironment => !!e).slice(0, 20);
+}
+
+/** The app from `GET /apps/{appId}` (`{id, name, licenseType, subdomain, region, technicalContact}`): only what's shown. */
+export function appOf(body: unknown): CloudEnvironments['app'] | undefined {
+  if (!body || typeof body !== 'object') return undefined;
+  const r = body as Record<string, unknown>;
+  const out = {
+    ...(str(r.licenseType) ? { licenseType: str(r.licenseType)!.slice(0, 40) } : {}),
+    ...(str(r.region) ? { region: str(r.region)!.slice(0, 60) } : {}),
+    ...(str(r.subdomain) ? { subdomain: str(r.subdomain)!.slice(0, 80) } : {}),
+  };
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** What a refused read means, in words a Project Manager can act on. */
@@ -81,7 +97,11 @@ async function read(d: EnvDeps, projectId: string): Promise<CloudEnvironments> {
     } catch {
       return { at: now, list: [], error: 'The Deploy API’s answer wasn’t readable.' };
     }
-    return { at: now, list: environmentsOf(body) };
+    // The app itself (`GET /apps/{appId}`: its licence type), best effort: a refusal there costs nothing above.
+    const app = await (d.fetch ?? fetch)(`${base}/apps/${encodeURIComponent(projectId)}`, { headers: { Authorization: `MxToken ${d.token}`, Accept: 'application/json' }, signal: ctrl.signal })
+      .then(async (r) => (r.ok ? appOf(JSON.parse(await r.text())) : undefined))
+      .catch(() => undefined);
+    return { at: now, list: environmentsOf(body), ...(app ? { app } : {}) };
   } catch (err) {
     const e = err as Error & { cause?: { code?: string } };
     const why = e.name === 'AbortError' ? `no answer in ${REQUEST_MS / 1000} s` : hide(e.cause?.code ?? e.message);
@@ -101,7 +121,7 @@ export function loadEnvironments(d: EnvDeps, projectId: string, force = false): 
   const p = read(d, projectId)
     .then((e) => {
       // A failed read keeps the last good list beside its error, so the Overview doesn't lose the URL on a blip.
-      const kept = e.error && had?.list.length ? { ...e, list: had.list } : e;
+      const kept = e.error && had?.list.length ? { ...e, list: had.list, ...(had.app ? { app: had.app } : {}) } : e;
       cache.set(projectId, kept);
       return kept;
     })

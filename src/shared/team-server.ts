@@ -85,6 +85,8 @@ export interface CloudEnvironments {
   at: number;
   list: CloudEnvironment[];
   error?: string;
+  /** The app (`GET /apps/{appId}`): its licence type ("free"), region, subdomain. Never the technical contact. */
+  app?: { licenseType?: string; region?: string; subdomain?: string };
 }
 
 /** The Projects API (v2) and Team Server's git host. Tests pass fakes; the office never reads these from its environment. */

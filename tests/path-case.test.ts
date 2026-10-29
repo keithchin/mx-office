@@ -145,3 +145,22 @@ test('a clean tree records nothing; a bad one is one failed run keyed by its com
   assert.equal(d.sourceKey, `path-case:${'a'.repeat(40)}`);
   assert.equal(d.suite, `${SUITE}: javasource/Mod must be lower case`);
 });
+
+test('the local merge confirm reads the check at its commit even when no other view has looked yet', async () => {
+  const dir = repo();
+  const data = mkdtempSync(path.join(os.tmpdir(), 'path-case-merge-'));
+  try {
+    resetPathCase();
+    const bad = commitOf(dir, ['App.mpr', 'themesource/Styling/web/main.scss']);
+    const { resultsAt } = await import('../src/server/local-merge/describe.js');
+    const ctx = { cfg: { dataDir: data }, floors: new Map([['p1', { id: 'p1', dir }]]) } as never;
+    const r = await resultsAt(ctx, 'p1', bad);
+    const c = r.checks.find((x) => x.name.startsWith(SUITE));
+    assert.ok(c, `the merge dialog's checks: ${JSON.stringify(r.checks)}`);
+    assert.equal(c.verdict, 'failed');
+  } finally {
+    resetPathCase();
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(data, { recursive: true, force: true });
+  }
+});

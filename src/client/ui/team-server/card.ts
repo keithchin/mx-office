@@ -53,7 +53,7 @@ export function environmentsFacts(e: CloudEnvironments | undefined): HTMLElement
   if (!e) return [h('dt', {}, 'Cloud'), h('dd', { class: 'ts-small' }, 'Not read yet (the office needs its Mendix token).')];
   const rows = e.list.map((x) => h('div.ts-env', { 'data-env': x.name }, x.url ? h('a', { href: x.url, target: '_blank', rel: 'noopener' }, `${environmentWords(x)} ↗`) : environmentWords(x), x.planName ? h('span.ts-small', {}, ` · ${x.planName}`) : '', x.isProduction ? h('span.ts-small', {}, ' · production') : ''));
   const none = !e.list.length && !e.error ? [h('span.ts-small', {}, 'No cloud environments yet: Publish from Studio Pro makes the Free App sandbox.')] : [];
-  return [h('dt', {}, 'Cloud'), h('dd', { class: e.error && !e.list.length ? 'bad' : '' }, ...rows, ...none, e.error ? h('div.ts-small', {}, e.error) : '', h('div.ts-small', {}, `Read ${timeAgo(e.at)}`))];
+  return [h('dt', {}, 'Cloud'), h('dd', { class: e.error && !e.list.length ? 'bad' : '' }, ...rows, ...none, e.error ? h('div.ts-small', {}, e.error) : '', e.app?.licenseType ? h('div.ts-small', { 'data-licence': e.app.licenseType }, `Licence: ${e.app.licenseType}${e.app.region ? ` · ${e.app.region}` : ''}`) : '', h('div.ts-small', {}, `Read ${timeAgo(e.at)}`))];
 }
 
 export function teamServerCard(floor: string): HTMLElement {

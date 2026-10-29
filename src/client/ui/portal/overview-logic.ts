@@ -108,7 +108,8 @@ export function detailRows(f: DetailFacts): DetailRow[] {
   else if (f.repo) rows.push({ label: 'Repository', value: f.repo, href: `https://github.com/${f.repo}`, external: true });
   else if (f.dir) rows.push({ label: 'Folder', value: f.dir, mono: true });
   // The app's Mendix Cloud environments (Deploy API, cached by the office): "Sandbox · running · https://…mxapps.io".
-  for (const e of f.teamServer?.environments?.list ?? []) rows.push({ label: e.isProduction ? 'Mendix Cloud (production)' : 'Mendix Cloud', value: environmentWords(e), ...(e.url ? { href: e.url, external: true } : {}) });
+  const licence = f.teamServer?.environments?.app?.licenseType;
+  for (const e of f.teamServer?.environments?.list ?? []) rows.push({ label: e.isProduction ? 'Mendix Cloud (production)' : 'Mendix Cloud', value: environmentWords(e), ...(e.url ? { href: e.url, external: true } : {}), ...(licence ? { sub: `Licence: ${licence}${e.planName ? ` · plan ${e.planName}` : ''}` } : {}) });
   if (f.branch) rows.push({ label: 'Branch', value: f.branch, mono: true, tab: 'git' });
   if (f.mendix) rows.push({ label: 'Mendix version', value: f.mendix, tab: 'model' });
   if (f.toolkit) rows.push({ label: 'Toolkit', value: `${f.toolkit.state === 'pinned' ? 'Pinned at' : 'At'} ${short(f.toolkit.sha)}${f.toolkit.date ? ` · ${f.toolkit.date}` : ''}`, mono: true });

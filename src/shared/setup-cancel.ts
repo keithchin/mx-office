@@ -96,6 +96,8 @@ export interface CancelPlan {
   };
   /** A local-only project's own bare repository (<projects home>/.local-git/<owner>/<name>.git), when this setup made it: it goes with the folder. */
   localBare?: { path: string; exists: boolean };
+  /** A Team Server project's Studio copy the office made (`<owner>/.studio-pro/<name>`): it goes with the folder. */
+  studioCopy?: { path: string; deletable: boolean; why?: string };
   /** The Mendix app: its .mpr goes with the folder and the repository; a Portal / Team Server app never does. */
   mendix: { mpr: boolean; portalUrl?: string };
   /** Something that stops it now, in words. */
@@ -183,6 +185,7 @@ export function cancelConsequences(p: CancelPlan, r: Pick<CancelRequest, 'delete
   }
   lines.push(r.deleteFolder ? `The local folder ${p.dir} deleted, for good${p.mendix.mpr ? ', with the Mendix app (.mpr) in it' : ''}.` : `The local folder ${p.dir} kept.`);
   if (p.localBare?.exists) lines.push(r.deleteFolder ? `The project’s local repository ${p.localBare.path} (its origin on this machine) deleted, for good.` : `The project’s local repository ${p.localBare.path} kept (it goes only with the folder).`);
+  if (p.studioCopy) lines.push(r.deleteFolder ? (p.studioCopy.deletable ? `The project’s Studio copy ${p.studioCopy.path} (the clone Studio Pro opens) deleted, for good.` : `The project’s Studio copy ${p.studioCopy.path} kept: ${p.studioCopy.why}.`) : `The project’s Studio copy ${p.studioCopy.path} kept (it goes only with the folder).`);
   if (!p.repoDelete.offline) lines.push(r.deleteRepo ? `The GitHub repository ${p.repo} deleted, for good.` : `The GitHub repository ${p.repo} kept.`);
   lines.push('The setup itself removed: New project no longer lists it.');
   lines.push('A Mendix Portal / Team Server app is never deleted by the office: delete it in the Portal yourself if there is one.');
