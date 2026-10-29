@@ -39,6 +39,8 @@ export interface BudgetDeps {
   /** What the worker is on, for the row's kind and design pointer: its task's words, its role id, the floor's design binding (`<id>@v<n>#<digest7>` or 'none'). */
   workOf?(floorId: string, workerId: string): { text?: string; role?: string; design?: string } | undefined;
   stageOf(dir: string): StageId;
+  /** When the stage in use is read from a team branch because main lags (stage.ts stageSourceOf). */
+  stageSource?(dir: string): { main: StageId; branch: string } | undefined;
   /** The office's own Ledger: background calls go into it too. */
   officeLedger: { add(u: Usage): void; state(): UsageState };
   /** The analysis runs (for the back-fill). */

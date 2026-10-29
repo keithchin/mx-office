@@ -66,6 +66,7 @@ export const stagesSection: BudgetSection = (v: BudgetView, _o, refresh) => {
   const sumP = s.rows.reduce((n, r) => n + (r.planned ?? 0), 0);
   const sumA = s.rows.reduce((n, r) => n + r.spent, 0);
   const notes = [
+    s.stageVia ? `Stage ${s.stageVia.stage} is read from the team’s branch ${s.stageVia.branch} (its PROJECT.md): main still says Stage ${s.stageVia.main} until those documents are merged, so spend is booked to Stage ${s.stageVia.stage}.` : '',
     s.noPipeline ? 'Missing: this project has no toolkit pipeline, so its spend can’t be told apart by stage and no stage is warned about.' : '',
     s.unattributed > 0.005 ? `Missing: ${usdCents(s.unattributed)} was booked to no stage (before the stage was known, or outside the pipeline), so it’s in no row.` : '',
     'Spend is booked to the stage the project was in at the time (read from its gate files); work done before a gate was recorded counts towards the earlier stage.',

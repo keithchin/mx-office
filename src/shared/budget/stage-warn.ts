@@ -81,6 +81,8 @@ export interface StagePlanView {
   unattributed: number;
   /** The project has no toolkit pipeline: spend can't be told apart by stage at all. */
   noPipeline: boolean;
+  /** The stage in use is the one the team settled on a branch, because main still says an earlier one (its docs aren't merged yet). */
+  stageVia?: { stage: StageId; main: StageId; branch: string };
   /** Of the spend, estimated from history (not split by stage). */
   estimated: number;
   /** Whether the plan's numbers are the office's own estimates (default rates or history) rather than set by a person. */

@@ -41,6 +41,7 @@ export function stagePlanOf(b: BudgetService, floor: FloorRef, n: Numbers = numb
   const f = b.file(floor);
   const current = b.deps.stageOf(floor.dir);
   const p = paceInputs(b, floor, n);
+  const via = b.deps.stageSource?.(floor.dir);
   const inPlan = new Set<StageId>(n.plan.lines.map((l) => l.stage));
   const recs = new Map((f.stageWarns ?? []).map((r) => [r.stage, r]));
   const rows = n.variance.map((v) => {
@@ -60,6 +61,7 @@ export function stagePlanOf(b: BudgetService, floor: FloorRef, n: Numbers = numb
     rows,
     unattributed: p.unattributed,
     noPipeline: current === '—',
+    ...(via && via.main !== current ? { stageVia: { stage: current, main: via.main, branch: via.branch } } : {}),
     estimated: r2(Object.values(f.ledger.days).reduce((s, d) => s + d.est, 0)),
     planEstimated: n.plan.lines.some((l) => l.basis === 'default' || l.basis === 'history'),
     ...(p.runOut ? { runOut: p.runOut } : {}),
