@@ -20,6 +20,7 @@ export function marketplaceOf(ctx: Ctx): MarketplaceService {
       mxcli: () => officeMxcli()?.path,
       token: () => marketplaceToken(),
       floorDir: (id) => ctx.floors.get(id)?.dir,
+      floors: () => [...ctx.floors.keys()],
       identity: () => officeSettings().gitIdentity,
       tell: (floorId, workerId, text) => {
         const floor = ctx.floors.get(floorId);
@@ -31,6 +32,10 @@ export function marketplaceOf(ctx: Ctx): MarketplaceService {
       audit: (floor, action, actor, summary, details, target) => void audit.record({ floor, actor, action, summary, details, target }),
     });
     services.set(ctx.cfg, s);
+    // Approved modules waiting for a clean app are tried again every minute (service.ts retryWaiting).
+    const svc = s;
+    const timer = setInterval(() => void svc.retryWaiting(), 60_000);
+    timer.unref?.();
   }
   return s;
 }

@@ -44,7 +44,15 @@ export interface PackageFacts {
   bytes: number;
 }
 
-export type MarketplaceStatus = 'pending' | 'working' | 'added' | 'declined' | 'failed';
+/**
+ * waiting: approved, the package checked and kept, the agent's app has uncommitted changes: the office tries again
+ * every minute and adds it once the app is clean (the agent is told to commit). superseded: the agent asked again
+ * (a corrected request for the same item) after this one failed, so this one is closed.
+ */
+export type MarketplaceStatus = 'pending' | 'working' | 'waiting' | 'added' | 'declined' | 'failed' | 'superseded';
+
+/** Whether a request still needs the Project Manager or the office (its Needs-you card is up). */
+export const marketplaceOpen = (s: MarketplaceStatus) => s === 'pending' || s === 'failed' || s === 'working' || s === 'waiting';
 
 export interface MarketplaceRequest extends MarketplaceAsk {
   /** mkt_<base36 time><random>. */
@@ -59,6 +67,10 @@ export interface MarketplaceRequest extends MarketplaceAsk {
   info?: MarketplaceInfo;
   /** Set once it was added: how, the package as checked, the commit and the file(s) it put in the project. */
   added?: { how: 'download' | 'file'; pkg: PackageFacts; commit?: string; files: string[]; by: string; at: number };
+  /** Approved and waiting for a clean app (status waiting): since when, how the package came, who approved it, the tries. */
+  waiting?: { since: number; how: 'download' | 'file'; by: string; /** The kept package's file name. */ name: string; tries: number };
+  /** The corrected request that replaced this failed one (status superseded). */
+  supersededBy?: string;
   /** Why it was declined or failed, in words (never a token). */
   note?: string;
   done?: { by: string; at: number };
