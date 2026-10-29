@@ -8,6 +8,7 @@ import { unknownLine, type AnswerRevisionKind, type DispatchRecord, type Dispatc
 import { TypedWatch } from '../dispatch/typed-watch.js';
 import { inputBoxHolds } from '../dispatch/input-box.js';
 import { mayType } from './deliver.js';
+import { isAsleepStatus } from './bench.js';
 import { taskIdIn } from '../../shared/tasks.js';
 import type { EscalationOutcome, EscalationVerdict } from '../../shared/roster/escalation.js';
 import type { AnswerLine } from '../answers/store.js';
@@ -70,6 +71,19 @@ function typedWatch(roster: Roster): TypedWatch {
       return floor.enter(w.id);
     },
     starting: (floorId, r) => at(floorId, r).w?.status === 'starting',
+    // Its session now: a wake can start a new one, where the typed message then lands.
+    sessionNow: (floorId, r) => {
+      const { floor, w } = at(floorId, r);
+      if (!floor || !w) return undefined;
+      const transcriptPath = floor.transcript?.(w);
+      const sessionId = (w as { sessionId?: string }).sessionId;
+      return { ...(sessionId ? { sessionId } : {}), ...(transcriptPath ? { transcriptPath } : {}) };
+    },
+    // Gone from the floor, or asleep again (its terminal exited after the wake): it can't take the message any more.
+    stopped: (floorId, r) => {
+      const { floor, w } = at(floorId, r);
+      return !!floor && (!w || isAsleepStatus(w.status));
+    },
     lost: (floorId, r) => {
       const { floor } = at(floorId, r);
       if (!floor) return;
