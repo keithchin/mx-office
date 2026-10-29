@@ -18,6 +18,7 @@ import { draftFromGates, stage6 } from './import-gates.js';
 import { draftFromPrChecks, draftFromPull } from './import-pr.js';
 import { mainOf, type MainRef } from './repo.js';
 import { TestRunStore } from './store.js';
+import { checkCommits } from '../path-case/index.js';
 
 const stores = new Map<string, TestRunStore>();
 const facts = new Map<string, { sha: string; p: Promise<RepoFacts> }>();
@@ -87,6 +88,8 @@ export async function testingView(dataDir: string, floor: FloorLike, deps: Testi
   const rendered = main ? deps.renderedGates?.(floor.dir, main.sha) : undefined;
   const gateDraft = main && rendered ? draftFromGates(main.sha, rendered.html, rendered.at, main.branch) : undefined;
   await store.ingest([...(repo?.reports ?? []), ...(gateDraft ? [gateDraft] : []), ...floor.github.pulls.items.flatMap((p) => draftFromPull(repoOf(floor), p) ?? [])]);
+  // The office's folder-name case check on main's files (server/path-case/; once per commit).
+  if (main) await checkCommits(store, floor.dir, [main.sha]);
   if (main && rendered) {
     const v = stage6(rendered.html);
     if (v) gate6 = { status: v.status, detail: v.detail, from: `gate-check rendered by the office at ${main.sha.slice(0, 7)}` };
