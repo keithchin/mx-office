@@ -46,8 +46,9 @@ export function escalationDraft(e: Escalation): ChatterDraft {
   // Jeff's and the handoff note's are raised by the office for the agent: their details say so (roster/jeff.ts, members.ts).
   if (e.details.startsWith('Jeff noticed ')) return { ...base, from: JEFF, text: `${e.by} ended its turn waiting on you: ${e.title}` };
   if (e.details.includes('The office raised this on its behalf from its handoff note')) return { ...base, from: OFFICE, text: `${e.by}'s handoff note says it's waiting on you: ${e.title}` };
-  const said = [e.title, e.recommendation ? `I'd go with: ${e.recommendation}` : '', e.details].filter(Boolean).join(' — ');
-  return { ...base, from: raiser(e), text: said };
+  // The whole of it, its lines kept (long): cut to one 400-character line, the decision couldn't be read here (release 81).
+  const said = [[e.title, e.recommendation ? `I'd go with: ${e.recommendation}` : ''].filter(Boolean).join(' — '), e.details].filter(Boolean).join('\n\n');
+  return { ...base, from: raiser(e), text: said, long: true };
 }
 
 export function answerDraft(e: Escalation): ChatterDraft | undefined {
@@ -55,7 +56,7 @@ export function answerDraft(e: Escalation): ChatterDraft | undefined {
   if (!r) return undefined;
   const text = r.verdict === 'approve' ? `Approved 👍${r.text ? ` ${r.text}` : ''}` : r.verdict === 'reject' ? `Rejected: ${r.text}` : r.verdict === 'dismiss' ? 'Noted, thanks 👍' : r.text;
   // Every answer comes from the Project Manager's console or approvals (http/routes/roster.ts): a person.
-  return { kind: 'answer', from: human(r.by), to: raiser(e), text, at: r.at, ref: { escalationId: e.id }, key: `ans:${e.id}` };
+  return { kind: 'answer', from: human(r.by), to: raiser(e), text, at: r.at, ref: { escalationId: e.id }, key: `ans:${e.id}`, long: true };
 }
 
 const list = (label: string, items: string[]) => (items.length ? `${label}: ${items.join('; ')}.` : '');

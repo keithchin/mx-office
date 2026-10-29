@@ -6,6 +6,7 @@
 // detail is fetched once when it opens (api.ts); a 409 says what changed and shows the new current answer.
 
 import type { AnswerDetail, LinkedWork, QChangeKind } from '../../../shared/change-answer';
+import { fullLabel } from '../../../shared/full-text';
 import { LINK_WORDS, revDispatchWords, revOutcomeWords } from '../../../shared/change-answer';
 import { NO_WORK_REQUIRED } from '../../../shared/task-links';
 import { taskLinksList } from '../task-links/view';
@@ -51,6 +52,7 @@ export function openChangeAnswer(floor: string, decision: string, rev: number, d
       { 'aria-label': `Current answer (rev ${d.rev})` },
       h('h3', {}, `Current answer (rev ${d.rev})`),
       h('p.ca-title', {}, d.title),
+      d.details ? h('details.ca-full', {}, h('summary', {}, fullLabel(d.details)), h('div.ca-full-text', {}, d.details)) : null,
       cur ? h('p.ca-rev-text', {}, [cur.option && !cur.text.includes(cur.option) ? cur.option : '', cur.text].filter(Boolean).join(': ') || '(no text)') : h('p.ca-rev-meta', {}, 'Not in the answer store'),
       cur ? h('p.ca-rev-meta', {}, `${cur.by} · ${timeAgo(cur.at)} · Sent: ${revDispatchWords(cur)} · Follow-through: ${revOutcomeWords(cur)}`) : null,
       d.revs.length > 1 ? h('details.ca-hist', {}, h('summary', {}, `History (${d.revs.length} revisions)`), historyList(d)) : null,

@@ -12,6 +12,9 @@ import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { jeffPortrait } from '../jeff';
 
+/** Longer than this (or more than one line), a message folds its rest under "Show all". */
+const LONG_AT = 400;
+
 export interface ChatterActions {
   openWorker(id: string): void;
   openEscalation(id: string): void;
@@ -66,9 +69,21 @@ export function messageNode(m: ChatterMessage, act: ChatterActions, compact = fa
   const go = target(m, act);
   const words = h('span.tc-text', {}, m.text);
   const bubble = go ? h('button.tc-bubble', { type: 'button', title: go.label, onclick: go.go }, words) : h('p.tc-bubble', {}, words);
+  // A long message (an escalation in full, a phone message) shows its first lines; "Show all" unfolds the rest in place.
+  const long = m.text.length > LONG_AT || m.text.includes('\n');
+  const more = long
+    ? (h('button.pt-link.tc-more', { type: 'button', 'aria-expanded': 'false' }, 'Show all') as HTMLButtonElement)
+    : null;
+  if (more)
+    more.addEventListener('click', () => {
+      const open = more.getAttribute('aria-expanded') !== 'true';
+      more.setAttribute('aria-expanded', String(open));
+      more.textContent = open ? 'Show less' : 'Show all';
+      bubble.classList.toggle('tc-open', open);
+    });
   return h(
     'li.tc-msg',
-    { class: `tc-k-${m.kind} tc-by-${m.from.kind}`, 'data-id': m.id },
+    { class: `tc-k-${m.kind} tc-by-${m.from.kind}${long ? ' tc-long' : ''}`, 'data-id': m.id },
     h('figure.tc-who', { title: m.from.role ? `${m.from.name}, ${m.from.role}` : m.from.name }, avatar(m.from, compact ? 24 : 32)),
     h(
       'div.tc-main',
@@ -84,6 +99,7 @@ export function messageNode(m: ChatterMessage, act: ChatterActions, compact = fa
         h('time.tc-time', { datetime: new Date(m.at).toISOString(), 'data-at': String(m.at), title: new Date(m.at).toLocaleString() }, timeAgo(m.at)),
       ),
       bubble,
+      more,
     ),
   );
 }

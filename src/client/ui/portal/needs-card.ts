@@ -26,7 +26,7 @@ import { askLead } from '../lead-panel/hooks';
 import { answerFor, escalationModel, rowModel, verifyAnswer, type EscModel, type Tone } from './needs-logic';
 import type { DecisionCard } from '../../../shared/decisions/types';
 import { cardCounts, countsWords } from '../../../shared/decisions/words';
-import { cardExtras, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, permissionCard, type CardCtx } from './decision-card';
+import { cardExtras, fullText, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, permissionCard, type CardCtx } from './decision-card';
 import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { stuckView } from '../stuck/feed';
@@ -158,6 +158,8 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       h('div.pt-esc-h', {}, tagEl(m.tone, m.tag), h('b.pt-esc-t', {}, m.title)),
       h('p.pt-esc-meta.pt-esc-by', {}, m.meta),
       m.question ? h('p.pt-esc-q', {}, m.question) : null,
+      // The whole message, folded (a card's extras show it when there's a card).
+      m.full && !(card && x) ? fullText(m.full) : null,
       verify ? null : opts,
       m.why ? h('p.pt-esc-why', {}, h('b', {}, `${m.why.label} `), m.why.text) : null,
       ...(card && x ? cardExtras(card, x) : []),

@@ -6,6 +6,7 @@
 // answer action (ui/pm/escalations.ts answer → the team's `escalation` action).
 
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
+import { fullBeyond } from '../../../shared/full-text';
 import type { Escalation } from '../../../shared/roster/escalation';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { NeedItem, NeedKind } from '../needsyou/logic';
@@ -30,6 +31,8 @@ export interface EscModel {
   meta: string;
   /** The question, in a paragraph (the details' first). */
   question?: string;
+  /** The whole details when the question paragraph is only their start (shown folded: shared/full-text.ts). */
+  full?: string;
   options: EscOption[];
   /** "Why A: …", or "Recommends: …" when the recommendation names no option. */
   why?: { label: string; text: string };
@@ -91,6 +94,7 @@ export function escalationModel(e: Escalation, c: EscContext): EscModel {
     title: e.title,
     meta,
     question: firstParagraph(e.details),
+    ...(fullBeyond(firstParagraph(e.details), e.details) ? { full: fullBeyond(firstParagraph(e.details), e.details) } : {}),
     options,
     why,
   };

@@ -110,7 +110,8 @@ test('an agent escalation and the Project Manager’s answer: the person is a hu
   const esc = t.sent.find((m) => m.kind === 'escalation')!;
   assert.deepEqual([esc.from.name, esc.from.kind, esc.from.role, esc.from.roleId], ['Hedy', 'agent', 'Lead Developer', 'lead-developer']);
   assert.deepEqual(esc.to, { group: 'pm' });
-  assert.match(esc.text, /^Add CSV export\? — I'd go with: Yes, in v2 — Customers asked twice\.$/);
+  // Kept whole, its details as a paragraph of their own (release 81: long escalations were cut to one line).
+  assert.match(esc.text, /^Add CSV export\? — I'd go with: Yes, in v2\n\nCustomers asked twice\.$/);
   assert.equal(esc.ref?.escalationId, e.id);
 
   // Keith the person answers; Keith the Coordinator is an agent.
