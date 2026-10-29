@@ -21,7 +21,8 @@ export interface PlaceDeps {
   identity?: { name: string; email: string };
 }
 
-export type Placed = { ok: true; commit: string; files: string[] } | { ok: false; error: string };
+/** `dirty`: the app has uncommitted changes, so nothing was done (the service waits for a clean app and tries again). */
+export type Placed = { ok: true; commit: string; files: string[] } | { ok: false; error: string; dirty?: true };
 
 async function git(deps: PlaceDeps, cwd: string, args: string[], home: string) {
   const run = deps.run ?? runCommand;
@@ -65,7 +66,7 @@ export async function placeAndCommit(deps: PlaceDeps, r: MarketplaceRequest, fil
       if (!deps.mxcli) return { ok: false, error: 'mxcli isn’t set up on the office’s machine (🔌 Connections › Paths): a module can’t be installed' };
       const appRel = rel(root, appDir) || '.';
       const dirty = await git(deps, root, ['status', '--porcelain', '--', appRel], home);
-      if (dirty.code !== 0 || dirty.stdout.trim()) return { ok: false, error: `${r.by.name}’s app has uncommitted changes: a module install rewrites model files, so commit (or put aside) the work first, then the module can be added` };
+      if (dirty.code !== 0 || dirty.stdout.trim()) return { ok: false, dirty: true, error: `${r.by.name}’s app has uncommitted changes: a module install rewrites model files, so the work is committed (or put aside) first, then the module is added` };
       const err = await installModule({ mxcli: deps.mxcli, run: deps.run, cwd: appDir }, file, mpr);
       if (err) return { ok: false, error: err };
       const changed = await git(deps, root, ['status', '--porcelain', '--', appRel], home);

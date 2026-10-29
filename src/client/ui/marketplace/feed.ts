@@ -2,7 +2,7 @@
 // the floor on first use and again whenever the audit log says a marketplace.* event happened on it (a request,
 // added, declined, failed). No polling.
 
-import type { MarketplaceView } from '../../../shared/marketplace';
+import { marketplaceOpen, type MarketplaceView } from '../../../shared/marketplace';
 import type { ServerMsg } from '../../../shared/protocol';
 import { marketplaceApi } from './api';
 
@@ -30,7 +30,7 @@ export function marketplaceNeed(floor: string | null | undefined): MarketplaceVi
     view = undefined;
     void refresh(floor);
   }
-  return view && view.floor === floor && view.requests.some((r) => r.status === 'pending' || r.status === 'failed' || r.status === 'working') ? view : undefined;
+  return view && view.floor === floor && view.requests.some((r) => marketplaceOpen(r.status)) ? view : undefined;
 }
 
 export function onMarketplaceChanged(fn: () => void): () => void {

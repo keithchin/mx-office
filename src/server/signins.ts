@@ -1,4 +1,5 @@
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { execFileOff } from './offloop/exec.js';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -645,16 +646,14 @@ function lastWords(s: string): string {
   return (lines.at(-1) ?? '').slice(0, 300);
 }
 
-/** Runs a command to the end; never rejects. `last` is the last line it said on stderr (or stdout). */
+/** Runs a command to the end, never rejects; started off the event loop (offloop/exec.ts: its start held it 2.5 s, 28 Oct). */
 function run(cmd: string, args: string[], env: Record<string, string>, input?: string): Promise<{ code: number; out: string; last: string }> {
   return new Promise((resolve) => {
-    const p = execFile(cmd, args, { env, timeout: LOOK_TIMEOUT_MS, maxBuffer: 1024 * 1024, encoding: 'utf8' }, (err, stdout, stderr) => {
+    execFileOff(cmd, args, { env, timeout: LOOK_TIMEOUT_MS, maxBuffer: 1024 * 1024, input: input ?? '' }, (err, stdout, stderr) => {
       const e = err as { code?: number | string } | null;
       const code = !e ? 0 : typeof e.code === 'number' ? e.code : -1;
       const last = lastWords(stderr || (err && !stdout ? err.message : ''));
       resolve({ code, out: stdout.trim(), last });
     });
-    if (input !== undefined) p.stdin?.end(input);
-    else p.stdin?.end();
   });
 }

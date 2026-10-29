@@ -91,8 +91,12 @@ export const CHATTER_WORD: Record<ChatterKind, string> = {
 
 /** Longest text a message keeps. */
 export const CHATTER_TEXT_MAX = 400;
-/** Longest a team phone message (a person's, or an agent's reply to one) keeps, with its lines and Markdown. */
-export const CHATTER_LONG_MAX = 4000;
+/**
+ * Longest a long message keeps, with its lines and Markdown: a team phone message (a person's, or an agent's reply
+ * to one), an escalation in full (its details up to 6,000 characters, and the +1s folded into it up to 12,000) and
+ * the Project Manager's answer. The thread shows its first lines and folds the rest (ui/chatter/message.ts).
+ */
+export const CHATTER_LONG_MAX = 13_000;
 
 export const isGroup = (t: ChatterTo): t is { group: 'team' | 'pm' } => 'group' in t;
 

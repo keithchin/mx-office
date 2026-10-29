@@ -236,6 +236,10 @@ export class Delivery {
       const w = floor.worker(h.workerId);
       if (w?.kind === 'agent' && (between(w.status) || isAsleepStatus(w.status))) due.add(w.id);
     }
+    // Asleep ones owed a person's answers: woken with them (nothing else would announce them after a restart).
+    for (const w of floor.workers()) {
+      if (w.kind === 'agent' && !due.has(w.id) && isAsleepStatus(w.status) && this.roster.escalations.owedTo(floor, w).lines.length) due.add(w.id);
+    }
     return [...due];
   }
 
@@ -287,8 +291,9 @@ export class Delivery {
     const now = this.roster.deps.now();
     const queued = this.heldOf(floor.id, w.id).filter((h) => h.expiresAt > now);
     const going = queued.filter((h) => !paused || h.origin === 'person');
-    // An asleep one isn't woken for owed answers alone: its next hire or wake carries them.
-    const owed = asleep ? undefined : this.roster.escalations.owedTo(floor, w);
+    // A person's answers it's owed wake an asleep one too (owedTo leaves out one being benched or replaced): after a
+    // restart every agent was asleep, and answers owed to them waited, unsaid, until someone pressed Resume (28 Oct).
+    const owed = this.roster.escalations.owedTo(floor, w);
     if (!going.length && !owed?.lines.length) return undefined;
     const ids = [...going.flatMap((h) => (h.dispatchId ? [h.dispatchId] : [])), ...(owed?.dispatchIds ?? [])];
     return { going, owed, asleep, ids };
@@ -310,7 +315,8 @@ export class Delivery {
     const person = fromPerson || owed?.lines.length ? (fromPerson?.by ?? 'The Project Manager') : undefined;
     const by = person ?? (going.length === 1 ? going[0].by : undefined);
     const err = asleep ? floor.wake(w.id, text, by) : floor.prompt(w.id, text, by);
-    if (err) return;
+    if (err) return this.notDelivered(floor, w, err, going.some((h) => h.origin === 'person') || !!owed?.lines.length);
+    this.failed.delete(`${floor.id}:${w.id}`);
     if (noted) this.roster.awareness.ack(floor, w.id);
     owed?.mark();
     const fns = going.flatMap((h) => this.sentFns.get(h.id) ?? []);
@@ -318,6 +324,19 @@ export class Delivery {
     const typedIds = going.flatMap((h) => (h.dispatchId ? [h.dispatchId] : []));
     if (typedIds.length) void this.roster.dispatch.typed(floor.id, typedIds);
     for (const fn of fns) fn();
+  }
+
+  /** Why a worker's due messages last couldn't go in (floor:worker), so it's said once, not every minute. */
+  private failed = new Map<string, string>();
+
+  /** What's due couldn't be typed (or the agent woken with it): it stays held or owed, and a person's is said, once per reason. */
+  private notDelivered(floor: TeamFloor, w: WorkerInfo, why: string, person: boolean) {
+    const key = `${floor.id}:${w.id}`;
+    if (!person || this.failed.get(key) === why) return;
+    this.failed.set(key, why);
+    const line = `Couldn't deliver what's waiting for ${w.name} (your answers among it): ${why}. It stays kept and goes in once ${w.name} can take it.`;
+    floor.activity?.(`⚠️ ${line}`);
+    floor.toast(line, 'warn');
   }
 
   /** Takes one held prompt back: its durable save failed, so it mustn't go in unrecorded (dispatch-send.ts). */

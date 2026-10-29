@@ -5,6 +5,7 @@
 // Still needed), and any other source (its own button). The escalation with options stays needs-card.ts's.
 
 import type { DecisionCard } from '../../../shared/decisions/types';
+import { fullLabel } from '../../../shared/full-text';
 import { KIND_TAG } from '../../../shared/decisions/words';
 import type { NeedTarget } from '../needsyou/logic';
 import { h, timeAgo, toast } from '../dom';
@@ -33,9 +34,16 @@ export const kindTag = (c: DecisionCard) => h('span.pt-tag', { class: c.level ==
 /** The other open escalations a card folds (an answer answers them too). */
 export const otherEscalations = (c: DecisionCard) => c.sources.slice(1).flatMap((s) => (s.escalation ? [s.escalation] : []));
 
+/** A long message's whole text, folded under its first paragraph (shared/full-text.ts): the details element opens with the keyboard too. */
+export function fullText(text: string): HTMLElement {
+  return h('details.pt-full', {}, h('summary', {}, fullLabel(text)), h('div.pt-full-text', {}, text));
+}
+
 /** What blocks, evidence, sources, notes, related and the after line say, under a card's question. */
 export function cardExtras(c: DecisionCard, x: CardCtx): HTMLElement[] {
   const out: HTMLElement[] = [];
+  // The whole message, folded, when the paragraph above is only its start.
+  if (c.full) out.push(fullText(c.full));
   // What the agent tried before asking (a Studio Pro hand-add needs it: shared/roster/handadd.ts), first and open.
   if (c.tried?.length) out.push(h('div.pt-dc-tried', {}, h('b', {}, `Tried (${c.tried.length}):`), h('ul', {}, ...c.tried.map((t) => h('li', {}, t)))));
   if (c.blocks.length) out.push(h('p.pt-dc-line', {}, h('b', {}, 'Blocks: '), c.blocks.map((b) => b.label).join(' · ')));

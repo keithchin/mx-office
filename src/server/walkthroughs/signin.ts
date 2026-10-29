@@ -13,7 +13,7 @@
 // form's message), and the session cap said as such when it's that.
 
 import { open, stat } from 'node:fs/promises';
-import { installedChromium } from '../design/capture.js';
+import { launchHeadless } from '../offloop/chromium.js';
 import { ADMIN_USER } from '../../shared/walkthroughs/identity.js';
 import { CAP_LOG, CAP_REASON, endMendixSession, isSessionCap } from '../../shared/liveapp/session-cap.js';
 
@@ -51,7 +51,7 @@ export interface Page {
   waitForTimeout(ms: number): Promise<void>;
   screenshot(o: { path: string; type: 'png' }): Promise<unknown>;
   url(): string;
-  video(): { path(): Promise<string> } | null;
+  video(): { path(): Promise<string>; saveAs?(to: string): Promise<void>; delete?(): Promise<void> } | null;
 }
 export interface Ctx {
   newPage(): Promise<Page>;
@@ -66,13 +66,9 @@ export interface Browser {
   close(): Promise<void>;
 }
 
+/** The recording browser, launched from a host process, never in the office's own (offloop/chromium.ts). */
 export async function launchChromium(): Promise<Browser> {
-  const pw = (await import('playwright-core')) as unknown as { chromium: { launch(o: { headless: boolean; timeout: number; executablePath?: string }): Promise<Browser> } };
-  return pw.chromium.launch({ headless: true, timeout: 30_000 }).catch(async (err: Error) => {
-    const exe = /Executable doesn't exist/i.test(err.message) ? await installedChromium() : undefined;
-    if (!exe) throw err;
-    return pw.chromium.launch({ headless: true, timeout: 30_000, executablePath: exe });
-  });
+  return launchHeadless<Browser>(30_000);
 }
 
 export interface Login {

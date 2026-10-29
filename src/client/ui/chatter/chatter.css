@@ -73,3 +73,7 @@ button.tc-bubble:hover { background: var(--paper-2); }
   .tc-scroll { max-height: 60vh; }
   .tc-person { max-width: 120px; }
 }
+/* A long message: its lines kept, its first five shown; Show all unfolds the rest (message.ts). */
+.tc-long .tc-text { white-space: pre-wrap; }
+.tc-bubble.tc-open .tc-text { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.tc-more { margin-top: 2px; font-size: 11px; }

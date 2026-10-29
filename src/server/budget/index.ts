@@ -18,7 +18,7 @@ import { checkFloor, numbersOf, type ControlDeps } from './control.js';
 import { checkStages } from './stage-warn.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
-import { currentStage } from './stage.js';
+import { currentStage, stageSourceOf } from './stage.js';
 import { currentTaskIds } from '../tasks/index.js';
 import { designOf } from '../design/index.js';
 import { pointerOf } from '../../shared/design/types.js';
@@ -87,6 +87,7 @@ export function budgetOf(ctx: Ctx): BudgetService {
       }
     },
     stageOf: currentStage,
+    stageSource: stageSourceOf,
     officeLedger: ctx.ledger,
     team: (floorId) => {
       try {

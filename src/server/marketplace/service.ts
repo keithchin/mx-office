@@ -6,10 +6,14 @@
 //   file     the PM's "Use a package file…": a .mpk they picked (uploaded, or a path on the office's
 //            machine), checked against the request (kind, name, version), then placed the same way; no token;
 //   decline  with the PM's words, told to the agent.
+//   wait     a module approved while the agent's app has uncommitted changes isn't a failure: the checked package
+//            is kept (<data>/marketplace/waiting/<rid>.mpk), the request waits, the agent is told to commit, and
+//            the office tries again every minute (retryWaiting) until the app is clean (WAIT_MAX_MS at most);
+//   supersede an agent's corrected request for the same item closes its earlier failed ones.
 // Every step is audited without any token; the agent is told the outcome as the office's own message.
 
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { askWords, packageMismatch, packageWords, type MarketplaceAsk, type MarketplaceRequest, type MarketplaceView, type PackageFacts } from '../../shared/marketplace.js';
@@ -29,6 +33,8 @@ export interface MarketplaceDeps {
   identity?: () => { name: string; email: string } | undefined;
   /** Tells the agent (the office's own message); false when it couldn't. */
   tell: (floor: string, workerId: string, text: string) => boolean;
+  /** The projects with requests to look at for retryWaiting (every project the office has). */
+  floors?: () => string[];
   /** Records an audit event (never given a token). */
   audit: (floor: string, action: string, actor: { kind: 'human' | 'agent' | 'office'; name: string; id?: string }, summary: string, details: Record<string, unknown>, target: { kind: string; id: string; label: string }) => void;
 }
@@ -36,6 +42,10 @@ export interface MarketplaceDeps {
 export type Outcome = { ok: true; request: MarketplaceRequest } | { ok: false; error: string; status: number };
 
 const fail = (error: string, status = 400): Outcome => ({ ok: false, error, status });
+/** How long an approved request waits for the agent's app to be clean before it's said to have failed. */
+export const WAIT_MAX_MS = 8 * 60 * 60_000;
+/** The same Marketplace item: its content id, or the same package name. */
+const sameItem = (a: Pick<MarketplaceRequest, 'id' | 'name'>, b: Pick<MarketplaceAsk, 'id' | 'name'>) => a.id === b.id || (!!a.name && !!b.name && a.name.toLowerCase() === b.name.toLowerCase());
 const newRid = (now: number) => `mkt_${now.toString(36)}${randomBytes(4).toString('hex')}`;
 const RECIPE = (r: MarketplaceRequest, p: PackageFacts) =>
   p.kind === 'widget'
@@ -68,7 +78,7 @@ export class MarketplaceService {
 
   /** An agent's request: joins an open one for the same item and version from the same folder, else a new card. */
   async ask(floor: string, who: { id: string; name: string }, folder: string, branch: string | undefined, a: MarketplaceAsk): Promise<{ request: MarketplaceRequest; joined: boolean }> {
-    const open = (await this.store.list(floor)).find((r) => (r.status === 'pending' || r.status === 'working') && r.id === a.id && (r.version ?? '') === (a.version ?? '') && r.folder === folder);
+    const open = (await this.store.list(floor)).find((r) => (r.status === 'pending' || r.status === 'working' || r.status === 'waiting') && r.id === a.id && (r.version ?? '') === (a.version ?? '') && r.folder === folder);
     if (open) return { request: open, joined: true };
     const r: MarketplaceRequest = { ...a, rid: newRid(this.now()), floor, status: 'pending', by: who, folder, ...(branch ? { branch } : {}), at: this.now() };
     const t = this.deps.token();
@@ -78,14 +88,20 @@ export class MarketplaceService {
       if (info) r.info = info;
     }
     await this.store.put(r);
+    // A corrected re-request (another version, name or id of the same item, from the same agent) closes its failed ones.
+    for (const old of (await this.store.list(floor)).filter((x) => x.rid !== r.rid && x.status === 'failed' && x.by.id === who.id && sameItem(x, a))) {
+      await this.store.put({ ...old, status: 'superseded', supersededBy: r.rid, note: `${old.note ? `${old.note} · ` : ''}replaced by ${who.name}’s new request ${r.rid}`, done: { by: 'the office', at: this.now() } });
+      this.deps.audit(floor, 'marketplace.superseded', { kind: 'office', name: 'Marketplace' }, `Closed ${who.name}’s failed request for ${askWords(old)}: replaced by its new request ${r.rid}`, { rid: old.rid, supersededBy: r.rid }, { kind: 'marketplace', id: old.rid, label: askWords(old) });
+    }
     this.deps.audit(floor, 'marketplace.request', { kind: 'agent', name: who.name, id: who.id }, `${who.name} asked to add ${askWords(r)} from the Mendix Marketplace (item ${r.id})${branch ? ` to ${branch}` : ''}`, { rid: r.rid, id: r.id, kind: r.kind, version: r.version, name: r.name, branch }, { kind: 'marketplace', id: r.rid, label: askWords(r) });
     return { request: r, joined: false };
   }
 
-  private async open(floor: string, rid: string): Promise<MarketplaceRequest | Outcome> {
+  private async open(floor: string, rid: string, waiting = false): Promise<MarketplaceRequest | Outcome> {
     const r = await this.store.get(floor, rid);
     if (!r) return fail('No such Marketplace request', 404);
-    if (r.status !== 'pending' && r.status !== 'failed') return fail(`Already ${r.status}${r.done ? ` by ${r.done.by}` : ''}`, 409);
+    if (r.status === 'waiting' && !waiting) return fail(`Already approved: it’s added once ${r.by.name}’s app has no uncommitted changes`, 409);
+    if (r.status !== 'pending' && r.status !== 'failed' && !(waiting && r.status === 'waiting')) return fail(`Already ${r.status}${r.done ? ` by ${r.done.by}` : ''}`, 409);
     if (this.busy.has(rid)) return fail('Already being added', 409);
     return r;
   }
@@ -142,8 +158,9 @@ export class MarketplaceService {
 
   /** The PM's Decline, with their words (told to the agent). */
   async decline(floor: string, rid: string, by: string, words: string): Promise<Outcome> {
-    const r = await this.open(floor, rid);
+    const r = await this.open(floor, rid, true);
     if ('ok' in r) return r;
+    if (r.status === 'waiting') await rm(this.waitFile(r), { recursive: true, force: true }).catch(() => undefined);
     const text = words.replace(/\s+/g, ' ').trim().slice(0, 1000);
     const next: MarketplaceRequest = { ...r, status: 'declined', ...(text ? { note: text } : {}), done: { by, at: this.now() } };
     await this.store.put(next);
@@ -182,12 +199,71 @@ export class MarketplaceService {
     const folder = resolveFolder(r.folder, this.deps.floorDir?.(r.floor));
     if (!folder) return `${r.by.name}'s folder was recorded as "${r.folder}", relative to the project, and the office doesn't know the project's folder any more: ${r.by.name} can ask again`;
     const placed = await placeAndCommit({ run: this.deps.run, mxcli: this.deps.mxcli(), identity: this.deps.identity?.() }, { ...r, folder }, file, pkg);
+    if (!placed.ok && placed.dirty) return this.wait(r, file, by, how, placed.error);
     if (!placed.ok) return placed.error;
-    const next: MarketplaceRequest = { ...r, status: 'added', note: undefined, added: { how, pkg, commit: placed.commit, files: placed.files, by, at: this.now() }, done: { by, at: this.now() } };
+    if (r.status === 'waiting' || r.waiting) await rm(this.waitFile(r), { recursive: true, force: true }).catch(() => undefined);
+    const next: MarketplaceRequest = { ...r, status: 'added', note: undefined, waiting: undefined, added: { how, pkg, commit: placed.commit, files: placed.files, by, at: this.now() }, done: { by, at: this.now() } };
     await this.store.put(next);
     const short = placed.commit.slice(0, 7);
     this.deps.audit(r.floor, 'marketplace.added', { kind: 'human', name: by }, `Added ${packageWords(pkg)} to ${r.branch ?? r.by.name + '’s folder'} for ${r.by.name} (${how === 'download' ? 'downloaded by the office' : 'from a package file'}), commit ${short}`, { rid: r.rid, how, kind: pkg.kind, name: pkg.name, version: pkg.version, sha256: pkg.sha256, bytes: pkg.bytes, commit: placed.commit, files: placed.files }, { kind: 'marketplace', id: r.rid, label: askWords(r) });
     this.deps.tell(r.floor, r.by.id, `The office added ${packageWords(pkg)} to your branch${r.branch ? ` ${r.branch}` : ''} (request ${r.rid}): commit ${short}, ${placed.files.join(', ')}${pkg.version ? '' : '. The package states no version of its own: check it is the one you wanted'}. ${RECIPE(r, pkg)}`);
     return { ok: true, request: next };
+  }
+
+  /** Where a waiting request's checked package is kept until the app is clean (under its own file name: a version may be read from it). */
+  private waitFile(r: Pick<MarketplaceRequest, 'rid'>) {
+    return path.join(this.deps.dataDir, 'marketplace', 'waiting', r.rid.replace(/[^A-Za-z0-9_-]/g, '_'));
+  }
+
+  /** The app has uncommitted changes: the package is kept, the request waits, the agent is told once (retryWaiting tries again). */
+  private async wait(r: MarketplaceRequest, file: string, by: string, how: 'download' | 'file', why: string): Promise<Outcome> {
+    const first = r.status !== 'waiting';
+    if (first) {
+      await mkdir(this.waitFile(r), { recursive: true });
+      await copyFile(file, path.join(this.waitFile(r), path.basename(file)));
+    }
+    const next: MarketplaceRequest = { ...r, status: 'waiting', note: why, waiting: { since: r.waiting?.since ?? this.now(), how, by, name: r.waiting?.name ?? path.basename(file), tries: (r.waiting?.tries ?? 0) + 1 } };
+    await this.store.put(next);
+    if (first) {
+      this.deps.audit(r.floor, 'marketplace.waiting', { kind: 'human', name: by }, `${by} approved adding ${askWords(r)} for ${r.by.name}: waiting for its app to have no uncommitted changes`, { rid: r.rid, how }, { kind: 'marketplace', id: r.rid, label: askWords(r) });
+      this.deps.tell(r.floor, r.by.id, `The Project Manager (${by}) approved adding ${askWords(r)} from the Mendix Marketplace (request ${r.rid}), but your app has uncommitted changes and a module install rewrites model files. Commit your work (or put it aside) in ${r.folder}: the office adds the module by itself as soon as the app is clean (it looks every minute) and tells you. Don't install it some other way.`);
+    }
+    return { ok: true, request: next };
+  }
+
+  /**
+   * Every waiting request tried again (a timer, every minute, ./index.ts): added once the agent's app is clean, still
+   * waiting while it isn't, failed after WAIT_MAX_MS or when something else goes wrong (said on the card). Never throws.
+   */
+  async retryWaiting(floors = this.deps.floors?.() ?? []): Promise<void> {
+    for (const floor of floors) {
+      let list: MarketplaceRequest[];
+      try {
+        list = (await this.store.list(floor)).filter((r) => r.status === 'waiting');
+      } catch {
+        continue;
+      }
+      for (const r of list) {
+        if (this.busy.has(r.rid)) continue;
+        this.busy.add(r.rid);
+        try {
+          const how = r.waiting?.how ?? 'file';
+          const by = r.waiting?.by ?? 'the Project Manager';
+          const file = path.join(this.waitFile(r), r.waiting?.name ?? 'package.mpk');
+          const gone = !(await stat(file).then((s) => s.isFile(), () => false));
+          const late = this.now() - (r.waiting?.since ?? r.at) > WAIT_MAX_MS;
+          const out = gone ? 'the kept package is gone: approve it again' : late ? `${r.by.name}’s app still had uncommitted changes after ${Math.round(WAIT_MAX_MS / 3_600_000)} h: ask ${r.by.name} to commit, then approve it again` : await this.checkAndPlace(r, file, path.basename(file), by, how);
+          if (typeof out === 'string') {
+            await this.store.put({ ...r, status: 'failed', note: out, waiting: undefined, done: { by, at: this.now() } });
+            await rm(this.waitFile(r), { recursive: true, force: true }).catch(() => undefined);
+            this.deps.audit(r.floor, 'marketplace.failed', { kind: 'office', name: 'Marketplace' }, `Couldn’t add ${askWords(r)} for ${r.by.name}: ${out}`, { rid: r.rid }, { kind: 'marketplace', id: r.rid, label: askWords(r) });
+          }
+        } catch (err) {
+          console.error(`agent-office: marketplace: couldn't try ${r.rid} again: ${(err as Error).message}`);
+        } finally {
+          this.busy.delete(r.rid);
+        }
+      }
+    }
   }
 }

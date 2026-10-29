@@ -53,13 +53,40 @@ export function isTypedEvidence(line: string, r: Pick<DispatchRecord, 'payload' 
   if (!norm(r.payload).trim().endsWith(r.marker)) return false;
   // Typed while the agent was mid-turn, Claude Code hands the queued text to the model inside the turn (a
   // queued_command attachment, 'The user sent a new message while you were working') instead of a user entry.
-  if (l.type === 'attachment') return l.attachment?.type === 'queued_command' && typeof l.attachment.prompt === 'string' && holdsBlock(l.attachment.prompt, r.payload);
+  // Its prompt is a string, or (a hook added context, text was pasted) an array of content blocks.
+  if (l.type === 'attachment') return l.attachment?.type === 'queued_command' && holdsIn(l.attachment.prompt, r.payload);
   if (l.type !== 'user') return false;
   const text = typed(l);
   if (text === undefined) return false;
   // The whole entry as typed: the office's notes before it are kept, so the raw text is what's searched.
-  const raw = typeof l.message?.content === 'string' ? l.message.content : Array.isArray(l.message?.content) ? l.message.content.filter((b: any) => b?.type === 'text').map((b: any) => String(b.text ?? '')).join('\n') : text;
-  return holdsBlock(raw, r.payload);
+  return holdsIn(typeof l.message?.content === 'string' || Array.isArray(l.message?.content) ? l.message.content : text, r.payload);
+}
+
+/**
+ * Whether message content (a string, or an array of content blocks) holds `payload` as whole lines. Blocks are
+ * read joined by line breaks (a hook's block, then the typed text) and, in case one typed message was split
+ * inside a line, joined as they are. The false "typed but not received" alarms (28 Oct) were queued messages
+ * whose prompt was an array, which was never searched.
+ */
+export function holdsIn(content: unknown, payload: string): boolean {
+  if (typeof content === 'string') return holdsBlock(content, payload);
+  if (!Array.isArray(content)) return false;
+  const texts = content.filter((b: any) => b?.type === 'text' && typeof b.text === 'string').map((b: any) => String(b.text));
+  if (!texts.length) return false;
+  return holdsBlock(texts.join('\n'), payload) || holdsBlock(texts.join(''), payload);
+}
+
+/** How much of a session the office switched to is read (its newest part): a resumed session may begin with the old one's history. */
+export const SWITCHED_TAIL_BYTES = 2 * 1024 * 1024;
+
+/**
+ * typedLook in the worker's session now, when it isn't the one recorded before typing (woken with a new session
+ * id, or its session switched): its newest SWITCHED_TAIL_BYTES, since the typed message can only be near its end.
+ */
+export async function typedLookSwitched(r: Pick<DispatchRecord, 'payload' | 'marker' | 'typedAt'>, now: { sessionId?: string; transcriptPath: string }, max = EVIDENCE_MAX_BYTES): Promise<TypedLook> {
+  const size = await fsp.stat(now.transcriptPath).then((s) => s.size, () => -1);
+  if (size < 0) return { found: false, queued: false };
+  return typedLook({ ...r, ...(now.sessionId ? { sessionId: now.sessionId } : { sessionId: undefined }), transcriptPath: now.transcriptPath, transcriptOffset: Math.max(0, size - SWITCHED_TAIL_BYTES) }, max);
 }
 
 type Window = { text: string; over: boolean } | { unavailable: string };

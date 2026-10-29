@@ -17,12 +17,13 @@ import './marketplace.css';
 export function marketplaceCard(c: DecisionCard, x: CardCtx): HTMLElement {
   const m = c.marketplace!;
   const r = m.request;
-  const msg = h('p.mk-msg', { role: 'status', 'aria-live': 'polite' }, r.status === 'failed' && r.note ? `Last try failed: ${r.note}` : r.status === 'working' ? 'The office is adding it now…' : '');
+  const msg = h('p.mk-msg', { role: 'status', 'aria-live': 'polite' }, r.status === 'failed' && r.note ? `Last try failed: ${r.note}` : r.status === 'working' ? 'The office is adding it now…' : r.status === 'waiting' ? `Approved: waiting for ${r.by.name} to commit its work (the app has uncommitted changes). The office adds it by itself once it can.` : '');
   const words = x.admin ? cardWords(r.by.name) : undefined;
   const buttons: HTMLButtonElement[] = [];
   const btn = (cls: string, text: string, run: () => Promise<ActResult | undefined>, opts: { disabled?: boolean; title?: string; keep?: boolean } = {}) => {
     const b = h(`button.btn.small${cls}`, { type: 'button', ...(opts.title ? { title: opts.title } : {}) }, text) as HTMLButtonElement;
-    b.disabled = !!opts.disabled || r.status === 'working';
+    // Waiting for a clean app: only Decline is left (the office adds it by itself).
+    b.disabled = !!opts.disabled || r.status === 'working' || (r.status === 'waiting' && !cls.includes('mk-decline'));
     b.addEventListener('click', async () => {
       // A dialog keeps its opener enabled, so ✕ / Esc can give it focus back.
       const was = buttons.map((y) => y.disabled);
@@ -37,6 +38,12 @@ export function marketplaceCard(c: DecisionCard, x: CardCtx): HTMLElement {
       }
       words?.clear();
       setMarketplaceView(out.view);
+      if (out.request.status === 'waiting') {
+        msg.textContent = `Approved: ${r.by.name}’s app has uncommitted changes, so ${r.by.name} is asked to commit; the office adds it by itself once the app is clean.`;
+        msg.classList.remove('bad');
+        toast(`Approved: it goes in once ${r.by.name} commits`);
+        return;
+      }
       const done = out.request.status === 'added' ? `Added · commit ${out.request.added?.commit?.slice(0, 7) ?? ''}` : 'Declined';
       toast(out.request.status === 'added' ? `Added to ${r.branch ?? `${r.by.name}’s folder`}: ${r.by.name} is told` : `${r.by.name} is told you declined`);
       x.done(c, done);

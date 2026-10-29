@@ -65,6 +65,8 @@ export interface AnswerDetail {
   /** ESC-3f9c2a1b7e, Q OQ-01. */
   label: string;
   title: string;
+  /** The decision's whole text (an escalation's full details, never cut), when it has more than its title. */
+  details?: string;
   /** The revision the decision's own record points at (what expectedRev must be). */
   rev: number;
   /** Every revision in the answer store, oldest first. */

@@ -127,12 +127,12 @@ export class ChangeAnswer {
     const qx = await this.question(floorId, decision);
     const sources: LinkSources = { escalations: this.deps.escalations(floorId), ...this.deps.sources(floorId), blocks: this.blocksOf(qx?.book) };
     const e = this.esc(floorId, decision);
-    let base: Pick<AnswerDetail, 'title' | 'rev' | 'links' | 'input' | 'blocked'>;
+    let base: Pick<AnswerDetail, 'title' | 'details' | 'rev' | 'links' | 'input' | 'blocked'>;
     let current: Recording | undefined;
     if (e) {
       current = (await this.deps.follow.get(floorId)).recordings[decision];
       const blocked = this.escBlocked(e);
-      base = { title: e.title, rev: e.resolution?.answerRev ?? 0, links: escalationLinks(e, sources), input: { kind: 'esc', options: e.options, ...(e.recommendation ? { recommendation: e.recommendation } : {}), fyi: fyiNow(e) }, ...(blocked ? { blocked } : {}) };
+      base = { title: e.title, ...(e.details.trim() ? { details: e.details.replace(/\r\n?/g, '\n').trim() } : {}), rev: e.resolution?.answerRev ?? 0, links: escalationLinks(e, sources), input: { kind: 'esc', options: e.options, ...(e.recommendation ? { recommendation: e.recommendation } : {}), fyi: fyiNow(e) }, ...(blocked ? { blocked } : {}) };
     } else if (qx?.q || qx?.a) {
       current = qx.a?.recording ?? (qx.a?.status === 'recorded' ? { outcome: 'recorded', rev: qx.a.answerRev, at: qx.a.recordedAt ?? 0 } : undefined);
       const blocked = this.qBlocked(qx.a, qx.q);

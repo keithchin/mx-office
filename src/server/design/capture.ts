@@ -9,6 +9,7 @@ import path from 'node:path';
 import { ulid } from '../../shared/evidence/ids.js';
 import type { CaptureRecord } from '../../shared/design/types.js';
 import { endMendixSession } from '../../shared/liveapp/session-cap.js';
+import { launchHeadless } from '../offloop/chromium.js';
 
 export const CAPTURE_LIMIT_MS = 45_000;
 export const VIEWPORTS = [{ width: 1440, height: 900 }] as const;
@@ -34,27 +35,12 @@ interface PwBrowser {
   close(): Promise<void>;
 }
 
-/**
- * The newest Chromium in the machine's Playwright cache, for when the build playwright-core expects isn't the one
- * installed (0a: it wants chromium_headless_shell-1243, the machine has 1248). Undefined: let playwright say.
- */
-export async function installedChromium(env: NodeJS.ProcessEnv = process.env): Promise<string | undefined> {
-  const roots = [env.PLAYWRIGHT_BROWSERS_PATH, env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'ms-playwright'), env.HOME && path.join(env.HOME, '.cache', 'ms-playwright')].filter((x): x is string => !!x);
-  const subs = ['chrome-headless-shell-win64/chrome-headless-shell.exe', 'chrome-win64/chrome.exe', 'chrome-win/chrome.exe', 'chrome-headless-shell-linux64/chrome-headless-shell', 'chrome-linux64/chrome', 'chrome-linux/chrome'];
-  for (const root of roots) {
-    const dirs = (await readdir(root).catch(() => [] as string[])).filter((d) => /^chromium(_headless_shell)?-\d+$/.test(d)).sort((a, b) => Number(b.split('-').at(-1)) - Number(a.split('-').at(-1)));
-    for (const d of dirs) for (const s of subs) if (await stat(path.join(root, d, s)).then(() => true, () => false)) return path.join(root, d, s);
-  }
-  return undefined;
-}
+/** The newest Chromium in the machine's Playwright cache (offloop/chromium.ts, kept here for its callers). */
+export { installedChromium } from '../offloop/chromium.js';
 
 export const playwrightShooter: Shooter = async (s) => {
-  const pw = (await import('playwright-core')) as unknown as { chromium: { launch(o: { headless: boolean; timeout: number; executablePath?: string }): Promise<PwBrowser> } };
-  const browser = await pw.chromium.launch({ headless: true, timeout: 20_000 }).catch(async (err: Error) => {
-    const exe = /Executable doesn't exist/i.test(err.message) ? await installedChromium() : undefined;
-    if (!exe) throw err;
-    return pw.chromium.launch({ headless: true, timeout: 20_000, executablePath: exe });
-  });
+  // Launched from a host process, never in the office's (offloop/chromium.ts): its start held the event loop for seconds.
+  const browser = await launchHeadless<PwBrowser>(20_000);
   const timer = setTimeout(() => void browser.close().catch(() => undefined), CAPTURE_LIMIT_MS);
   try {
     const ctx = await browser.newContext({ viewport: { width: s.width, height: s.height }, colorScheme: s.scheme, serviceWorkers: 'block' });

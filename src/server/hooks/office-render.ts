@@ -16,6 +16,7 @@ import type { Ctx } from '../office/context.js';
 import { send } from '../http/util.js';
 import { workspaceOf } from '../worktrees.js';
 import { MERMAID_CDN, mermaidJs } from '../deliverables/content.js';
+import { launchChromiumOff } from '../offloop/chromium.js';
 
 export const RENDER_LIMITS = { inputBytes: 10 * 1024 * 1024, outputBytes: 50 * 1024 * 1024, ms: 45_000, maxWidth: 3840, maxHeight: 2160 };
 
@@ -98,11 +99,8 @@ export interface BrowserLike {
 }
 export type Launch = () => Promise<BrowserLike>;
 
-const defaultLaunch: Launch = async () => {
-  const pw = (await import('playwright-core')) as unknown as { chromium: { launch(o: { headless: boolean; timeout: number }): Promise<BrowserLike> } };
-  return pw.chromium.launch({ headless: true, timeout: 20_000 });
-};
-
+/** Launched from a host process, never in the office's own (offloop/chromium.ts): its start held the event loop for seconds. */
+const defaultLaunch: Launch = () => launchChromiumOff<BrowserLike>({ timeout: 20_000 });
 
 /** What the page may load: files inside `root`, and the CDN Mermaid (served from the office). Everything else is refused. */
 export function allowRequest(root: string, url: string): 'continue' | 'mermaid' | 'abort' {

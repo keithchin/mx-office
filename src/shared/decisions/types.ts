@@ -61,6 +61,11 @@ export interface DecisionCard {
   question: string;
   /** More of it, a paragraph at most. */
   detail?: string;
+  /**
+   * The whole message when `detail` is only its start (an escalation's full details: a long decision card was cut
+   * to its first paragraph everywhere). Shown folded under the paragraph (shared/full-text.ts).
+   */
+  full?: string;
   /** An escalation's `Tried:` section (shared/roster/handadd.ts): what the agent tried before asking, shown first. */
   tried?: string[];
   options?: string[];

@@ -5,7 +5,7 @@
 // without a token), Decline with words. A failed attempt stays on the card with why, to try again. Pure.
 
 import type { NeedItem } from '../needsyou.js';
-import { askWords, type MarketplaceRequest, type MarketplaceView } from '../marketplace.js';
+import { askWords, marketplaceOpen, type MarketplaceRequest, type MarketplaceView } from '../marketplace.js';
 import type { Candidate } from './candidates.js';
 
 /** What the card's buttons need besides the request. */
@@ -21,7 +21,7 @@ export const MARKETPLACE_AFTER =
 export function marketplaceCandidates(v: MarketplaceView | undefined, floor: string | undefined): Candidate[] {
   if (!v || !floor || v.floor !== floor) return [];
   return v.requests
-    .filter((r) => r.status === 'pending' || r.status === 'failed' || r.status === 'working')
+    .filter((r) => marketplaceOpen(r.status))
     .map((r) => {
       const what = askWords(r);
       const text = `${r.by.name} asks to add ${what} from the Mendix Marketplace${r.branch ? ` to ${r.branch}` : ''}`;
@@ -29,9 +29,9 @@ export function marketplaceCandidates(v: MarketplaceView | undefined, floor: str
         key: `marketplace-${r.rid}`,
         kind: 'marketplace',
         icon: '🧩',
-        text: r.status === 'failed' ? `${text}: the last try failed` : text,
+        text: r.status === 'failed' ? `${text}: the last try failed` : r.status === 'waiting' ? `${text}: approved, waiting for ${r.by.name} to commit its work` : text,
         since: r.at,
-        level: r.status === 'working' ? 'info' : 'warn',
+        level: r.status === 'working' || r.status === 'waiting' ? 'info' : 'warn',
         action: 'Review',
         target: { to: 'floor', floor },
       };
@@ -52,7 +52,7 @@ export function marketplaceCandidates(v: MarketplaceView | undefined, floor: str
         prio: 4,
         body: {
           question: `Add ${what} to ${r.branch ?? `${r.by.name}’s folder`}?`,
-          detail: `${r.by.name} asked for it${r.why ? `: “${r.why}”` : '.'}${r.status === 'failed' && r.note ? ` The last try failed: ${r.note}` : ''}${r.status === 'working' ? ' The office is adding it now.' : ''}`,
+          detail: `${r.by.name} asked for it${r.why ? `: “${r.why}”` : '.'}${r.status === 'failed' && r.note ? ` The last try failed: ${r.note}` : ''}${r.status === 'working' ? ' The office is adding it now.' : ''}${r.status === 'waiting' ? ` Approved: ${r.by.name}’s app has uncommitted changes, so the office adds it by itself once they’re committed (it looks every minute; ${r.by.name} was told).` : ''}`,
           evidence: facts,
           blocks: [],
           owner: r.by.name,

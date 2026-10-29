@@ -16,7 +16,7 @@ import { marketplaceCandidates } from '../src/shared/decisions/marketplace.js';
 import { readPackage } from '../src/server/marketplace/mpk.js';
 import { marketplaceToken } from '../src/server/marketplace/token.js';
 import { childEnv, type Run } from '../src/server/marketplace/download.js';
-import { MarketplaceService } from '../src/server/marketplace/service.js';
+import { MarketplaceService, WAIT_MAX_MS } from '../src/server/marketplace/service.js';
 import { runCommand } from '../src/server/wizard/run.js';
 import { ALLOW_MENDIX_MARKETPLACE_ENV, ALLOW_CLAUDE_GATEWAY_ENV, ALLOW_TOKEN_ENV, dropTestCredentials, forgetDroppedCredentials, mendixMarketplaceAllowed } from '../src/server/testcreds.js';
 import { useTestMode } from '../src/server/testmode.js';
@@ -256,23 +256,65 @@ test('the card: a request waiting, the item, version, publisher, licence, who as
 
 test('a module: installed with mxcli install --file (no token) only into a clean app, everything it changed committed as the office', async (t) => {
   const { root, git } = project(t);
-  const { s, calls } = service(t, { token: false });
+  const { s, calls, told } = service(t, { token: false });
   const { request: r } = await s.ask('demo', AGENT, root, 'dev/receipts', { id: '42', kind: 'module', version: '1.4.0', name: 'SampleUtils' });
   const file = path.join(tmp('mkt-mod-'), 'SampleUtils_1.4.0.mpk');
   t.after(() => removeDir(path.dirname(file)));
   writeFileSync(file, moduleMpk());
-  // The agent's staged notes.txt is an uncommitted change in the app: refused, nothing run.
-  const dirty = await s.importFile('demo', r.rid, 'Pat', { path: file });
-  assert.ok(!dirty.ok && /uncommitted changes/.test(dirty.error));
-  assert.equal(calls.filter((c) => c.cmd === 'mxcli-fake').length, 0);
-  git('commit', '-qm', 'agent work');
+  // A wrong package is refused before anything else.
   const wrong = await s.importFile('demo', r.rid, 'Pat', { bytes: moduleMpk(), name: 'SampleUtils_1.3.0.mpk' });
   assert.ok(!wrong.ok && /version 1\.3\.0 \(by its file name\)/.test(wrong.error));
-  const ok = await s.importFile('demo', r.rid, 'Pat', { path: file });
-  assert.ok(ok.ok, ok.ok ? '' : ok.error);
+  // The agent's staged notes.txt is an uncommitted change in the app: not a failure (release 81), it waits, nothing run.
+  const dirty = await s.importFile('demo', r.rid, 'Pat', { path: file });
+  assert.ok(dirty.ok && dirty.request.status === 'waiting', 'approved, waiting for a clean app');
+  assert.match(dirty.request.note ?? '', /uncommitted changes/);
+  assert.equal(calls.filter((c) => c.cmd === 'mxcli-fake').length, 0);
+  assert.ok(told.some((t) => /Commit your work/.test(t)), 'the agent is told to commit');
+  assert.match(marketplaceCandidates({ floor: 'demo', admin: true, canDownload: false, requests: [dirty.request] }, 'demo')[0].need.text, /waiting for Rhea to commit/);
+  assert.ok(!(await s.importFile('demo', r.rid, 'Pat', { path: file })).ok, 'approved once: not twice');
+  // Still dirty: still waiting.
+  await s.retryWaiting(['demo']);
+  assert.equal((await s.store.get('demo', r.rid))?.status, 'waiting');
+  git('commit', '-qm', 'agent work');
+  // Clean now: the minute's retry adds it, the agent is told.
+  await s.retryWaiting(['demo']);
+  const ok = { request: (await s.store.get('demo', r.rid))! };
+  assert.equal(ok.request.status, 'added');
+  assert.ok(told.some((t) => /The office added module SampleUtils/.test(t)));
   const install = calls.find((c) => c.args[1] === 'install')!;
   assert.deepEqual(install.args.slice(0, 3), ['marketplace', 'install', '--file']);
   assert.equal(install.env.MENDIX_PAT, undefined, 'a module install needs no token');
   assert.deepEqual(git('show', '--name-only', '--format=', 'HEAD').split('\n'), ['app/javasource/sampleutils/Util.java']);
   assert.match(git('log', '-1', '--format=%an|%s'), /^Mx Office\|Add module SampleUtils 1\.4\.0/);
+});
+
+test('waiting too long fails with why; a corrected re-request closes the failed one; Decline works on a waiting one', async (t) => {
+  const { root } = project(t);
+  let now = Date.UTC(2026, 9, 28, 9);
+  const { s, data } = service(t, { token: false });
+  (s as unknown as { deps: { now: () => number } }).deps.now = () => now;
+  const file = path.join(tmp('mkt-mod2-'), 'SampleUtils_1.4.0.mpk');
+  t.after(() => removeDir(path.dirname(file)));
+  writeFileSync(file, moduleMpk());
+  const { request: a } = await s.ask('demo', AGENT, root, 'dev/receipts', { id: '42', kind: 'module', version: '1.4.0', name: 'SampleUtils' });
+  assert.equal((await s.importFile('demo', a.rid, 'Pat', { path: file })).ok, true);
+  assert.ok(existsSync(path.join(data, 'marketplace', 'waiting', a.rid)), 'the checked package is kept while it waits');
+  now += WAIT_MAX_MS + 60_000;
+  await s.retryWaiting(['demo']);
+  const failed = (await s.store.get('demo', a.rid))!;
+  assert.equal(failed.status, 'failed');
+  assert.match(failed.note ?? '', /still had uncommitted changes after 8 h/);
+  assert.ok(!existsSync(path.join(data, 'marketplace', 'waiting', a.rid)), 'its kept package is let go');
+  // The agent asks again, corrected (another version of the same item): the failed one is closed as superseded.
+  const { request: b } = await s.ask('demo', AGENT, root, 'dev/receipts', { id: '42', kind: 'module', version: '1.4.1', name: 'SampleUtils' });
+  const old = (await s.store.get('demo', a.rid))!;
+  assert.deepEqual([old.status, old.supersededBy], ['superseded', b.rid]);
+  assert.equal(marketplaceCandidates({ floor: 'demo', admin: true, canDownload: false, requests: await s.store.list('demo') }, 'demo').length, 1, 'one card: the new request');
+  // Decline on a waiting one: declined, its package let go.
+  const f2 = path.join(path.dirname(file), 'SampleUtils_1.4.1.mpk');
+  writeFileSync(f2, moduleMpk());
+  assert.equal((await s.importFile('demo', b.rid, 'Pat', { path: f2 })).ok, true);
+  const d = await s.decline('demo', b.rid, 'Pat', 'Not now');
+  assert.ok(d.ok && d.request.status === 'declined');
+  assert.ok(!existsSync(path.join(data, 'marketplace', 'waiting', b.rid)));
 });
