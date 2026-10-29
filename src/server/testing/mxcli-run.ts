@@ -20,6 +20,7 @@ import { execFileOffP, type OffError } from '../offloop/exec.js';
 import { testRunWhy } from '../../shared/testing/test-reason.js';
 import { checkoutAt, disposeFolder, testPathsIn, workDirOf } from './workfolder.js';
 import { NO_FLAGS, type TestFlags } from './test-flags.js';
+import { freeFolder, heldWords, oneAtATime, runMxOwned } from './run-guard.js';
 
 export interface MxOut {
   code: number | null;
@@ -105,7 +106,12 @@ export class NoTestsError extends Error {}
  * commit) and where its JUnit file is kept. Throws NoTestsError when the commit has no test files (no
  * record: nothing was run); every other failure is a harness-error record.
  */
-export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRunDraft; junit?: string }> {
+export function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRunDraft; junit?: string }> {
+  // One run at a time per work folder, and never into a folder a previous run still holds (run-guard.ts).
+  return oneAtATime(workDirOf(o.dataDir, o.floorId, 'tests'), () => microflowRun(o));
+}
+
+async function microflowRun(o: TestRunOpts): Promise<{ draft: TestRunDraft; junit?: string }> {
   const now = o.now ?? Date.now;
   const runId = `mt_${ulid(now())}`;
   const startedAt = new Date(now()).toISOString();
@@ -127,9 +133,11 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
   });
   let wf;
   try {
+    const held = await freeFolder(dir);
+    if (held) throw new Error(held);
     wf = await checkoutAt(o.floorDir, o.sha, dir, o.dataDir);
   } catch (err) {
-    return { draft: draftFromMxcliRun(envelope({ failure: `The office could not prepare its work folder: ${(err as Error).message}` }), undefined) };
+    return { draft: draftFromMxcliRun(envelope({ failure: `The office could not prepare its work folder: ${heldWords((err as Error).message)}` }), undefined) };
   }
   try {
     const paths = testPathsIn(wf.files);
@@ -151,7 +159,8 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
       const a = held ? [...args, '--app-port', String(held.ports[0]), '--admin-port', String(held.ports[1]), '--serve-port', String(held.ports[2])] : args;
       const mxbuild = o.mxbuildFor?.(path.join(wf.dir, wf.mpr));
       try {
-        return { ready, out: await runMx(o.bin, a, wf.dir, o.timeoutMs + 60_000, { ...(hsql ? {} : (o.pgEnv ?? {})), ...(mxbuild ? { MXCLI_MXBUILD_PATH: mxbuild, MXBUILD_PATH: mxbuild } : {}) }) };
+        // Started as the office's own (run-guard.ts): at its timeout its whole tree stops, not only mxcli.
+        return { ready, out: await runMxOwned(dir, o.bin, a, wf.dir, o.timeoutMs + 60_000, { ...(hsql ? {} : (o.pgEnv ?? {})), ...(mxbuild ? { MXCLI_MXBUILD_PATH: mxbuild, MXBUILD_PATH: mxbuild } : {}) }) };
       } finally {
         held?.release();
       }
@@ -201,7 +210,11 @@ function jsonIn(out: string): string | undefined {
 }
 
 /** Report, lint and the catalog's schema on commit `sha`, in the office's work folder: the record to keep. */
-export async function runQuality(o: QualityOpts): Promise<QualityDraft> {
+export function runQuality(o: QualityOpts): Promise<QualityDraft> {
+  return oneAtATime(workDirOf(o.dataDir, o.floorId, 'quality'), () => qualityRun(o));
+}
+
+async function qualityRun(o: QualityOpts): Promise<QualityDraft> {
   const now = o.now ?? Date.now;
   const timeout = o.timeoutMs ?? 180_000;
   const startedAt = new Date(now()).toISOString();
@@ -210,7 +223,11 @@ export async function runQuality(o: QualityOpts): Promise<QualityDraft> {
   const timings: Record<string, number> = {};
   const errors: string[] = [];
   const t0 = Date.now();
-  const wf = await checkoutAt(o.floorDir, o.sha, dir, o.dataDir);
+  const held = await freeFolder(dir);
+  if (held) throw new Error(held);
+  const wf = await checkoutAt(o.floorDir, o.sha, dir, o.dataDir).catch((err: Error) => {
+    throw new Error(heldWords(err.message));
+  });
   timings.checkout = Date.now() - t0;
   const tag = `q_${wf.commit.slice(0, 12)}_${o.mxcliVersion.replace(/[^\w.-]/g, '_')}`;
   try {
@@ -218,21 +235,21 @@ export async function runQuality(o: QualityOpts): Promise<QualityDraft> {
     const reportFile = path.join(evDir, `${tag}.report.json`);
     const lintFile = path.join(evDir, `${tag}.lint.json`);
     await rm(reportFile, { force: true });
-    const rep = await runMx(o.bin, ['report', '-p', wf.mpr, '--format', 'json', '-o', reportFile], wf.dir, timeout);
+    const rep = await runMxOwned(dir, o.bin, ['report', '-p', wf.mpr, '--format', 'json', '-o', reportFile], wf.dir, timeout);
     timings.report = rep.ms;
     const reportText = await readFile(reportFile, 'utf8').catch(() => undefined);
     const report = reportText ? parseReportJson(reportText) : undefined;
     if (!report) errors.push(`report gave no scores (exit ${rep.code ?? 'none'}${rep.killed ? ', timed out' : ''}${rep.startError ? `, ${rep.startError}` : ''}): ${lastWords(rep)}`);
 
     // lint exits 1 when it found an error-severity finding: its JSON decides, not the code.
-    const lnt = await runMx(o.bin, ['lint', '-p', wf.mpr, '--format', 'json'], wf.dir, timeout);
+    const lnt = await runMxOwned(dir, o.bin, ['lint', '-p', wf.mpr, '--format', 'json'], wf.dir, timeout);
     timings.lint = lnt.ms;
     const lintText = jsonIn(lnt.stdout);
     const lint = lintText ? parseLintJson(lintText) : undefined;
     if (lintText) await writeFile(lintFile, lintText, { mode: 0o600 });
     if (!lint) errors.push(`lint gave no findings list (exit ${lnt.code ?? 'none'}${lnt.killed ? ', timed out' : ''}${lnt.startError ? `, ${lnt.startError}` : ''}): ${lastWords(lnt)}`);
 
-    const meta = await runMx(o.bin, ['-p', wf.mpr, '--json', '-c', 'select * from CATALOG.catalog_meta'], wf.dir, 60_000);
+    const meta = await runMxOwned(dir, o.bin, ['-p', wf.mpr, '--json', '-c', 'select * from CATALOG.catalog_meta'], wf.dir, 60_000);
     timings.catalog = meta.ms;
     const rows = (() => {
       try {
