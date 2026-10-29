@@ -3,7 +3,7 @@
 // "Approve at @sha" pins the commit and Merge merges that commit with `git merge --no-ff <sha>` in a temporary
 // worktree off origin/<main>, as the office's identity (workers/git-identity.ts), pushed to the project's local
 // origin without force (a main that moved meanwhile refuses the push: nothing changes). Newer commits stay on the
-// branch for a later review, and the answer says so: "Merging @3d6ca6b (reviewed). The branch has 2 newer commits,
+// branch for a later review, and the answer says so: "Merged @3d6ca6b (reviewed). The branch has 2 newer commits,
 // not included." A commit that's gone, off the branch, already on main or conflicting is refused with the reason.
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -16,7 +16,7 @@ import { localOnlyAt } from '../local-only.js';
 import { audit, byWhom } from '../audit/index.js';
 import { officeGitEnv } from '../workers/git-identity.js';
 import { needsApproval } from '../../shared/roster/autonomy.js';
-import { mergingWords, type LocalMergeDone } from '../../shared/local-merge.js';
+import { mergedWords, type LocalMergeDone } from '../../shared/local-merge.js';
 import { BRANCH_OK, bookOf, commitOn, levelOf, ref, reviewAt, saveBook, type LocalMergeDeps } from './index.js';
 import { dcsOf, kindAt } from './describe.js';
 import { tellMainNow } from './tell.js';
@@ -62,7 +62,7 @@ export async function mergeLocal(
     await git(['worktree', 'add', '--detach', wt, base], floor.dir);
     const later = newer ? `\n${newer} newer commit${newer === 1 ? '' : 's'} on ${r.branch} (up to ${c.head.slice(0, 12)}) not included.` : '';
     const notes = what.kind === 'notes' ? ' (notes only)' : '';
-    const msg = `Merge ${r.branch} @${c.full.slice(0, 7)} into ${main}${notes} (local only)\n\nReviewed at ${c.full.slice(0, 12)} by ${review.by}; merged by ${by.name} in Mx Office.${later}\nMx-Office-Local-Merge: ${r.branch}@${c.full}`;
+    const msg = `Merge ${r.branch} @${c.full.slice(0, 7)} into ${main}${notes} (local merge)\n\nReviewed at ${c.full.slice(0, 12)} by ${review.by}; merged by ${by.name} in Mx Office.${later}\nMx-Office-Local-Merge: ${r.branch}@${c.full}`;
     try {
       await git([...id, 'merge', '--no-ff', '-m', msg, c.full], wt);
     } catch (err) {
@@ -97,14 +97,15 @@ export async function mergeLocal(
   const dcs = await dcsOf(ctx, floor.id, r.branch, owner?.id);
   const told = tellMainNow(ctx, floor, { main, merge, branch: r.branch, sha: c.full, dcs, newer, reviewedBy: review.by }, owner?.id, deps);
   // Agents' asks to merge what is on main now are marked gone (./asks.ts): the person says Resolved or Still needed.
-  await settleMergeAsks(ctx, floor, git, `refs/remotes/origin/${main}`, main, { force: true });
-  const words = mergingWords(c.full, newer);
+  // In the background: the answer (and the dialog) doesn't wait for it once main has moved.
+  void settleMergeAsks(ctx, floor, git, `refs/remotes/origin/${main}`, main, { force: true }).catch((err: Error) => console.error(`agent-office: couldn't settle ${floor.id}'s merge asks: ${err.message}`));
+  const words = mergedWords(c.full, newer);
   audit.record({
     floor: floor.id,
     actor: byWhom(by.name, by.id),
     action: 'local-merge.merge',
     target: { kind: 'branch', id: r.branch, label: r.branch },
-    summary: `${by.name} merged ${r.branch} at ${c.full.slice(0, 7)} (reviewed by ${review.by}${what.kind === 'notes' ? ', notes only' : ''}) into ${main} with --no-ff as ${merge.slice(0, 7)}${newer ? `; ${newer} newer commit${newer === 1 ? '' : 's'} not included` : ''}: local only, no GitHub`,
+    summary: `${by.name} merged ${r.branch} at ${c.full.slice(0, 7)} (reviewed by ${review.by}${what.kind === 'notes' ? ', notes only' : ''}) into ${main} with --no-ff as ${merge.slice(0, 7)}${newer ? `; ${newer} newer commit${newer === 1 ? '' : 's'} not included` : ''}: merged in the office, no GitHub`,
     details: { sha: c.full, head: c.head, newer, merge, into: main, kind: what.kind, dcs: dcs.map((d) => d.id), reviewedBy: review.by, told, autonomy: level, pmDecides: needsApproval(level, 'merge') },
     severity: 'notice',
   });

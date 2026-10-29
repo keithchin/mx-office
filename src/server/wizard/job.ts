@@ -53,7 +53,7 @@ export interface JobState {
    * was sent, the Projects API job to follow, and the app's id once it's made (or the id the person pasted). Cancel &
    * undo never deletes it.
    */
-  teamServer?: { sentAt?: number; jobId?: string; projectId?: string; how?: 'made' | 'linked'; unsure?: boolean };
+  teamServer?: { sentAt?: number; jobId?: string; projectId?: string; how?: 'made' | 'linked'; unsure?: boolean; /** The Portal app's events are in the project's own audit log too. */ audited?: boolean };
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;

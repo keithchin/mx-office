@@ -5,6 +5,7 @@
 // Needs-you alert is remembered under. Pure, so tests/portal-nav.test.ts runs it.
 
 import { VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
+import { environmentWords, type CloudEnvironments } from '../../../shared/team-server';
 import { WAITING_BG } from '../../../shared/roster/background-work';
 import type { UnknownReason } from '../../../shared/business-status';
 
@@ -74,7 +75,7 @@ export interface DetailFacts {
   /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
   localOnly?: boolean;
   /** On Mendix Team Server: the Portal app's link and the remote (shared/team-server.ts). */
-  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean };
+  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean; environments?: CloudEnvironments };
 }
 
 export interface DetailRow {
@@ -106,6 +107,8 @@ export function detailRows(f: DetailFacts): DetailRow[] {
   else if (f.localOnly) rows.push({ label: 'Repository', value: LOCAL_ONLY_LABEL, sub: f.dir ?? f.repo });
   else if (f.repo) rows.push({ label: 'Repository', value: f.repo, href: `https://github.com/${f.repo}`, external: true });
   else if (f.dir) rows.push({ label: 'Folder', value: f.dir, mono: true });
+  // The app's Mendix Cloud environments (Deploy API, cached by the office): "Sandbox · running · https://…mxapps.io".
+  for (const e of f.teamServer?.environments?.list ?? []) rows.push({ label: e.isProduction ? 'Mendix Cloud (production)' : 'Mendix Cloud', value: environmentWords(e), ...(e.url ? { href: e.url, external: true } : {}) });
   if (f.branch) rows.push({ label: 'Branch', value: f.branch, mono: true, tab: 'git' });
   if (f.mendix) rows.push({ label: 'Mendix version', value: f.mendix, tab: 'model' });
   if (f.toolkit) rows.push({ label: 'Toolkit', value: `${f.toolkit.state === 'pinned' ? 'Pinned at' : 'At'} ${short(f.toolkit.sha)}${f.toolkit.date ? ` · ${f.toolkit.date}` : ''}`, mono: true });

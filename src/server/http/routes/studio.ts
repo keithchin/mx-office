@@ -21,12 +21,13 @@ import type { Route } from '../router.js';
 import type { Ctx } from '../../office/context.js';
 import { floorParam } from './files.js';
 import { refuseStale } from '../../phone-access/reauth.js';
+import { studioTargetOf } from '../../studio/targets.js';
 
 /**
  * What the routes call to do the work, so the tests can stand in for any of it (and make it throw). The
  * office uses the real ones; in test mode the opener never starts Studio Pro (studio/open.ts fakeMachine).
  */
-export const studioRouteDeps = { syncFloorNow, studioInfo, whyNoMpr, openInStudio };
+export const studioRouteDeps = { syncFloorNow, studioInfo, whyNoMpr, openInStudio, studioTargetOf };
 
 /** Each problem as an HTTP status: nothing to open is the floor's, the rest the office machine's. */
 const STATUS = { 'no-mpr': 404, 'no-desktop': 503, 'not-windows': 503, 'not-installed': 503 } as const;
@@ -108,9 +109,20 @@ export const studioRoutes = {
         // Who it's by: the account, or on the shared password the name on the page's profile (only ever shown).
         const named = typeof body.by === 'string' ? body.by.replace(/[^\p{L}\p{N} ._'-]/gu, '').trim().slice(0, 60) : '';
         const by = session.account?.name ?? (named || 'An admin');
-        // Up to date with GitHub first, when that's safe; when it isn't, the folder opens as it is and the answer says why.
-        const sync = await studioRouteDeps.syncFloorNow(floor, { fetch: true });
-        const r = studioRouteDeps.openInStudio(floor.dir);
+        // A project whose Studio Pro opens a copy of its own (studio/targets.ts: Team Server's Studio copy): that copy,
+        // made or brought up to date first. Else the project's folder, up to date with GitHub first when that's safe;
+        // when it isn't, the folder opens as it is and the answer says why.
+        const t = studioRouteDeps.studioTargetOf(floor);
+        let dir = floor.dir;
+        let note: string | undefined;
+        let sync;
+        if (t) {
+          const p = await t.provider.prepare(floor, by);
+          if ('error' in p) return send(res, 409, { ok: false, error: p.error } satisfies StudioOpenResult);
+          dir = p.dir;
+          note = p.note;
+        } else sync = await studioRouteDeps.syncFloorNow(floor, { fetch: true });
+        const r = studioRouteDeps.openInStudio(dir);
         if (!r.ok) return send(res, STATUS[r.problem], { ok: false, error: r.problem === 'no-mpr' ? studioRouteDeps.whyNoMpr(floor.dir, sync) : r.error, problem: r.problem, sync } satisfies StudioOpenResult);
         const busy = busyAgents(floor);
         const v = r.version ? ` ${r.version}` : '';
@@ -120,8 +132,8 @@ export const studioRoutes = {
           actor: human(by, session.account?.id),
           action: 'studio.open',
           target: { kind: 'project', id: floor.id, label: floor.def.name },
-          summary: `Opened the project in Studio Pro${v}`,
-          details: { mpr: r.mpr, ...(r.version ? { version: r.version } : {}), via: r.via, busy },
+          summary: `Opened the project in Studio Pro${v}${t ? ' (its Team Server Studio copy)' : ''}`,
+          details: { mpr: r.mpr, ...(r.version ? { version: r.version } : {}), via: r.via, busy, ...(t ? { copy: dir } : {}) },
           severity: 'notice',
         });
         noteChatter(floor.id, {
@@ -132,7 +144,7 @@ export const studioRoutes = {
         });
         ctx.toastFloor(floor, `🧱 ${by} opened the project in Studio Pro${v}: the agents' mxcli writes pause while it's open`, 'warn');
         console.log(`  ${by} opened ${r.mpr} in Studio Pro${v}`);
-        return send(res, 200, { ok: true, mpr: r.mpr, ...(r.version ? { version: r.version } : {}), sync } satisfies StudioOpenResult);
+        return send(res, 200, { ok: true, mpr: r.mpr, ...(r.version ? { version: r.version } : {}), ...(sync ? { sync } : {}), ...(note ? { note } : {}) } satisfies StudioOpenResult);
       }),
   },
 } satisfies Record<string, Route>;

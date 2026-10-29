@@ -235,7 +235,7 @@ export class SetupCancels {
     const refusal = delPlan ? (delPlan.folder.deletable ? undefined : delPlan.folder.why) : undefined;
     const folderAuth = exists ? await this.folderAuth(s, refusal) : undefined;
     let repoDelete: CancelPlan['repoDelete'];
-    if (made.offline) repoDelete = { createdBySetup: false, byHand: false, offline: true, possible: false, why: 'a local repository on this machine (a test office’s, or a local-only project’s): nothing on GitHub' };
+    if (made.offline) repoDelete = { createdBySetup: false, byHand: false, offline: true, possible: false, why: 'a local repository on this machine (a test office’s, a local-only project’s, or a Team Server project’s with no GitHub): nothing on GitHub' };
     else {
       // Test mode with a real gh: it isn't even asked what its token may do.
       const fakeOnly = this.deps.testMode() && !this.deps.ghIsFake();

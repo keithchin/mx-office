@@ -19,7 +19,7 @@ import path from 'node:path';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { gitGraphsOf, runGit, type Git } from '../gitgraph/index.js';
-import { localOnlyAt } from '../local-only.js';
+import { localOnlyAt, offGitHubAt } from '../local-only.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import { audit, byWhom } from '../audit/index.js';
 import { rosterOf } from '../roster/adapter.js';
@@ -193,7 +193,7 @@ async function askedOn(ctx: Ctx, floor: Floor, git: Git, head: string, branch: s
 /** The branches the team has ahead of main, with what they are and their review. Empty for a project that isn't local only. */
 export async function localMergeView(ctx: Ctx, floor: Floor): Promise<LocalMergeView> {
   const level = levelOf(ctx, floor);
-  const base: LocalMergeView = { floor: floor.id, localOnly: localOnlyAt(floor.dir), main: 'main', branches: [], level, levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') };
+  const base: LocalMergeView = { floor: floor.id, localOnly: localOnlyAt(floor.dir), ...(offGitHubAt(floor.dir) === 'teamserver' ? { teamServer: true } : {}), main: 'main', branches: [], level, levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') };
   if (!base.localOnly) return base;
   const g = await gitGraphsOf(ctx).graph(floor);
   const main = g.defaultBranch;

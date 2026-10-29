@@ -8,3 +8,7 @@
 .ts-connect { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .ts-connect input { flex: 1 1 260px; min-width: 0; }
 .ts-confirm ul { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 6px; }
+.ts-facts dd.ts-wait { color: var(--muted); }
+.ts-env { margin: 0 0 2px; }
+.ts-publish { margin: 8px 0 0; font-size: 13px; }
+.ts-publish ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }

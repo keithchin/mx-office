@@ -3,7 +3,7 @@
 //   repo     first the Portal app: the Projects API makes it (POST /projects, then its job followed to the app's
 //            id: team-server/api.ts), or the id the person pasted is checked on Team Server; every stage is
 //            saved on the job before the next, so a Retry never creates a second app. Then the setup's own repo
-//            step: the bare repository on this machine (Team Server alone, which is local only too) or GitHub
+//            step: the bare repository on this machine (Team Server alone: no GitHub, its origin on this machine) or GitHub
 //            (the mirror). Cancel & undo never deletes the Portal app.
 //   clone    the setup's own clone, then the `teamserver` remote (the plain URL) and Team Server's history adopted
 //            with one commit that keeps the project's tree and has the Portal's template commit as its second
@@ -49,6 +49,22 @@ export function withTeamServer(deps: SetupDeps, steps: Record<StepId, StepImpl>)
     if (!id) throw new Error('The Portal app isn’t made yet: Retry from the repository step');
     return { projectId: id, url: teamServerUrl(id, ep().git), remote: TEAMSERVER_REMOTE, ...(job.plan.teamServer?.mirror ? { mirror: true } : {}), how: job.teamServer?.how ?? 'made', by: job.by, at: job.startedAt };
   };
+
+  /**
+   * The Portal app's events in the new project's own audit log, once it has one (the clone step makes the project): the
+   * repo step recorded them office-wide, before there was a project, so the project's log would otherwise lack them.
+   */
+  function projectAudit(job: JobState) {
+    const ts = job.teamServer;
+    if (!job.floor || !ts?.projectId || ts.audited) return;
+    const app = `${job.plan.owner}/${job.plan.name}`;
+    if (ts.how === 'linked') auditTs({ action: 'team-server.linked', floor: job.floor, by: job.by, projectId: ts.projectId, summary: `${job.by} linked the existing Mendix Portal app ${ts.projectId} to the new project ${app}` });
+    else {
+      auditTs({ action: 'team-server.app-create', floor: job.floor, by: job.by, summary: `${job.by} asked the Mendix Portal to create the app for ${app}${ts.jobId ? ` (job ${ts.jobId})` : ''}`, severity: 'info', ...(ts.jobId ? { details: { jobId: ts.jobId } } : {}) });
+      auditTs({ action: 'team-server.app-created', floor: job.floor, by: job.by, projectId: ts.projectId, summary: `The Mendix Portal created the app for ${app} (${ts.projectId})`, ...(ts.jobId ? { details: { jobId: ts.jobId } } : {}) });
+    }
+    ts.audited = true;
+  }
 
   /** The Portal app, made or linked, its id saved on the job and the plan (mx create-project binds the app to it). */
   async function portalApp(job: JobState, io: StepIO): Promise<string> {
@@ -117,6 +133,7 @@ export function withTeamServer(deps: SetupDeps, steps: Record<StepId, StepImpl>)
       const r = await clone(job, io);
       if (!job.plan.teamServer || !job.dir) return r;
       const rec = recOf(job);
+      projectAudit(job);
       const g = gitFor(io);
       await ensureRemote(g, job.dir, rec);
       const tsMain = await fetchTsMain(g, job.dir, rec.remote);

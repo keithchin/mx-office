@@ -57,8 +57,10 @@ export interface LocalMergeBranch {
 
 export interface LocalMergeView {
   floor: string;
-  /** Created with "Keep this project off GitHub": only then is there anything here. */
+  /** Off GitHub ("Keep this project off GitHub", or on Team Server with no GitHub mirror): only then is there anything here. */
   localOnly: boolean;
+  /** Off GitHub because the code is on Mendix Team Server: main goes there after each merge. */
+  teamServer?: boolean;
   main: string;
   /** main's commit now (origin/main), so the panel can say what the team should see. */
   mainSha?: string;
@@ -116,6 +118,11 @@ export interface LocalMergeDone {
 
 const short = (sha: string) => sha.slice(0, 7);
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+
+/** After the merge: "Merged @3d6ca6b (reviewed). The branch has 2 newer commits, not included." (the toast says main's new commit). */
+export function mergedWords(sha: string, newer: number): string {
+  return `Merged @${short(sha)} (reviewed).${newer > 0 ? ` The branch has ${plural(newer, 'newer commit')}, not included.` : ''}`;
+}
 
 /** "Merging @3d6ca6b (reviewed). The branch has 2 newer commits, not included." */
 export function mergingWords(sha: string, newer: number): string {

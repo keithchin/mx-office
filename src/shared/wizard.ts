@@ -12,6 +12,7 @@ import type { SignoffRequest } from './gate-play.js';
 import type { AutonomyAsk, AutonomyChoice, AutonomyPolicy } from './roster/autonomy-step.js';
 import type { StageEvidence } from './stage-derive.js';
 import type { RoleId } from './roster/roles.js';
+import type { CloudEnvironments } from './team-server.js';
 
 /**
  * A new project's Discovery choices: the brief written, and handed to the team as its first task (real-build fix: left
@@ -355,7 +356,7 @@ export interface SetupView {
   /** Created with "Keep this project off GitHub" (agent-office.project.json): the Overview says "Local only: not on GitHub". */
   localOnly?: boolean;
   /** On Mendix Team Server (agent-office.project.json `teamServer`, server/team-server/): the Overview shows the Portal app and the remote. */
-  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean };
+  teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean; environments?: CloudEnvironments };
   /** Where the project is, as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
   stage?: StageEvidence;
   /** What the team's working branch has that main hasn't, per stage: shown as "on the team's branch (not merged)" next to main's (server/wizard/branch-gates.ts). */
