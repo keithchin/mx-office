@@ -177,10 +177,14 @@ export async function record(i: RecordInput): Promise<RecordResult> {
     res.durationMs = Date.now() - t0;
     const video = page?.video();
     await ctx?.close().catch(() => undefined);
-    const raw = await video?.path().catch(() => undefined);
-    if (raw) {
-      const to = path.join(i.outDir, 'raw.webm');
-      if (await rename(raw, to).then(() => true, () => false)) res.video = to;
+    const to = path.join(i.outDir, 'raw.webm');
+    // The browser is a host process's (offloop/chromium.ts): its video file is fetched with saveAs, then let go there.
+    if (video?.saveAs && (await video.saveAs(to).then(() => true, () => false))) {
+      res.video = to;
+      await video.delete?.().catch(() => undefined);
+    } else {
+      const raw = await video?.path().catch(() => undefined);
+      if (raw && (await rename(raw, to).then(() => true, () => false))) res.video = to;
     }
     i.signal.removeEventListener('abort', stop);
     if (own) await sessions.close().catch(() => undefined);
