@@ -71,6 +71,12 @@ export interface EscContext {
   ago(at: number): string;
 }
 
+/** `{ full }` when the whole text says more than its preview (shared/full-text.ts), else nothing: computed once. */
+export function withFull(preview: string | undefined, whole: string): { full?: string } {
+  const full = fullBeyond(preview, whole);
+  return full ? { full } : {};
+}
+
 export function escalationModel(e: Escalation, c: EscContext): EscModel {
   const verify = isNotVerified(e);
   const role = e.role ? ROLE_BY_ID.get(e.role) : undefined;
@@ -94,7 +100,7 @@ export function escalationModel(e: Escalation, c: EscContext): EscModel {
     title: e.title,
     meta,
     question: firstParagraph(e.details),
-    ...(fullBeyond(firstParagraph(e.details), e.details) ? { full: fullBeyond(firstParagraph(e.details), e.details) } : {}),
+    ...withFull(firstParagraph(e.details), e.details),
     options,
     why,
   };

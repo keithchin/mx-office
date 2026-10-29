@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fullBeyond, fullLabel } from '../src/shared/full-text.js';
 import { escalationCandidates } from '../src/shared/decisions/candidates.js';
-import { escalationModel } from '../src/client/ui/portal/needs-logic.js';
+import { escalationModel, withFull } from '../src/client/ui/portal/needs-logic.js';
 import { escalationDraft, answerDraft } from '../src/server/chatter/sources.js';
 import { cleanLong } from '../src/server/chatter/index.js';
 import { CHATTER_LONG_MAX } from '../src/shared/chatter.js';
@@ -33,16 +33,17 @@ test('fullBeyond: the whole text only when the preview is not all of it', () => 
   assert.match(fullLabel('one two three'), /Read the whole message \(3 words\)/);
 });
 
-test('Needs you: the card keeps its first-paragraph preview and carries the whole message (folded)', () => {
+test('Needs you: the card keeps its short preview; the page folds the whole message under it from the escalation it already has', () => {
   const [c] = escalationCandidates(roster([esc(long)]));
   assert.ok(c.body.detail && c.body.detail.length <= 320, 'the preview stays short');
-  assert.equal(c.body.full, long, 'the whole message, every paragraph');
+  // The shared Needs list (built on the server too, for Teams) carries no long text: no extra work or payload there.
+  assert.equal((c.body as { full?: string }).full, undefined);
   const m = escalationModel(esc(long), { ago: () => '' });
-  assert.equal(m.full, long);
+  assert.equal(m.full, long, 'the whole message, every paragraph');
+  assert.deepEqual(withFull(c.body.detail, long), { full: long });
   // A one-paragraph escalation has nothing more to show.
-  const [s] = escalationCandidates(roster([esc('Just this.')]));
-  assert.equal(s.body.full, undefined);
   assert.equal(escalationModel(esc('Just this.'), { ago: () => '' }).full, undefined);
+  assert.deepEqual(withFull('Just this.', 'Just this.'), {});
 });
 
 test('chatter: an escalation and its answer are kept whole, with their lines', () => {

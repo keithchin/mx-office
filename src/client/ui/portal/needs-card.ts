@@ -23,7 +23,8 @@ import { countWords } from '../../../shared/needs-count';
 import type { NeedItem } from '../needsyou/logic';
 import { leadOf } from '../lead-panel/logic';
 import { askLead } from '../lead-panel/hooks';
-import { answerFor, escalationModel, rowModel, verifyAnswer, type EscModel, type Tone } from './needs-logic';
+import { answerFor, escalationModel, rowModel, verifyAnswer, withFull, type EscModel, type Tone } from './needs-logic';
+import { withoutArtifactLine } from '../../../shared/decisions/artifact';
 import type { DecisionCard } from '../../../shared/decisions/types';
 import { cardCounts, countsWords } from '../../../shared/decisions/words';
 import { cardExtras, fullText, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, permissionCard, type CardCtx } from './decision-card';
@@ -158,8 +159,8 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       h('div.pt-esc-h', {}, tagEl(m.tone, m.tag), h('b.pt-esc-t', {}, m.title)),
       h('p.pt-esc-meta.pt-esc-by', {}, m.meta),
       m.question ? h('p.pt-esc-q', {}, m.question) : null,
-      // The whole message, folded (a card's extras show it when there's a card).
-      m.full && !(card && x) ? fullText(m.full) : null,
+      // The whole message, folded under its first paragraph.
+      m.full ? fullText(m.full) : null,
       verify ? null : opts,
       m.why ? h('p.pt-esc-why', {}, h('b', {}, `${m.why.label} `), m.why.text) : null,
       ...(card && x ? cardExtras(card, x) : []),
@@ -268,7 +269,8 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
         const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, e.permission, cardSig]);
         const had = drawn.get(it.key);
         const make = card.permission ? permissionCard : card.gone ? goneCard : card.kind === 'hands-on' ? handsOnCard : fyiCard;
-        const d = had?.sig === sig ? had : { sig, el: make(card, ctx(r)) };
+        // The whole message, folded under the card's paragraph (shared/full-text.ts), from the escalation the page already has.
+        const d = had?.sig === sig ? had : { sig, el: make({ ...card, ...withFull(card.detail, withoutArtifactLine(e.details)) }, ctx(r)) };
         keep.set(it.key, d);
         nodes.push(d.el);
         continue;

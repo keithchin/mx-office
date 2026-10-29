@@ -14,7 +14,6 @@ import { needsWords, questionsNeedParts, type QuestionBrief, type QuestionsNeed 
 import type { NeedItem } from '../needsyou.js';
 import { explicitIds, isJourneyId, refsFromTitle } from './ids.js';
 import { withoutArtifactLine } from './artifact.js';
-import { fullBeyond } from '../full-text.js';
 import type { DecisionCard, DecisionKind, DecisionSource } from './types.js';
 import { escalationKind } from './words.js';
 import { manualInPlay, signoffMeaning, signoffState } from '../gate-play.js';
@@ -28,7 +27,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'full' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission' | 'artifact' | 'trigger' | 'marketplace'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission' | 'artifact' | 'trigger' | 'marketplace'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }
@@ -110,7 +109,6 @@ export function escalationCandidates(r: RosterView): Candidate[] {
       body: {
         question: e.title,
         ...(para(withoutArtifactLine(e.details)) ? { detail: para(withoutArtifactLine(e.details)) } : {}),
-        ...(fullBeyond(para(withoutArtifactLine(e.details)), withoutArtifactLine(e.details)) ? { full: fullBeyond(para(withoutArtifactLine(e.details)), withoutArtifactLine(e.details)) } : {}),
         ...(triedItems(e.details).length ? { tried: triedItems(e.details) } : {}),
         ...(e.options.length ? { options: e.options } : {}),
         ...(e.recommendation ? { recommendation: e.recommendation } : {}),

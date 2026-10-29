@@ -8,6 +8,8 @@ const tidy = (s: string) => s.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n')
 
 /** The whole text when it says more than `preview` (cut, or more paragraphs after it); undefined when the preview is all of it. */
 export function fullBeyond(preview: string | undefined, whole: string | undefined): string | undefined {
+  // Quick out (most messages): one short paragraph is its own preview.
+  if (!whole || (whole.length <= 320 && !/\n\s*\n/.test(whole))) return undefined;
   const t = tidy(whole ?? '');
   if (!t) return undefined;
   const p = (preview ?? '').replace(/\s+/g, ' ').trim();
