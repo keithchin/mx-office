@@ -33,7 +33,7 @@ import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
-import { linuxMxbuildIn, linuxMxbuildMessage, pickMxbuild, supportsMxbuildPath, supportsWatch, type MxbuildPick } from './mxbuild.js';
+import { linuxMxbuildIn, linuxMxbuildMessage, MXBUILD_FROM, pickMxbuild, supportsMxbuildPath, supportsWatch, type MxbuildPick } from './mxbuild.js';
 import { readLastServed, writeServed } from './served.js';
 
 /** Lines of the log kept for the page. */
@@ -46,11 +46,6 @@ const READY_POLL_MS = 2_000;
 /** mxcli says the build is done and the Mendix runtime is starting (as far as its log says: else it stays "building" until it answers). */
 const RUNTIME_STARTING = /\b(?:starting|started|start)\b[^\n]*\bruntime\b|\bruntime\b[^\n]*\b(?:starting|started)\b/i;
 const short = (sha?: string) => sha?.slice(0, 7) ?? '';
-const MXBUILD_FROM: Record<NonNullable<MxbuildPick['source']>, string> = {
-  'toolkit.env': "MXBUILD_PATH in the project's .claude/toolkit.env",
-  office: "the office's MXBUILD_PATH",
-  'studio-pro': 'the installed Studio Pro of the project’s version',
-};
 
 export interface LiveAppDeps {
   cfg: LiveAppConfig;
@@ -81,6 +76,8 @@ export interface LiveAppDeps {
   freeMemory?(): Promise<number> | number;
   /** The data-impact guard (data-impact/guard.ts): whether `to` may be applied over `from`, the revision the database last ran. */
   guard?(dir: string, from: string, to: string): Promise<{ hold: false } | { hold: true; why: string }>;
+  /** The project's instance constants for a run in the checkout `dir` (`Module.Name=value`, app-instance/constants.ts): mxcli's `--constant`, never the model. */
+  constants?(dir: string): Promise<string[]>;
 }
 
 export class LiveApp {
@@ -391,6 +388,8 @@ export class LiveApp {
     else if (this.d.prefs?.().hotReload) this.note(`hot reload: ${hot.why}`);
     this.watching = hot.on;
     this.set({ hot });
+    for (const c of (await this.d.constants?.(this.checkout).catch((err: Error) => (this.note(`instance constants: ${err.message}`), [])) ?? [])) args.push('--constant', c);
+    if (gen !== this.gen) return;
     for (const s of pick.skipped) this.note(`mxbuild: ${s}`);
     if (pick.path) this.note(`mxbuild: ${pick.path} (${MXBUILD_FROM[pick.source!]})${flag ? '' : ': this mxcli has no --mxbuild-path, so it only gets MXBUILD_PATH'}`);
     else if (pick.expected) this.note(`mxbuild: Studio Pro ${pick.version} isn't installed (no ${pick.expected}); mxcli picks one itself`);

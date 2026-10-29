@@ -98,3 +98,19 @@ export function testBlocker(harnessError: string | undefined): { title: string; 
     recommendation: `Set ${MXCLI_SETTING} to mxcli ${MXCLI_HSQL_VERSION} or newer, then run the tests again (no database change and no superuser needed).`,
   };
 }
+
+/** The runtime's words when the app's startup seed makes an account whose password constant is empty in the run. */
+export const EMPTY_PASSWORD = /password cannot be empty/i;
+
+/**
+ * Every test stopped at the app's startup seed: it made an account with an empty password, because the seed's
+ * password constant has no value in this run (a production-minded model keeps it empty). Names the constant: the
+ * one the project declared, else the model's String constants whose name says password. ASCII punctuation only.
+ */
+export function emptySeedPasswordWhy(candidates: readonly string[], declared?: string): string {
+  const file = '.agent-office/instance-constants.json';
+  if (declared) return `The app's startup seed made an account with an empty password ("The password cannot be empty") although the office passed a generated value for ${declared} (the seedPassword of ${file}): the seed reads its password from another constant${candidates.filter((c) => c !== declared).length ? ` (the model also has ${candidates.filter((c) => c !== declared).join(', ')})` : ''}; name that one as seedPassword.`;
+  const which = candidates.length === 1 ? `the seed password constant ${candidates[0]}` : candidates.length ? `the seed password constant (one of ${candidates.join(', ')})` : 'the seed password constant';
+  const example = candidates[0] ?? 'Module.SeedPassword';
+  return `The app's startup seed made an account with an empty password ("The password cannot be empty"), so every test stopped before its verdict: ${which} has no value in this run. Name it in ${file} as "seedPassword": "${example}" (committed, no password in it): the office then generates a strong password for each test run and app instance and passes it for that run only. Never put a password or a demo user in the model.`;
+}

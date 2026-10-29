@@ -5,7 +5,8 @@
 //     with mxcli v0.27.0 and Mendix 11.12.2: a two-test suite in 33 s, JUnit written;
 //   * `--app-port` / `--admin-port` / `--serve-port` (the same versions): ports the office picks, so a test run
 //     never waits for (or fights over) the fixed 8081/8091;
-//   * `--mxbuild-path`: the app's mxbuild, as the live app and the app instances pick it.
+//   * `--mxbuild-path`: the app's mxbuild, as the live app and the app instances pick it;
+//   * `--constant`: the project's instance constants for the run (app-instance/constants.ts).
 // An older mxcli has none of the first two: its `--local` makes `<app>_test` through `psql -U postgres` (a
 // superuser) every time, even when the database is there (mxcli-run.ts says what to do about it).
 
@@ -19,6 +20,8 @@ export interface TestFlags {
   /** `--app-port`, `--admin-port` and `--serve-port`. */
   ports: boolean;
   mxbuildPath: boolean;
+  /** `--constant Module.Name=value` (this run only): the project's instance constants and a generated seed password. */
+  constant?: boolean;
 }
 
 export const NO_FLAGS: TestFlags = { dbType: false, ports: false, mxbuildPath: false };
@@ -26,7 +29,7 @@ export const NO_FLAGS: TestFlags = { dbType: false, ports: false, mxbuildPath: f
 /** The flags a `mxcli test --help` text lists. */
 export function testFlagsIn(help: string): TestFlags {
   const has = (f: string) => new RegExp(`(^|\\s)--${f}\\b`, 'm').test(help);
-  return { dbType: has('db-type'), ports: has('app-port') && has('admin-port') && has('serve-port'), mxbuildPath: has('mxbuild-path') };
+  return { dbType: has('db-type'), ports: has('app-port') && has('admin-port') && has('serve-port'), mxbuildPath: has('mxbuild-path'), constant: has('constant') };
 }
 
 const cache = new Map<string, { mtime: number; flags: Promise<TestFlags> }>();

@@ -2,7 +2,8 @@
 // command and the MCP tools that call it). The worker's own hook token says who's asking, as for
 // office-workers; an agent only ever sees and stops its own instance.
 //   GET  /office/app                    its instance, and the project's microflow test run
-//   POST /office/app/start {commit}     a running instance at that commit ("main", or a sha the repository has)
+//   POST /office/app/start {commit, constants}  a running instance at that commit ("main", or a sha the repository
+//                                       has), with constants for that run only (shared/instance-constants.ts)
 //   POST /office/app/stop
 //   POST /office/app/journey {journey | file+text}   a journey on it, recorded against its commit
 //   POST /office/app/smoke {paths, as}  a smoke click-through on it, recorded against its commit
@@ -39,7 +40,8 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
   if (!ACTIONS.includes(action)) return send(res, 404, { error: `No /office/app${action}` });
   const apps = agentAppsOf(ctx);
   if (req.method === 'GET' && action === '') {
-    const app = apps.view(floor.id, me.id);
+    // Its own agent's status call is the one place the instance's generated test password is given.
+    const app = apps.view(floor.id, me.id, true, true);
     return send(res, 200, { app: app ?? null, line: viewLine(app), test: testRunOf(floor.id) });
   }
   if (req.method === 'GET' && action === '/test') return send(res, 200, await testState(ctx, floor.id));
@@ -61,9 +63,10 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
   if (action === '/start') {
     const commit = await resolve(str(body.commit, 200));
     if (!commit) return send(res, 400, { error: `The project's repository has no commit ${String(body.commit ?? 'main')}: commit (and for a worktree, that is enough: worktrees share the repository) and ask again` });
-    const r = await apps.start(floor.id, { id: me.id, name: me.name }, commit);
-    if (typeof r === 'string') return send(res, 409, { error: r });
-    audit.record({ floor: floor.id, actor: who, action: 'agent-app.start', target: { kind: 'commit', id: commit, label: `@${commit.slice(0, 7)}` }, summary: `Asked for an app instance at ${commit.slice(0, 7)}`, severity: 'info' });
+    const r = await apps.start(floor.id, { id: me.id, name: me.name }, commit, body.constants !== undefined ? { constants: body.constants } : {});
+    if (typeof r === 'string') return send(res, /constants/.test(r) ? 400 : 409, { error: r });
+    // The constants' names only: never a value, never the generated password.
+    audit.record({ floor: floor.id, actor: who, action: 'agent-app.start', target: { kind: 'commit', id: commit, label: `@${commit.slice(0, 7)}` }, summary: `Asked for an app instance at ${commit.slice(0, 7)}${r.constants?.length ? ` with constants ${r.constants.join(', ')}` : ''}`, severity: 'info' });
     return send(res, 200, { app: r, line: viewLine(r) });
   }
   if (action === '/stop') {

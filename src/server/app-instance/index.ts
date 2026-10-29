@@ -13,6 +13,8 @@
 //   * it lives only as long as its caller needs it: start() resolves once the app answers, stop() ends the
 //     process tree and drops the database (the workspace stays), and freshDatabase() starts the same build
 //     again on a new database (a caller that needs several clean starts). An office that exits takes them along.
+//   * it may run with constants for that run only (`constants`: mxcli's `--constant Module.Name=value`, from
+//     ./constants.ts), never written to the model; a generated seed password among them is masked in the log.
 // Each start reports its phases as they come (`onPhase`) and leaves its timing (`timing`) behind.
 // mxcli, mxbuild and the runtime are child processes; the office only coordinates. Whoever starts one gets
 // its address; the credentials stay here.
@@ -29,6 +31,8 @@ import { pickPorts } from '../liveapp/ports.js';
 import { killTreeNow, pgBinDir, startTree, stopTree } from '../liveapp/process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
 import { BootClock, bootFailure, MXCLI_BUNDLE_LIMIT_MS, supportsWebClientTimeout, transientOfLine, WEB_CLIENT_TIMEOUT, WEB_CLIENT_TIMEOUT_MS, type Transient } from './boot.js';
+import { supportsConstantFlag } from './constants.js';
+import { NO_CONSTANT_FLAG } from '../../shared/instance-constants.js';
 import { dropDb, dropLeftovers, instanceDbName, instanceDbStem, realPsql, type Psql } from './db.js';
 import { clearRunData, markWorkspace, prepareWorkspace, sweepWorkspaces } from './workspace.js';
 
@@ -59,6 +63,12 @@ export interface InstanceSpec {
   psql?: Psql;
   mxbuild?: { pick(mpr: string, floorEnv: Record<string, string>): MxbuildPick; supportsFlag(mxcli: string): Promise<boolean> };
   webClientTimeout?(mxcli: string): Promise<boolean>;
+  /** Constants for this run only (`Module.Name=value`, ./constants.ts): mxcli's `--constant`, never the model. */
+  constants?: readonly string[];
+  /** Values never written to the log (a generated seed password), masked like the database's. */
+  secrets?: readonly string[];
+  /** Whether this mxcli takes `--constant` (./constants.ts supportsConstantFlag; tests stand in). */
+  constantFlag?(mxcli: string): Promise<boolean>;
 }
 
 export interface AppInstance {
@@ -134,7 +144,8 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
   const lines: string[] = [];
   const log = logAppender(logFile);
   const note = (line: string) => {
-    const l = db.password ? line.replaceAll(db.password, '***') : line;
+    let l = db.password ? line.replaceAll(db.password, '***') : line;
+    for (const s of spec.secrets ?? []) if (s) l = l.replaceAll(s, '***');
     lines.push(l.length > 400 ? `${l.slice(0, 400)}…` : l);
     if (lines.length > 40) lines.splice(0, lines.length - 40);
     try {
@@ -206,6 +217,12 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
     // A cold bundle on a busy machine can pass mxcli's default 5 min; a newer mxcli can be given longer.
     const longBundle = await (spec.webClientTimeout ?? supportsWebClientTimeout)(mxcli).catch(() => false);
     if (longBundle) args.push('--web-client-timeout', WEB_CLIENT_TIMEOUT);
+    // Constants for this run only (the project's instance constants, the agent's, a generated seed password).
+    if (spec.constants?.length) {
+      if (!(await (spec.constantFlag ?? supportsConstantFlag)(mxcli).catch(() => false))) throw new Error(`The app can't start with its instance constants (${spec.constants.map((c) => c.slice(0, c.indexOf('='))).join(', ')}): ${NO_CONSTANT_FLAG}`);
+      for (const c of spec.constants) args.push('--constant', c);
+      note(`constants for this run only: ${spec.constants.map((c) => c.slice(0, c.indexOf('='))).join(', ')}`);
+    }
     const bundleLimit = longBundle ? WEB_CLIENT_TIMEOUT_MS : MXCLI_BUNDLE_LIMIT_MS;
     const env = { ...floorEnv, ...extra, PGPASSWORD: db.password };
     let current = args;

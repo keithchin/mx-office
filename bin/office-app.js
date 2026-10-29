@@ -12,13 +12,16 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const APP_USAGE = `  office-app start [--commit <sha|main|HEAD>] [--no-wait]
+export const APP_USAGE = `  office-app start [--commit <sha|main|HEAD>] [--const Module.Name=value]... [--no-wait]
                                                 a running instance of the app at that commit (default:
                                                 HEAD of this folder, committed files only), on its own
                                                 ports and fresh database; waits until it answers and
                                                 prints its URL and test users. One per agent: another
-                                                commit replaces it. Stops after 15 min unused
-  office-app status                             your instance now
+                                                commit (or other constants) replaces it. Stops after 15
+                                                min unused. --const sets a constant for this run only
+                                                (over .agent-office/instance-constants.json; never the
+                                                model): no secrets, the seed password is generated
+  office-app status                             your instance now (and its generated test password)
   office-app journey <J-id|path> [--commit <sha>]
                                                 play a journey on it (the project's at that commit by id
                                                 or path, or a file of yours): a toolkit .journey.json, or
@@ -75,10 +78,17 @@ export function parseApp(argv) {
     else if (flag === '--result') out.result = val();
     else if (flag === '--detail') out.detail = val();
     else if (flag === '--shot') (out.shots ??= []).push(val());
+    else if (flag === '--const' || flag === '--constant') {
+      // --const Module.Name=value: the value may hold '=' itself, so only the flag's own '=' is split off.
+      const v = a.startsWith(`${flag}=`) ? a.slice(flag.length + 1) : i + 1 < rest.length ? rest[++i] : '';
+      if (!/^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*=/.test(v)) throw new AppUsageError(`${flag} takes Module.Name=value (for example --const Core.SeedDemoData=true)`);
+      (out.constants ??= []).push(v);
+    }
     else if (a.startsWith('-')) throw new AppUsageError(`Unknown option: ${flag}`);
     else words.push(a);
   }
   if (!['start', 'status', 'stop', 'journey', 'smoke', 'test', 'check'].includes(cmd)) throw new AppUsageError(`Unknown command: ${cmd}`);
+  if (out.constants && cmd !== 'start') throw new AppUsageError('--const is for office-app start');
   if (cmd === 'check' && (!out.name || !['passed', 'failed'].includes(out.result))) throw new AppUsageError('check needs --name "<what you checked>" and --result passed|failed');
   if (cmd === 'journey') {
     if (!out.file && words.length !== 1) throw new AppUsageError('journey takes one journey: its id (J-12), its path in the repository, or a file of yours');
@@ -133,8 +143,8 @@ export function revOf(commit, cwd, git = (args) => execFileSync('git', args, { c
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Starts (or reuses) the instance and, with `wait`, polls until it's ready or failed. */
-async function startApp(commit, wait, io, say = () => {}) {
-  let a = await appCall('/start', { commit }, io);
+async function startApp(commit, wait, io, say = () => {}, constants) {
+  let a = await appCall('/start', { commit, ...(constants !== undefined ? { constants } : {}) }, io);
   const until = Date.now() + START_WAIT_MS;
   let last = '';
   while (wait && a.app?.state === 'starting' && Date.now() < until) {
@@ -168,6 +178,14 @@ async function runTests(commit, wait, io, say = () => {}) {
 }
 
 /** A check's body: screenshots by full path (the office copies them into its evidence). */
+/** The generated test password of the instance (status only): for the agent's own scripts, never a file. */
+export function passwordLine(app) {
+  const p = app?.testPassword;
+  return p ? `Test password for this instance only (${p.constant}): ${p.value}\nUse it for the seeded test users in your own scripts; never write it into a file, a commit, a journal or a message: it changes with every instance.` : '';
+}
+
+const withPassword = (line, app) => [line, passwordLine(app)].filter(Boolean).join('\n');
+
 function checkBody(cmd, cwd) {
   const abs = (p) => (/^([a-z]:)?[\\/]/i.test(p) ? p : `${cwd}/${p}`.replace(/\\/g, '/'));
   return { name: cmd.name, result: cmd.result, ...(cmd.detail ? { detail: cmd.detail } : {}), shots: (cmd.shots ?? []).map(abs), ...(cmd.commit ? { commit: cmd.commit } : {}) };
@@ -188,10 +206,19 @@ export const APP_TOOLS = [
     name: 'app_start',
     title: 'Start your app instance',
     description: "Starts a running copy of the project's Mendix app at a commit (your candidate's sha, or 'main'), run by the office on its own ports and a fresh database, and waits until it answers (a cold start takes 2-8 minutes). Gives its URL and the test users. One per agent; another commit replaces it; it stops after 15 minutes unused. Use this instead of `mxcli run --local`. Uncommitted changes are not in it: commit first.",
-    inputSchema: { type: 'object', properties: { commit: { type: 'string', description: "A commit sha (yours: git rev-parse HEAD) or 'main'." }, wait: { type: 'boolean', description: 'Wait until it is ready (default true).' } }, required: ['commit'], additionalProperties: false },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        commit: { type: 'string', description: "A commit sha (yours: git rev-parse HEAD) or 'main'." },
+        wait: { type: 'boolean', description: 'Wait until it is ready (default true).' },
+        constants: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] }, description: 'Constants for this run only, over the project\'s .agent-office/instance-constants.json ({"Core.SeedDemoData": true}); never written to the model. No secrets: a seed password the project names is generated by the office.' },
+      },
+      required: ['commit'],
+      additionalProperties: false,
+    },
     annotations: { destructiveHint: false, openWorldHint: false },
   },
-  { name: 'app_status', title: 'Your app instance', description: 'Your app instance now: starting (and where), ready (URL, test users, when it stops), failed or stopped (why).', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'app_status', title: 'Your app instance', description: 'Your app instance now: starting (and where), ready (URL, test users, the constants it runs with, when it stops, and the seed password the office generated for it when the project names one: for your own scripts only, never write it down), failed or stopped (why).', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'app_stop', title: 'Stop your app instance', description: 'Stops your app instance: its processes end and its database is dropped.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { destructiveHint: false, openWorldHint: false } },
   {
     name: 'journey_run',
@@ -229,11 +256,14 @@ export const APP_TOOL_NAMES = APP_TOOLS.map((t) => t.name);
 export async function runAppTool(name, args, io) {
   const a = args && typeof args === 'object' ? args : {};
   const cwd = io.cwd ?? process.cwd();
-  if (name === 'app_status') return { text: (await appCall('', undefined, io)).line };
+  if (name === 'app_status') {
+    const r = await appCall('', undefined, io);
+    return { text: withPassword(r.line, r.app) };
+  }
   if (name === 'app_stop') return { text: (await appCall('/stop', {}, io)).line };
   if (name === 'app_start') {
-    const r = await startApp(revOf(a.commit, cwd).commit, a.wait !== false, io);
-    return { text: `${r.line}\n${JSON.stringify(r.app ?? {}, null, 1)}`, isError: r.app?.state === 'failed' };
+    const r = await startApp(revOf(a.commit, cwd).commit, a.wait !== false, io, undefined, a.constants);
+    return { text: `${withPassword(r.line, r.app)}\n${JSON.stringify(r.app ?? {}, null, 1)}`, isError: r.app?.state === 'failed' };
   }
   if (name === 'journey_run') {
     const r = await appCall('/journey', journeyBody({ journey: a.journey, file: a.file, commit: a.commit }, cwd), io, 20 * 60_000);
@@ -269,13 +299,13 @@ export async function appMain(argv, io = {}) {
     officeEnv(env);
     if (cmd.cmd === 'status' || cmd.cmd === 'stop') {
       const r = cmd.cmd === 'status' ? await appCall('', undefined, ctx) : await appCall('/stop', {}, ctx);
-      out(cmd.json ? JSON.stringify(r, null, 2) : r.line);
+      out(cmd.json ? JSON.stringify(r, null, 2) : cmd.cmd === 'status' ? withPassword(r.line, r.app) : r.line);
       return 0;
     }
     if (cmd.cmd === 'start') {
       const rev = revOf(cmd.commit, ctx.cwd);
       if (rev.note) err(rev.note);
-      const r = await startApp(rev.commit, cmd.wait, ctx, cmd.json ? undefined : err);
+      const r = await startApp(rev.commit, cmd.wait, ctx, cmd.json ? undefined : err, cmd.constants);
       out(cmd.json ? JSON.stringify(r, null, 2) : r.line);
       return r.app?.state === 'failed' ? 1 : 0;
     }

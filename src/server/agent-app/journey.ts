@@ -112,7 +112,7 @@ async function scriptFor(e: AgentApp, ask: JourneyAsk, d: JourneyDeps): Promise<
 }
 
 /** The project's test users for this instance (agent-app/identity.ts). */
-const idsOf = (e: AgentApp, d: JourneyDeps): Promise<ProjectIdentities> => identitiesFor(d.floorDir, e.commit, e.instance?.runtimeLog, d.runnerConfig ? { runnerConfig: d.runnerConfig } : {});
+const idsOf = (e: AgentApp, d: JourneyDeps): Promise<ProjectIdentities> => identitiesFor(d.floorDir, e.commit, e.instance?.runtimeLog, { ...(d.runnerConfig ? { runnerConfig: d.runnerConfig } : {}), ...(e.generated ? { generated: e.generated } : {}) });
 
 /** A refused sign-in, said with who, where the account came from and what to do, and raised for the PM. */
 function signInFailure(e: AgentApp, d: JourneyDeps, failure: string, who: { user: string; from: string }, ids: ProjectIdentities): string {

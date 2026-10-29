@@ -25,6 +25,12 @@ export interface AgentAppView {
   why?: string;
   /** What seeded it: the after-startup microflow always runs; tests/e2e/seed.journey.json when the project has one. */
   seed?: string;
+  /** The constants it runs with for this run only (names; shared/instance-constants.ts). */
+  constants?: string[];
+  /** The constant whose value the office generated for this instance (the seed's password). */
+  passwordConstant?: string;
+  /** That password: only in the answer to its own agent's status call, never in a log, the audit or a page. */
+  testPassword?: { constant: string; value: string };
   startedAt?: number;
 }
 
@@ -53,7 +59,9 @@ export function viewLine(v: AgentAppView | undefined, now = Date.now()): string 
   if (v.state === 'failed') return `Your app instance ${at} didn't start: ${v.why ?? 'no reason given'}`;
   if (v.state === 'stopped') return `Your app instance ${at} stopped: ${v.why ?? 'stopped'}`;
   const users = v.users?.length ? ` · test users: ${v.users.map((u) => (u.role ? `${u.user} (${u.role})` : u.user)).join(', ')}${v.passwords ? ` (passwords: ${v.passwords})` : ''}` : '';
-  return `Your app instance ${at} is ready at ${v.url} · stops after ${mins(v.expires)} without a call (at most ${mins(v.ends)})${users}${v.seed ? ` · seed: ${v.seed}` : ''}`;
+  const consts = v.constants?.length ? ` · constants for this run: ${v.constants.join(', ')}` : '';
+  const pw = v.passwordConstant ? ` · the seed password (${v.passwordConstant}) was generated for this instance; smoke runs and journeys use it, and office-app status shows it if your own script needs it` : '';
+  return `Your app instance ${at} is ready at ${v.url} · stops after ${mins(v.expires)} without a call (at most ${mins(v.ends)})${users}${v.seed ? ` · seed: ${v.seed}` : ''}${consts}${pw}`;
 }
 
 /** A runtime error the instance logged while a journey or smoke run played: a failed check with its line. */

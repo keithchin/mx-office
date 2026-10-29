@@ -1,7 +1,8 @@
 // The project's test users for an agent's app instance (shared/agent-app-identity.ts says the order): the
 // journey-runner config at the commit (walkthroughs/identity.ts, sandboxed), the personas the project's own
 // journeys name at that commit, and the seed password constant the instance booted with (mxcli's
-// .mxcli/run-local.json beside the runtime log). Read off the event loop; passwords stay in memory.
+// .mxcli/run-local.json beside the runtime log), or the one the office generated for the instance (the project's
+// seedPassword in .agent-office/instance-constants.json), which every seeded user signs in with. Read off the event loop; passwords stay in memory.
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -36,6 +37,8 @@ export interface IdentityDeps {
   runnerConfig?: (dir: string, commit: string) => Promise<RunnerConfig | undefined>;
   personas?: (dir: string, commit: string) => Promise<string[]>;
   seed?: (runtimeLog: string | undefined) => Promise<{ constant: string; value: string } | undefined>;
+  /** The seed password the office generated for this instance (shared/instance-constants.ts), and the seed's users. */
+  generated?: { constant: string; value: string; users: { user: string; role?: string }[] };
 }
 
 /** The project's test users at `commit` for the instance whose runtime log is `runtimeLog`. */
@@ -43,7 +46,8 @@ export async function identitiesFor(floorDir: string, commit: string, runtimeLog
   const [cfg, personas, seed] = await Promise.all([
     (d.runnerConfig ?? runnerConfigAt)(floorDir, commit).catch(() => undefined),
     (d.personas ?? journeyPersonas)(floorDir, commit).catch(() => [] as string[]),
-    (d.seed ?? seedPassword)(runtimeLog).catch(() => undefined),
+    d.generated ? undefined : (d.seed ?? seedPassword)(runtimeLog).catch(() => undefined),
   ]);
-  return projectIdentities(cfg, personas, seed);
+  const g = d.generated;
+  return g ? projectIdentities(cfg, [...personas, ...g.users.map((u) => u.user)], { constant: g.constant, value: g.value }, { generated: true, roles: g.users }) : projectIdentities(cfg, personas, seed);
 }

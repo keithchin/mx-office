@@ -11,6 +11,7 @@
 // someone opened the tab and nothing was read yet. A milestone
 // becoming ready, or a crash, is a toast and a Needs-you row the notification channels send once.
 
+import { liveAppConstants } from '../app-instance/constants.js';
 import { forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { LiveAppState } from '../../shared/protocol.js';
@@ -158,6 +159,8 @@ export class LiveApps {
         prefs: () => this.prefsOf(floor.id),
         // Too little memory for hot reload's resident bundler: that start restarts for every change instead (./hot-mode.ts).
         freeMemory: availableMemory,
+        // The project's instance constants (.agent-office/instance-constants.json) for each run, never the model.
+        constants: (dir) => liveAppConstants(dir, this.mxcli),
         // What an update changes, read by the model's unit reader (model/units.ts) from the live checkout's git; its reader let go after.
         classify: (dir, from, to, mpr) => classifyUpdate(dir, from, to, mpr, { units: this.units }).finally(() => this.units.blobs(dir).close()),
         // Nothing that may drop or convert stored data is applied without a data-impact approval (data-impact/guard.ts).

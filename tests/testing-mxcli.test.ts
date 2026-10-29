@@ -145,6 +145,16 @@ if (a[0] === 'test') {
   fs.writeFileSync('MxTest-injected.txt', 'x');
   if (mode === 'no-runtime') { console.error('Error: could not start the local runtime: no JDK'); process.exit(1); }
   const out = a[a.indexOf('--junit') + 1];
+  if (mode === 'seed') {
+    // An app whose startup seed makes accounts from Core.SeedPassword: empty unless the run sets it.
+    const consts = a.filter((_, i) => a[i - 1] === '--constant');
+    for (const c of consts) console.log('constant ' + c);
+    const pw = (consts.find((c) => c.startsWith('Core.SeedPassword=')) || '=').split('=')[1];
+    const files = a.slice(1, a.indexOf('-p'));
+    const verdict = pw ? '' : '<error message="Object id: 1234, validation errors: (member: Password, message: The password cannot be empty.)">x</error>';
+    fs.writeFileSync(out, '<?xml version="1.0"?><testsuites><testsuite name="tests" tests="' + files.length + '">' + files.map((f) => '<testcase name="t in ' + f + '" classname="x" file="' + f + '" time="0.1"><properties><property name="assertions" value="1"></property></properties>' + verdict + (pw ? '<system-out>seeded with ' + pw + '</system-out>' : '') + '</testcase>').join('') + '</testsuite></testsuites>');
+    process.exit(pw ? 0 : 1);
+  }
   const files = a.slice(1, a.indexOf('-p'));
   const cases = files.map((f) => '<testcase name="t in ' + f + '" classname="x" file="' + path.join(process.cwd(), f) + '" time="0.1"><properties><property name="assertions" value="1"></property></properties>' + (f.includes('seed') ? '<failure message="boom">boom</failure>' : '') + '</testcase>').join('');
   fs.writeFileSync(out, '<?xml version="1.0"?><testsuites><testsuite name="tests" tests="' + files.length + '">' + cases + '</testsuite></testsuites>');
@@ -255,7 +265,7 @@ test("mxcli v0.27+: the run boots on the built-in database (--db-type hsqldb) on
     const prepare = async () => (prepared++, { db: 'project_test', notes: [] });
     const ports = async () => ({ ports: [8401, 8402, 8403], release: () => void released++ });
     const flags = testFlagsIn('Flags:\n      --db-type string   ...\n      --app-port int\n      --admin-port int\n      --serve-port int\n      --mxbuild-path string');
-    assert.deepEqual(flags, { dbType: true, ports: true, mxbuildPath: true });
+    assert.deepEqual(flags, { dbType: true, ports: true, mxbuildPath: true, constant: false });
     const { draft } = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'v0.27.0', sha: s.sha, actor: 'Ann', timeoutMs: 60_000, prepare, ports, flags, pgEnv: { PGPASSWORD: 'pw' } });
     const call = s.calls().find((c) => c.args[0] === 'test')!;
     const at = (f: string) => call.args[call.args.indexOf(f) + 1];
@@ -274,6 +284,42 @@ test("mxcli v0.27+: the run boots on the built-in database (--db-type hsqldb) on
     assert.equal(old.draft.results.length, 2);
     untouched(s);
   } finally {
+    rmSync(s.root, { recursive: true, force: true });
+  }
+});
+
+test('instance constants in a microflow test run: a generated seed password for that run only, masked; an empty seed password is said with its constant', async () => {
+  const s = setup();
+  try {
+    process.env.FAKE_MXCLI_MODE = 'seed';
+    const flags = { ...testFlagsIn('Flags:\n      --db-type string'), constant: true };
+    const base = { dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'v0.27.0', sha: s.sha, actor: 'Ann', timeoutMs: 60_000, flags };
+    // Nothing sets the seed password: every test is a harness error, and the record says which constant to name.
+    const empty = await runMicroflowTests({ ...base, constants: { args: [], secrets: [], passwordConstants: async () => ['Core.SeedPassword'] } });
+    assert.ok(empty.draft.results.every((t) => t.harness));
+    assert.match(empty.draft.harnessError!, /empty password .*Core\.SeedPassword has no value in this run.*"seedPassword": "Core\.SeedPassword"/);
+    // Without any instance constants the words still say what to do.
+    const none = await runMicroflowTests(base);
+    assert.match(none.draft.harnessError!, /the seed password constant has no value in this run/);
+    // Declared: a generated value for this run only, passed as --constant, never in the record or the JUnit kept.
+    const pw = 'Gen-pw_for_test_9';
+    const { draft, junit } = await runMicroflowTests({ ...base, constants: { args: ['Core.SeedDemoData=true', `Core.SeedPassword=${pw}`], secrets: [pw], seedPassword: 'Core.SeedPassword', passwordConstants: async () => ['Core.SeedPassword'] } });
+    const call = s.calls().filter((c) => c.args[0] === 'test').pop()!;
+    assert.deepEqual(call.args.filter((_, i) => call.args[i - 1] === '--constant'), ['Core.SeedDemoData=true', `Core.SeedPassword=${pw}`]);
+    assert.equal(draft.harnessError, undefined);
+    assert.ok(draft.results.every((t) => t.status === 'passed'));
+    assert.ok(!JSON.stringify(draft).includes(pw), 'the password is not in the record');
+    assert.ok(!readFileSync(junit!, 'utf8').includes(pw), 'nor in the JUnit file kept as evidence');
+    // An mxcli without --constant: not started, said as a newer mxcli (raised for the PM), never the seed's riddle.
+    const old = await runMicroflowTests({ ...base, flags: { ...flags, constant: false }, constants: { args: [`Core.SeedPassword=${pw}`], secrets: [pw], seedPassword: 'Core.SeedPassword', passwordConstants: async () => [] } });
+    assert.match(old.draft.harnessError!, /^Not started: Needs a newer mxcli, not a database: the project's instance constants \(Core\.SeedPassword\) need `mxcli test --constant`/);
+    assert.ok(!old.draft.harnessError!.includes(pw));
+    // A broken constants file: not started, its problem said.
+    const bad = await runMicroflowTests({ ...base, constants: { why: 'The app instance can’t start with these constants: Core.ApiKey looks like a secret' } });
+    assert.match(bad.draft.harnessError!, /^Not started: .*Core\.ApiKey looks like a secret/);
+    untouched(s);
+  } finally {
+    process.env.FAKE_MXCLI_MODE = '';
     rmSync(s.root, { recursive: true, force: true });
   }
 });
