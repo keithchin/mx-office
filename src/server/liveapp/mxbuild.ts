@@ -166,3 +166,9 @@ export const supportsWatch = (mxcli: string, timeoutMs = 20_000): Promise<boolea
 /** Forgets what was learnt about each mxcli (tests). */
 export const forgetMxcliFlags = () => helpCache.clear();
 
+/** Where a picked mxbuild came from, in words (the live app's log). */
+export const MXBUILD_FROM: Record<NonNullable<MxbuildPick['source']>, string> = {
+  'toolkit.env': "MXBUILD_PATH in the project's .claude/toolkit.env",
+  office: "the office's MXBUILD_PATH",
+  'studio-pro': 'the installed Studio Pro of the project’s version',
+};

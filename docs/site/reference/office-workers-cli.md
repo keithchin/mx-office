@@ -187,8 +187,9 @@ The Engagement Partner sends the sections `executive`, `statistics`, `findings`,
 Every worker also has `office-app` (`bin/office-app.js`; `office-journey run <J>` is `office-app journey <J>`, and `office-workers app …` is `office-app …`). It gives an agent **a running copy of its app at one commit**, run by the office, so it can check its own pages and flows before it says done. Never improvise `mxcli run --local` or `mxcli test --local` in a worktree: that leaves processes and databases behind, and its results count for nothing.
 
 ```text
-office-app start [--commit <sha|main|HEAD>] [--no-wait]   an instance at that commit (default HEAD, committed files only); waits, prints its URL and test users
-office-app status                                         your instance now
+office-app start [--commit <sha|main|HEAD>] [--const Module.Name=value]... [--no-wait]
+                                                          an instance at that commit (default HEAD, committed files only); waits, prints its URL and test users
+office-app status                                         your instance now (and its generated test password, when there is one)
 office-app journey <J-id|path> [--commit <sha>]           play a journey on it, recorded at its commit
 office-app smoke [--page /p/addr]... [--as <user>]         open pages as one of the project's test users, recorded at its commit
 office-app check --name "<what>" --result passed|failed [--detail "..."] [--shot <png>]... [--commit <sha>]
@@ -197,11 +198,23 @@ office-app test [--commit <sha|main|HEAD>] [--no-wait]    the microflow tests at
 office-app stop                                           stop it (its processes and database go)
 ```
 
-- **One instance per agent.** The same commit again gives the same instance; another commit replaces it. It runs in the office's own workspace (`<data>/testing/work/<project>/instance-ag<id>`), on three free ports and a fresh database `<project>_ag<id>_<random>`, never the live app's.
+- **One instance per agent.** The same commit (and the same `--const`s) again gives the same instance; another commit, or other constants, replaces it. It runs in the office's own workspace (`<data>/testing/work/<project>/instance-ag<id>`), on three free ports and a fresh database `<project>_ag<id>_<random>`, never the live app's.
 - **Refused with the reason** when the machine has less than about 2.5 GB of memory free, or when 2 agents' instances already run.
 - **Stops by itself** after 15 minutes without a call from its agent, and after an hour at most. Stopping ends mxcli's whole process tree, drops the database, and then ends anything whose command line still names the instance's workspace (a stale rollup-runner). What runs is kept in `<data>/agent-apps/live.json`, so an office that crashed cleans up a minute after its next start.
 - **Seed.** The project's after-startup microflow runs at every start; a project that has `tests/e2e/seed.journey.json` gets it played once before the instance is ready.
-- **Test users** are the project's own: `tests/e2e/project.config.js`, unless all it names are the toolkit template's placeholders (`demo_test_user`, `erika.engineer`, `paul.planner`); then the personas the project's journeys sign in as (`persona: '…'`, `Persona: …`, `TEST_USER=…` in `tests/**/*.journey.json` and `*.journey.js`), with the seed password constant the instance booted with (a constant whose name says password in mxcli's boot configuration). `office-app status` lists them and says where the passwords come from, never a password.
+- **Test users** are the project's own: `tests/e2e/project.config.js`, unless all it names are the toolkit template's placeholders (`demo_test_user`, `erika.engineer`, `paul.planner`); then the personas the project's journeys sign in as (`persona: '…'`, `Persona: …`, `TEST_USER=…` in `tests/**/*.journey.json` and `*.journey.js`), with the generated seed password (above), else the seed password constant the instance booted with (a constant whose name says password in mxcli's boot configuration). `office-app status` lists them and says where the passwords come from; the only password it ever prints is the generated one, to its own agent.
+- **Instance constants.** An instance can run with constants for that run only, passed to `mxcli run --constant Module.Name=value` (the runtime's MicroflowConstants of that run): never written to the model, never committed, never in a cloud deployment. The project declares the defaults once in **`.agent-office/instance-constants.json`** (committed, read at the instance's commit), and an agent adds or overrides one with `--const Module.Name=value` (repeatable; MCP `app_start` `constants`):
+
+  ```json
+  {
+    "constants": { "Core.SeedDemoData": true },
+    "seedPassword": "Core.SeedPassword",
+    "seedUsers": ["test.requester", { "user": "test.approver", "role": "Approver" }]
+  }
+  ```
+
+  Every name is checked against the model's constants at that commit and every value against its type (Boolean `true`/`false`, Integer, Decimal, String, Date and time), before anything starts: *the model at this commit has no constant Core.SeedDemodata (did you mean Core.SeedDemoData?)*, *Core.MaxItems is an Integer constant: give a whole number*. The values are not secrets: a constant whose name says password, token or key is refused in the file and on the command line. An mxcli without `--constant` is said as such (update it in Connections › Folders › mxcli).
+- **A generated test password.** When the file names `seedPassword`, the office generates a strong password (24 characters, upper and lower case, digits and a symbol) for each instance and passes it as that constant for that run only. It is kept in memory while the instance runs, masked in the instance log, and given only to the agent that asked, by `office-app status` (and the MCP `app_status`/`app_start` answer); never the audit log, chatter, a page, a journal or git. Smoke runs and journeys use it on their own for every seeded test user (the config's users, the journeys' personas and `seedUsers`; a password `project.config.js` names is passed over). Keep the seed off in the model (a Boolean constant such as `Core.SeedDemoData` defaulting to false, no known password, demo users off) and never add demo users, a demo admin or a known password to the model: the model ships to every environment.
 - **A refused sign-in is never a quiet stop.** The answer says who the office signed in as, where that account came from, and what to change (`tests/e2e/project.config.js`, or `--as <user>`), and the office raises it for the Project Manager as a **Needs you** item filed for that agent; the run is recorded as one that couldn't run, and shows as **failed** in the receipt and the merge dialog.
 - **Journeys** are the project's own at the instance's commit, by id or path, or a file you send (its definition revision is then *unknown*):
   - a toolkit `tests/**/*.journey.json` is played by the walkthrough recorder, unfilmed, as the journey's identity, and **signed out after every run** (an unlicensed Mendix app keeps only 6 sessions; when the app refuses one anyway, the answer says so plainly and the run counts for no journey);

@@ -16,8 +16,8 @@ weight: 2
 | `escalate` | **title**, urgency, trigger, details, options[], recommendation, artifact | `office-workers escalate` |
 | `subagent` | **op** (list, review, warn, bench, swap-model, reinstate), name, verdict (accept, rework), note, reason, model | `office-workers subagent` |
 | `marketplace_add` | **id**, **kind** (widget, module), version, name, why | `office-workers marketplace add` (`office-marketplace add`) |
-| `app_start` | **commit**, wait | `office-app start` |
-| `app_status` | none | `office-app status` |
+| `app_start` | **commit**, wait, constants (`{"Module.Name": value}`, this run only) | `office-app start --const` |
+| `app_status` | none (its answer has the instance's generated test password, when the project names a seed password constant) | `office-app status` |
 | `app_stop` | none | `office-app stop` |
 | `journey_run` | journey, file, commit | `office-app journey` |
 | `app_smoke` | paths[], as | `office-app smoke` |

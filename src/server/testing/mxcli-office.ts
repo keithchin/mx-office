@@ -14,7 +14,8 @@ import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { testingStore } from './index.js';
-import { NoTestsError, runMicroflowTests, runQuality } from './mxcli-run.js';
+import { NoTestsError, runMicroflowTests, runQuality, type TestRunOpts } from './mxcli-run.js';
+import { testRunConstants } from '../app-instance/constants.js';
 import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
@@ -82,6 +83,8 @@ export interface MxDeps {
   prepare?: (mprBase: string) => Promise<{ db: string; notes: string[] } | { why: string }>;
   /** Stand-in for test-flags.ts testFlags (tests). */
   flags?: (bin: string) => Promise<TestFlags>;
+  /** Stand-in for app-instance/constants.ts testRunConstants (tests). */
+  constants?: (floorDir: string, sha: string) => Promise<TestRunOpts['constants']>;
   /** Hears each finished run's record (the callers raise what only a person can clear: agent-app/raise.ts). */
   onDone?: (draft: TestRunDraft) => void;
 }
@@ -141,7 +144,9 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
     try {
       const prepare = deps.prepare ?? ((base: string) => prepareTestRun(base, { dataDir }));
       const flags = await (deps.flags ?? testFlags)(tool.bin).catch(() => undefined);
-      const { draft } = await runMicroflowTests({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
+      // The project's instance constants and a generated seed password, for this run only.
+      const constants = await (deps.constants ?? ((d: string, c: string) => testRunConstants(dataDir, d, c)))(floor.dir, sha).catch(() => undefined);
+      const { draft } = await runMicroflowTests({ ...(constants ? { constants } : {}), dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
       try {
         deps.onDone?.(draft);
       } catch {

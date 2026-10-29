@@ -1,7 +1,8 @@
 // The Playbook's runtime rule (P0-1 of the real rebuild test: four runtime defects passed every model gate and
 // were found only when the Project Manager ran the app, while the agents wrote "not measured: I cannot start
 // the app here"). Whoever builds pages or flows, or tests them, runs the app at its candidate through the
-// office before saying done. roster/playbooks.ts adds it for the roles that write or check the model.
+// office before saying done, with test accounts from instance constants (shared/instance-constants.ts), never
+// demo users or known passwords in the model. roster/playbooks.ts adds it for the roles that write or check the model.
 
 import type { RoleId } from '../../shared/roster/roles.js';
 
@@ -14,6 +15,8 @@ export const RUNTIME_RULE = [
   '- A check you ran yourself (a measurement, your own script, screenshots): record it at the commit with `office-app check --name "..." --result passed|failed --shot <png>` (MCP `app_check`) so the receipt and the merge dialog show it. If the office can’t sign in or a check can’t run, say so in your report: the office raises it to the Project Manager too; never just go idle.',
   '- Report the result with its commit ("journeys J-12, J-13 passed at @abc1234"). "Not measured" is no longer acceptable when an instance can be started; if the office refuses one (memory, limit), say its reason.',
   '- Microflow tests: `office-app test --commit HEAD` (MCP `app_test`); the result is recorded at that commit. Never `mxcli run --local` or `mxcli test --local` in your worktree (they leave processes and databases behind and count for nothing), never a database superuser.',
+  '- Test accounts: keep the seed off in the model (a Boolean constant such as `Core.SeedDemoData` defaulting to false, no known password, demo users off). Declare once in `.agent-office/instance-constants.json` (committed, so never a secret) what instances run with: `{"constants": {"Core.SeedDemoData": true}, "seedPassword": "Core.SeedPassword", "seedUsers": ["test.requester"]}`. The office generates a strong seed password for each instance and passes it for that run only; smoke runs and journeys sign in with it, and `office-app status` shows it if your own script needs it (never write it into a file, commit, journal or message). `office-app start --const Module.Name=value` (MCP `app_start` `constants`) sets another constant for your run only.',
+  '- Never add demo users, a demo admin or a known or throwaway password to the model, not even for a test: the model ships, to every sandbox and cloud environment.',
   '- `office-app stop` when you are done (it also stops by itself after 15 minutes unused).',
   '',
 ];

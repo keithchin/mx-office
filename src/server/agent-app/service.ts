@@ -10,6 +10,9 @@
 //   * it stops by itself after AGENT_APP_IDLE_MS without a call from its agent, and after AGENT_APP_MAX_MS at
 //     most; stopping ends mxcli's process tree by its pid, drops the database, and then ends anything whose
 //     command line still names the instance's workspace (./leftovers.ts: no stale rollup-runner);
+//   * it runs with the project's instance constants and the agent's own (`constants`, app-instance/constants.ts)
+//     for that run only; when the project names its seed password constant, a strong password is generated per
+//     instance, kept in memory only, given to its agent by status alone and used by its smoke runs and journeys;
 //   * what is running is written to <data>/agent-apps/live.json, so an office that crashed cleans up at its
 //     next start (`recover`): the pids' trees, anything naming the workspaces, and their databases.
 
@@ -22,6 +25,7 @@ import type { AppInstance } from '../app-instance/index.js';
 import { instanceDir } from '../app-instance/index.js';
 import { availableMemory } from '../machine.js';
 import { killTreeNow } from '../liveapp/process.js';
+import { parseRequested, requestKey, type ConstantsPlan } from '../../shared/instance-constants.js';
 import { killLeftovers, listProcesses, type LeftoverDeps } from './leftovers.js';
 
 export interface Booted extends AppInstance {
@@ -37,6 +41,9 @@ export interface BootSpec {
   signal: AbortSignal;
   progress(line: string): void;
   onPhase(phase: BootPhase): void;
+  /** Constants for this run only (`Module.Name=value`), and the values the log must never show. */
+  constants: string[];
+  secrets: string[];
 }
 
 export interface AgentAppDeps {
@@ -44,7 +51,9 @@ export interface AgentAppDeps {
   floorDir(id: string): string | undefined;
   boot(spec: BootSpec): Promise<Booted>;
   /** The project's test accounts at a commit for a booted instance (agent-app/identity.ts), and where their passwords come from. */
-  users?(floorDir: string, commit: string, runtimeLog?: string): Promise<{ user: string; role?: string }[] | { users: { user: string; role?: string }[]; passwords: string }>;
+  users?(floorDir: string, commit: string, runtimeLog?: string, generated?: Generated): Promise<{ user: string; role?: string }[] | { users: { user: string; role?: string }[]; passwords: string }>;
+  /** The constants of an instance at a commit (app-instance/constants.ts): the project's, the agent's, a generated seed password; a string says what's wrong. */
+  constants?(floorDir: string, commit: string, requested: unknown): Promise<ConstantsPlan | string>;
   /** Plays the project's seed journey on a fresh instance, when it has one: what seeded it, in words. */
   seed?(e: AgentApp): Promise<string | undefined>;
   /** Drops a recovered instance's databases (by the instance's stem). */
@@ -76,6 +85,11 @@ export interface AgentApp {
   /** Where the users' passwords come from, in words (never a password). */
   passwords?: string;
   instance?: Booted;
+  /** What the agent asked for (the same ask at the same commit reuses the instance), and the constants' names it runs with. */
+  asked: string;
+  constants?: string[];
+  /** The seed password generated for this instance: only for its agent and the office's own runs on it. */
+  generated?: Generated;
   startedAt: number;
   lastUsed: number;
   abort: AbortController;
@@ -94,6 +108,8 @@ interface LiveRow {
 /** The instance's purpose word for one agent: `ag` and 6 characters of its worker id's hash (folder and database names). */
 export const purposeOf = (workerId: string) => `ag${createHash('sha1').update(workerId).digest('hex').slice(0, 6)}`;
 
+type Generated = NonNullable<ConstantsPlan['generated']>;
+
 const keyOf = (floorId: string, workerId: string) => `${floorId}|${workerId}`;
 
 export class AgentApps {
@@ -111,14 +127,15 @@ export class AgentApps {
   }
 
   /** What the agent is told about its instance (and the call counts as using it). */
-  view(floorId: string, workerId: string, touch = true): AgentAppView | undefined {
+  view(floorId: string, workerId: string, touch = true, reveal = false): AgentAppView | undefined {
     const e = this.apps.get(keyOf(floorId, workerId));
     if (!e) return undefined;
     if (touch && e.state !== 'stopped' && e.state !== 'failed') e.lastUsed = this.now();
-    return this.viewOf(e);
+    return this.viewOf(e, reveal);
   }
 
-  private viewOf(e: AgentApp): AgentAppView {
+  /** `reveal`: the generated test password too (only ever in the answer to its own agent's status call). */
+  private viewOf(e: AgentApp, reveal = false): AgentAppView {
     const idle = this.d.idleMs ?? AGENT_APP_IDLE_MS;
     const ends = e.startedAt + (this.d.maxMs ?? AGENT_APP_MAX_MS);
     return {
@@ -130,6 +147,9 @@ export class AgentApps {
       ...(e.phase ? { phase: e.phase } : {}),
       ...(e.why ? { why: e.why } : {}),
       ...(e.seed ? { seed: e.seed } : {}),
+      ...(e.constants?.length ? { constants: e.constants } : {}),
+      ...(e.generated ? { passwordConstant: e.generated.constant } : {}),
+      ...(reveal && e.generated && e.state === 'ready' ? { testPassword: { constant: e.generated.constant, value: e.generated.value } } : {}),
       startedAt: e.startedAt,
     };
   }
@@ -152,36 +172,40 @@ export class AgentApps {
    * Starts (or gives back) the agent's instance at `commit` (a full sha the project's repository has). Gives
    * back at once, while it builds; the agent asks `view` until it's ready. A string says why not.
    */
-  async start(floorId: string, worker: { id: string; name: string }, commit: string): Promise<AgentAppView | string> {
+  async start(floorId: string, worker: { id: string; name: string }, commit: string, opts: { constants?: unknown } = {}): Promise<AgentAppView | string> {
     const floorDir = this.d.floorDir(floorId);
     if (!floorDir) return 'No such project';
     const key = keyOf(floorId, worker.id);
     const had = this.apps.get(key);
-    if (had && had.commit === commit && (had.state === 'starting' || had.state === 'ready')) {
+    const asked = requestKey(parseRequested(opts.constants).constants);
+    if (had && had.commit === commit && had.asked === asked && (had.state === 'starting' || had.state === 'ready')) {
       had.lastUsed = this.now();
       return this.viewOf(had);
     }
     const others = [...this.apps.values()].filter((e) => e !== had && (e.state === 'starting' || e.state === 'ready'));
     const max = this.d.max ?? AGENT_APP_MAX;
     if (others.length >= max) return `The office runs at most ${max} agents' app instances at once and ${others.length} are running (${others.map((e) => `${e.worker} @${e.commit.slice(0, 7)}`).join(', ')}): try again when one stops (they stop after ${Math.round((this.d.idleMs ?? AGENT_APP_IDLE_MS) / 60_000)} min unused)`;
-    if (had && (had.state === 'starting' || had.state === 'ready')) await this.stop(floorId, worker.id, `replaced by an instance at ${commit.slice(0, 7)}`);
+    // Unknown constants, wrong types, a secret on the command line: said before anything starts.
+    const plan = this.d.constants ? await this.d.constants(floorDir, commit, opts.constants) : ({ args: [], names: [] } as ConstantsPlan);
+    if (typeof plan === 'string') return plan;
+    if (had && (had.state === 'starting' || had.state === 'ready')) await this.stop(floorId, worker.id, had.commit === commit ? 'replaced by an instance with other constants' : `replaced by an instance at ${commit.slice(0, 7)}`);
     const free = await (this.d.freeMemory ?? availableMemory)();
     const need = this.d.minFree ?? AGENT_APP_MIN_FREE;
     if (free < need) return memoryWords(free, need);
     const purpose = purposeOf(worker.id);
     const at = this.now();
     const abort = new AbortController();
-    const e: AgentApp = { floorId, workerId: worker.id, worker: worker.name, commit, purpose, workspace: instanceDir(this.d.dataDir, floorId, purpose), state: 'starting', phase: 'Getting the commit’s files', startedAt: at, lastUsed: at, abort, started: Promise.resolve() };
+    const e: AgentApp = { floorId, workerId: worker.id, worker: worker.name, commit, purpose, workspace: instanceDir(this.d.dataDir, floorId, purpose), state: 'starting', phase: 'Getting the commit’s files', asked, ...(plan.names.length ? { constants: plan.names } : {}), ...(plan.generated ? { generated: plan.generated } : {}), startedAt: at, lastUsed: at, abort, started: Promise.resolve() };
     this.apps.set(key, e);
     this.arm();
-    e.started = this.boot(e, floorDir);
+    e.started = this.boot(e, floorDir, plan.args);
     void this.save();
     return this.viewOf(e);
   }
 
-  private async boot(e: AgentApp, floorDir: string): Promise<void> {
+  private async boot(e: AgentApp, floorDir: string, constants: string[]): Promise<void> {
     try {
-      const inst = await this.d.boot({ floorId: e.floorId, floorDir, commit: e.commit, purpose: e.purpose, signal: e.abort.signal, progress: (l) => (e.phase = l), onPhase: (p) => {
+      const inst = await this.d.boot({ floorId: e.floorId, floorDir, commit: e.commit, purpose: e.purpose, constants, secrets: e.generated ? [e.generated.value] : [], signal: e.abort.signal, progress: (l) => (e.phase = l), onPhase: (p) => {
           // Waiting is said by progress() only when something is building; the phase alone would claim a live app.
           if (p !== 'waiting') e.phase = BOOT_PHASE_TITLE[p] ?? p;
         } });
@@ -190,7 +214,7 @@ export class AgentApps {
         return;
       }
       e.instance = inst;
-      const got = (await this.d.users?.(floorDir, e.commit, inst.runtimeLog).catch(() => [])) ?? [];
+      const got = (await this.d.users?.(floorDir, e.commit, inst.runtimeLog, e.generated).catch(() => [])) ?? [];
       e.users = Array.isArray(got) ? got : got.users;
       if (!Array.isArray(got)) e.passwords = got.passwords;
       await this.save();
@@ -235,6 +259,8 @@ export class AgentApps {
 
   /** After a stop or a failed start: whatever still names the workspace is ended; the record is rewritten. */
   private async cleanup(e: AgentApp) {
+    // The generated password lives as long as its instance.
+    e.generated = undefined;
     await killLeftovers([e.workspace], this.d.leftovers).catch(() => []);
     await this.save();
   }

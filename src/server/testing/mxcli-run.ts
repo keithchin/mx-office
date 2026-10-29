@@ -4,6 +4,8 @@
 //     the JUnit file written into the office's data folder and read inside the run's envelope
 //     (shared/testing/junit.ts). It needs a Mendix runtime, so it may legitimately fail to start: that
 //     is recorded as a harness error, never as failed tests. Exit code 1 is never read on its own.
+//     The project's instance constants (and a generated seed password) go in as `--constant` for that run
+//     only; an app seed that finds its password constant empty is said with that constant's name.
 //   * quality: `mxcli report --format json`, `mxcli lint --format json` and the catalog's schema
 //     (catalog_meta), bound to the commit and the mxcli version, with wall times.
 // The work folder is wiped before and after, so whatever mxcli writes there (catalog, widget docs, a
@@ -17,7 +19,7 @@ import { parseLintJson, parseReportJson, qualityKey, ruleFailuresOf, type Qualit
 import type { TestRunDraft } from '../../shared/testing/record.js';
 import { stripNoise } from '../model/mxcli.js';
 import { execFileOffP, type OffError } from '../offloop/exec.js';
-import { testRunWhy } from '../../shared/testing/test-reason.js';
+import { EMPTY_PASSWORD, emptySeedPasswordWhy, NEEDS_MXCLI, testRunWhy } from '../../shared/testing/test-reason.js';
 import { checkoutAt, disposeFolder, testPathsIn, workDirOf } from './workfolder.js';
 import { NO_FLAGS, type TestFlags } from './test-flags.js';
 
@@ -93,6 +95,13 @@ export interface TestRunOpts {
   ports?: () => Promise<{ ports: number[]; release(): void } | undefined>;
   /** Extra environment for the older route (PGPASSWORD of the office's own database user, when that user is mxcli's `postgres`). */
   pgEnv?: Record<string, string>;
+  /**
+   * The project's instance constants for this run (app-instance/constants.ts testRunConstants): mxcli's
+   * `--constant Module.Name=value`, the values never shown (a generated seed password), the seed password
+   * constant declared and the model's password-like String constants (to name one when the seed finds it
+   * empty); or why they can't be used (a harness error that says so, nothing started).
+   */
+  constants?: { args: string[]; secrets: string[]; seedPassword?: string; passwordConstants(): Promise<string[]> } | { why: string };
 }
 
 /** How the run boots its runtime, in words for the record. */
@@ -141,6 +150,13 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
     const args = ['test', ...paths, '-p', wf.mpr, '--local', '--require-assertions', '--junit', junitFile, '--timeout', `${minutes}m`];
     const base = path.basename(wf.mpr).replace(/\.mpr$/i, '');
     const flags = o.flags ?? NO_FLAGS;
+    const consts = o.constants && 'args' in o.constants ? o.constants : undefined;
+    if (o.constants && 'why' in o.constants) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${o.constants.why}` }), undefined) };
+    if (consts?.args.length) {
+      const names = consts.args.map((c) => c.slice(0, c.indexOf('='))).join(', ');
+      if (!flags.constant) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${NEEDS_MXCLI} the project's instance constants (${names}) need \`mxcli test --constant\`, which mxcli ${o.mxcliVersion} doesn't have. Point the office at a newer mxcli (Connections > Folders > mxcli), then run the tests again.` }), undefined) };
+      for (const c of consts.args) args.push('--constant', c);
+    }
     // mxcli v0.27+: the built-in database, so nobody needs a PostgreSQL superuser (or any PostgreSQL at all).
     const hsql = flags.dbType;
     if (hsql) args.push('--db-type', 'hsqldb');
@@ -158,12 +174,18 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
     };
     const got = await (o.serial ?? (<T>(fn: () => Promise<T>) => fn()))(run);
     if (got.ready && 'why' in got.ready) return { draft: draftFromMxcliRun(envelope({ commit: wf.commit, paths, failure: `Not started: ${got.ready.why}` }), undefined) };
-    const out = got.out!;
+    // A generated seed password never reaches the record, the log or the page, even when mxcli echoes it.
+    const mask = (t: string) => (consts?.secrets ?? []).reduce((acc, s) => (s ? acc.replaceAll(s, '***') : acc), t);
+    const out = { ...got.out!, stdout: mask(got.out!.stdout), stderr: mask(got.out!.stderr) };
     const db = got.ready && 'db' in got.ready && got.ready.db ? got.ready.db : undefined;
-    const junit = await readFile(junitFile, 'utf8').catch(() => undefined);
+    const junitRaw = await readFile(junitFile, 'utf8').catch(() => undefined);
+    const junit = junitRaw === undefined ? undefined : mask(junitRaw);
+    if (junit !== undefined && junit !== junitRaw) await writeFile(junitFile, junit);
     const mendix = mendixOf(`${out.stdout}\n${out.stderr}`);
     // No results: why, in mxcli's words and what they mean (shared/testing/test-reason.ts), never "no JUnit file" alone.
-    const failure = junit === undefined ? testRunWhy({ ...out, minutes: minutes + 1 }, db, { mxcliVersion: o.mxcliVersion, hsql }) : undefined;
+    // The app's startup seed refused an empty password: name the constant the run left empty.
+    const emptySeed = EMPTY_PASSWORD.test(`${junit ?? ''}\n${out.stdout}\n${out.stderr}`) ? emptySeedPasswordWhy((await consts?.passwordConstants().catch(() => [])) ?? [], consts?.seedPassword) : undefined;
+    const failure = junit === undefined ? (emptySeed ?? testRunWhy({ ...out, minutes: minutes + 1 }, db, { mxcliVersion: o.mxcliVersion, hsql })) : emptySeed;
     const env = envelope({
       commit: wf.commit,
       paths,
