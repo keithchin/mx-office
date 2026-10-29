@@ -10,6 +10,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { bookOf, confirmLocal, forgetLocalMerges, localMergeView, mergeLocal, reviewLocal } from '../src/server/local-merge/index.js';
+import { SLOW_GIT_MS } from '../src/server/local-merge/merge.js';
+import { runGit } from '../src/server/gitgraph/index.js';
 import { forgetLocalOnly } from '../src/server/local-only.js';
 import { devChangesOf } from '../src/server/dev-changes/index.js';
 import { testingStore } from '../src/server/testing/index.js';
@@ -141,8 +143,16 @@ test('merge-safe: the reviewed commit while the head moves, refusals, DC labels,
     // ---- The merge: exactly a1, --no-ff, as the office; a2 stays on the branch; the team is told ----
     git(floorDir, 'checkout', '-q', '--detach');
     const told: { id: string; text: string }[] = [];
-    const ok = await mergeLocal(ctx, floor, { branch: 'dev/DC-3', sha: a1 }, pat, { deliver: (id, text) => (told.push({ id, text }), undefined) });
+    // The checkout, merge and push get the slow limit (a grown app's worktree takes minutes on Windows), not the quick-read one.
+    const limits: Record<string, number | undefined> = {};
+    const timed: import('../src/server/gitgraph/index.js').Git = (args, cwd, timeout) => {
+      const verb = args.find((a) => ['worktree', 'merge', 'push'].includes(a));
+      if (verb) limits[verb === 'worktree' ? `worktree ${args[args.indexOf('worktree') + 1]}` : verb] = timeout;
+      return runGit(args, cwd, timeout);
+    };
+    const ok = await mergeLocal(ctx, floor, { branch: 'dev/DC-3', sha: a1 }, pat, { git: timed, deliver: (id, text) => (told.push({ id, text }), undefined) });
     assert.ok(ok.ok, JSON.stringify(ok));
+    for (const step of ['worktree add', 'merge', 'push', 'worktree remove']) assert.equal(limits[step], SLOW_GIT_MS, `${step} runs with the slow limit`);
     const done = ok as import('../src/shared/local-merge.js').LocalMergeDone;
     assert.equal(done.sha, a1);
     assert.equal(done.newer, 1);

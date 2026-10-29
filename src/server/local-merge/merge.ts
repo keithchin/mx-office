@@ -14,6 +14,9 @@ import type { Ctx } from '../office/context.js';
 import { gitGraphsOf, runGit } from '../gitgraph/index.js';
 import { localOnlyAt } from '../local-only.js';
 import { audit, byWhom } from '../audit/index.js';
+
+/** The merge's checkout, merge, push and clean-up: a grown project's worktree takes minutes on Windows, not seconds. */
+export const SLOW_GIT_MS = 10 * 60_000;
 import { officeGitEnv } from '../workers/git-identity.js';
 import { needsApproval } from '../../shared/roster/autonomy.js';
 import { mergingWords, type LocalMergeDone } from '../../shared/local-merge.js';
@@ -58,28 +61,32 @@ export async function mergeLocal(
   const env = officeGitEnv();
   const id = ['-c', `user.name=${env.GIT_COMMITTER_NAME}`, '-c', `user.email=${env.GIT_COMMITTER_EMAIL}`, '-c', 'commit.gpgsign=false', '-c', 'core.safecrlf=false'];
   let merge = '';
+  // A whole checkout of a grown Mendix app (thousands of files, widget packages, jars) takes far longer than a quick
+  // git read on Windows: the default limit killed it part way and showed git's progress line as the error.
+  const slow = SLOW_GIT_MS;
   try {
-    await git(['worktree', 'add', '--detach', wt, base], floor.dir);
+    await git(['worktree', 'prune'], floor.dir).catch(() => '');
+    await git(['worktree', 'add', '--quiet', '--detach', wt, base], floor.dir, slow);
     const later = newer ? `\n${newer} newer commit${newer === 1 ? '' : 's'} on ${r.branch} (up to ${c.head.slice(0, 12)}) not included.` : '';
     const notes = what.kind === 'notes' ? ' (notes only)' : '';
     const msg = `Merge ${r.branch} @${c.full.slice(0, 7)} into ${main}${notes} (local only)\n\nReviewed at ${c.full.slice(0, 12)} by ${review.by}; merged by ${by.name} in Mx Office.${later}\nMx-Office-Local-Merge: ${r.branch}@${c.full}`;
     try {
-      await git([...id, 'merge', '--no-ff', '-m', msg, c.full], wt);
+      await git([...id, 'merge', '--no-ff', '--quiet', '-m', msg, c.full], wt, slow);
     } catch (err) {
       // Which files conflict, in words; never git's own command line (it carries the merge message and its trailer).
       const files = (await git(['diff', '--name-only', '--diff-filter=U'], wt).catch(() => '')).split('\n').map((l) => l.trim()).filter(Boolean);
-      await git(['merge', '--abort'], wt).catch(() => '');
+      await git(['merge', '--abort'], wt, slow).catch(() => '');
       return { ok: false, status: 409, error: refusalWords(c.full, r.branch, main, files, (err as Error).message) };
     }
     merge = (await git(['rev-parse', 'HEAD'], wt)).trim();
     try {
       // No force, ever: a main that moved since the fetch refuses this, and the merge is dropped with the worktree.
-      await git(['push', 'origin', `HEAD:refs/heads/${main}`], wt);
+      await git(['push', '--quiet', 'origin', `HEAD:refs/heads/${main}`], wt, slow);
     } catch (err) {
       return { ok: false, status: 409, error: `Not merged: ${main} moved on in the project's origin meanwhile (${(err as Error).message.slice(0, 160)}). Try again.` };
     }
   } finally {
-    await git(['worktree', 'remove', '--force', wt], floor.dir).catch(() => '');
+    await git(['worktree', 'remove', '--force', wt], floor.dir, slow).catch(() => '');
     rmSync(tmp, { recursive: true, force: true });
   }
   // The team's view of main follows: origin/<main>, the local <main> when no worktree has it checked out (a
