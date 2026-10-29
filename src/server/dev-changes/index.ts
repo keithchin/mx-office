@@ -24,6 +24,7 @@ import { contains } from '../tasks/git.js';
 import { git } from '../asks/sources.js';
 import { modelOf } from '../model/index.js';
 import { testingStore } from '../testing/index.js';
+import { checkCommits } from '../path-case/index.js';
 import { checkName, checkVerdict } from '../../shared/testing/record.js';
 import { changeRequestBook } from '../change-requests/index.js';
 import { localOnlyAt } from '../local-only.js';
@@ -256,11 +257,14 @@ export function changesOnWorker(ctx: Ctx, floor: Floor): void {
 }
 
 /** Test runs that ran on one of the changes' candidates (or merge commits), as check results. */
-async function checksOf(ctx: Ctx, floorId: string, all: readonly DevChange[], pulls: readonly ChangePull[]): Promise<CheckResult[]> {
+async function checksOf(ctx: Ctx, floor: Pick<Floor, 'id' | 'dir'>, all: readonly DevChange[], pulls: readonly ChangePull[]): Promise<CheckResult[]> {
   // Its candidates' heads, and its merge commit once merged (the relevant revision then).
   const shas = new Set(all.flatMap((c) => [...c.candidates.map((x) => x.sha), ...(pullFor(c, pulls)?.mergeCommit ? [pullFor(c, pulls)!.mergeCommit!] : [])]));
   if (!shas.size) return [];
-  const recs = await testingStore(ctx.cfg.dataDir, floorId).all().catch(() => []);
+  const store = testingStore(ctx.cfg.dataDir, floor.id);
+  // The office's folder-name case check on each of those commits' files (server/path-case/; once per commit).
+  await checkCommits(store, floor.dir, shas);
+  const recs = await store.all().catch(() => []);
   const out: CheckResult[] = [];
   for (const r of recs) {
     const rev = r.testedRevision?.toLowerCase();
@@ -283,7 +287,7 @@ export async function changesView(ctx: Ctx, floor: Floor, who: Who): Promise<Dev
     ...base,
     ...(why ? { why } : {}),
     policy,
-    checks: await checksOf(ctx, floor.id, all, base.pulls),
+    checks: await checksOf(ctx, floor, all, base.pulls),
     hasCI: base.pulls.some((p) => (p as { checks?: string }).checks && (p as { checks?: string }).checks !== 'none'),
     // What people said after trying each change (its "Please try this" card), from guided validation's book.
     reviews: validationBook(ctx).reviews(floor.id),

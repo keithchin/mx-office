@@ -9,8 +9,11 @@
 export type Revision = string;
 export const UNKNOWN = 'unknown';
 
-/** office-journey: a journey or smoke run an agent asked the office for, on its app instance at a commit (server/agent-app/). */
-export type RunSource = 'pr-checks' | 'report-file' | 'gate-check' | 'mxcli-test' | 'office-journey';
+/**
+ * office-journey: a journey or smoke run an agent asked the office for, on its app instance at a commit (server/agent-app/).
+ * office-check: a check the office ran itself on a commit's files, without building it (server/path-case/).
+ */
+export type RunSource = 'pr-checks' | 'report-file' | 'gate-check' | 'mxcli-test' | 'office-journey' | 'office-check';
 
 export type ResultStatus = 'passed' | 'failed' | 'skipped';
 

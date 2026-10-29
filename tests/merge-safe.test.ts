@@ -156,7 +156,7 @@ test('merge-safe: the reviewed commit while the head moves, refusals, DC labels,
     const done = ok as import('../src/shared/local-merge.js').LocalMergeDone;
     assert.equal(done.sha, a1);
     assert.equal(done.newer, 1);
-    assert.equal(done.words, `Merging @${a1.slice(0, 7)} (reviewed). The branch has 1 newer commit, not included.`);
+    assert.equal(done.words, `Merged @${a1.slice(0, 7)} (reviewed). The branch has 1 newer commit, not included.`);
     assert.equal(git(bare, 'rev-parse', 'main'), done.merge);
     const parents = git(bare, 'rev-list', '--parents', '-n', '1', done.merge).split(' ');
     assert.equal(parents.length, 3, '--no-ff: a merge commit');

@@ -30,6 +30,8 @@ export interface StudioFloor {
   id: string;
   dir: string;
   def: { name: string };
+  /** Where Studio Pro opens the project when that isn't `dir` (targets.ts: Team Server's Studio copy). The marker stays in `dir`. */
+  studio?: string;
 }
 
 /** Where what Studio mode does goes; the office's are in startStudioMode, the tests' write it down. */
@@ -54,6 +56,8 @@ export interface WatchDeps {
 }
 
 interface Kept {
+  /** The folder its .mpr was looked for in. */
+  folder?: string;
   mpr?: string;
   version?: string;
   foundAt: number;
@@ -131,11 +135,14 @@ export class StudioWatch {
       k = { foundAt: 0, state, history, checkedAt: 0, fresh: true };
       this.floors.set(f.id, k);
     }
+    // A project whose Studio Pro folder changed (the Studio copy was just made) is looked for again at once.
+    if (k.folder !== (f.studio ?? f.dir)) k.foundAt = 0;
+    k.folder = f.studio ?? f.dir;
     if (this.d.now() - k.foundAt >= FIND_MPR_MS || !k.foundAt) {
       k.foundAt = this.d.now();
       let mpr: string | undefined;
       try {
-        mpr = this.d.findMpr(f.dir);
+        mpr = this.d.findMpr(f.studio ?? f.dir);
       } catch {
         mpr = undefined;
       }
@@ -197,7 +204,7 @@ export class StudioWatch {
     } else if (!s.open && prev.open) {
       next.since = now;
       this.note(k, { at: now, event: 'closed' });
-      const changed = modelChanges(await this.d.gitStatus(f.dir).catch(() => ''));
+      const changed = modelChanges(await this.d.gitStatus(f.studio ?? f.dir).catch(() => ''));
       k.checkedAt = now;
       if (changed.length) next.uncommitted = { since: now, files: changed.length };
       audit('studio.closed', `Studio Pro closed ${app}: mxcli writes allowed again${changed.length ? ` (${changed.length} model file${changed.length === 1 ? '' : 's'} not committed)` : ''}`, { mpr: k.mpr, openFor: now - prev.since, uncommitted: changed.length });
@@ -215,7 +222,7 @@ export class StudioWatch {
     // The changes Studio Pro left: gone from the list once git says they're committed (or undone).
     if (!s.open && next.uncommitted && now - k.checkedAt >= UNCOMMITTED_MS) {
       k.checkedAt = now;
-      const status = await this.d.gitStatus(f.dir).catch(() => undefined);
+      const status = await this.d.gitStatus(f.studio ?? f.dir).catch(() => undefined);
       if (status !== undefined && !modelChanges(status).length) delete next.uncommitted;
     }
     const changed = !same(prev, next);

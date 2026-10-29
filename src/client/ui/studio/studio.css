@@ -21,3 +21,10 @@
 .st-mode-open { background: var(--warn-soft); color: var(--warn-ink); }
 .st-mode-stale { background: var(--card); color: var(--muted); border-style: dashed; }
 .st-btn.st-open:disabled { opacity: 1; color: var(--muted); }
+
+/* A project on Team Server: Studio Pro opens its Studio copy; what to know before Publish. */
+.st-ts { margin: 0 0 10px; padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--card); font-size: 13px; }
+.st-ts p { margin: 0 0 6px; }
+.st-ts ul { margin: 0; padding-left: 18px; }
+.st-ts li { margin: 0 0 4px; }
+.st-ts code { overflow-wrap: anywhere; }

@@ -244,7 +244,7 @@ test('New project on Team Server: the Portal app made once, its history adopted,
   assert.ok(id && cleanProjectId(id), 'the app’s id saved on the job');
   assert.equal(job.plan.sprintrAppId, id, 'and on the plan: mx create-project binds the new app to it');
   assert.ok(saved >= 3, 'saved before the create, with the job id and with the app id');
-  assert.match(String(repo.detail), /^local only, nothing on GitHub: a local bare repository at /, 'the repo step’s own words, which Cancel & undo reads');
+  assert.match(String(repo.detail), /^on Mendix Team Server, nothing on GitHub: a local bare repository at /, 'the repo step’s own words, which Cancel & undo reads (no longer “local only”: the code goes to Team Server)');
   assert.ok(lines.some((l) => /Cancel & undo never deletes it/.test(l)));
 
   // A Retry of the step never creates a second app.
@@ -287,6 +287,12 @@ test('New project on Team Server: the Portal app made once, its history adopted,
   assert.ok(rec.calls.filter((c) => c.args[0] === 'remote' || c.args.includes('commit-tree')).every((c) => !c.env?.MX_OFFICE_TEAMSERVER_TOKEN), 'local commands never get it');
   const actions = a.events.map((e) => e.action);
   assert.ok(actions.includes('team-server.app-create') && actions.includes('team-server.app-created') && actions.includes('team-server.sync'), actions.join(', '));
+  // …and in the new project's own audit log, once the clone step made the project (Connect records them there too).
+  const mine = a.events.filter((e) => e.floor === 'visitor-desk').map((e) => e.action);
+  assert.ok(mine.includes('team-server.app-create') && mine.includes('team-server.app-created'), `the project's log: ${mine.join(', ')}`);
+  assert.equal(a.events.filter((e) => e.floor === 'visitor-desk' && e.action === 'team-server.app-created').length, 1, 'once, not on every Retry');
+  assert.match(String(settings.detail), /no GitHub recorded \(the code goes to Team Server\)/);
+  assert.doesNotMatch(String(settings.detail), /local only recorded/);
 });
 
 test('a Team Server setup that stopped after the create was sent asks the person to look in the Portal before creating again', async (t) => {

@@ -98,7 +98,11 @@ export async function resultsAt(ctx: Ctx, floorId: string, sha: string): Promise
   const journeys: LocalMergeResult[] = [];
   try {
     const { testingStore } = await import('../testing/index.js');
-    const recs = await testingStore(ctx.cfg.dataDir, floorId).all();
+    const store = testingStore(ctx.cfg.dataDir, floorId);
+    // The folder-name case check on exactly this commit, if no other view has looked yet (server/path-case/; once per commit).
+    const dir = ctx.floors?.get(floorId)?.dir;
+    if (dir) await (await import('../path-case/index.js')).checkCommits(store, dir, [sha]).catch(() => undefined);
+    const recs = await store.all();
     for (const r of recs) {
       if (!sameRevision(r.testedRevision, sha)) continue;
       const other = r.results.filter((x) => {

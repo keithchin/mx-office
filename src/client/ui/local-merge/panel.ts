@@ -39,7 +39,7 @@ export function localMergePanel(): LocalMergePanel {
       ? h('label.lm-toggle', {}, h('input', { type: 'checkbox', 'data-act': 'show-notes', checked: showNotes, onchange: (e: Event) => ((showNotes = (e.target as HTMLInputElement).checked), draw()) }), ` Show notes branches (${notes.length}: journal or docs only)`)
       : '';
     el.replaceChildren(
-      h('p.lm-head', {}, h('b', {}, 'You decide merges'), ` · ${v.levelName}${v.pmDecides ? '' : ' (the team may merge too)'} · local only: each merge takes exactly the commit you approved, into ${v.main}${v.mainSha ? ` (now @${short(v.mainSha)})` : ''}, no GitHub`),
+      h('p.lm-head', {}, h('b', {}, 'You decide merges'), ` · ${v.levelName}${v.pmDecides ? '' : ' (the team may merge too)'} · ${v.teamServer ? 'no GitHub' : 'local only'}: each merge takes exactly the commit you approved, into ${v.main}${v.mainSha ? ` (now @${short(v.mainSha)})` : ''}${v.teamServer ? ', then main goes to Team Server' : ', no GitHub'}`),
       ...rows.map((b) => row(v, b, admin)),
       toggle,
     );

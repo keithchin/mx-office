@@ -37,6 +37,8 @@ export interface StudioInfo {
   machine?: { problem: StudioProblem; error: string };
   /** The floor's folder against GitHub, from the office's last look (server/floor-sync/). */
   sync?: FloorSyncState;
+  /** Studio Pro opens a copy of its own instead of the project's folder (a project on Team Server: shared/studio-target.ts). */
+  target?: import('./studio-target.js').StudioTarget;
 }
 
 /** How the office knows Studio Pro has the project open. */
@@ -93,7 +95,7 @@ export function hasStudioMcp(version: string | undefined): boolean {
 }
 
 /** POST /api/studio/open {floor}: what happened. */
-export type StudioOpenResult = { ok: true; mpr: string; version?: string; sync?: FloorSyncState } | { ok: false; error: string; problem?: StudioProblem; sync?: FloorSyncState };
+export type StudioOpenResult = { ok: true; mpr: string; version?: string; sync?: FloorSyncState; /** What getting the Studio copy ready said (studio/targets.ts). */ note?: string } | { ok: false; error: string; problem?: StudioProblem; sync?: FloorSyncState };
 
 /** POST /api/studio/sync {floor}: the folder brought up to date (or why not), and what the button needs to know now. */
 export interface StudioSyncResult {

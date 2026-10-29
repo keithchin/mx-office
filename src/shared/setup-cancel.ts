@@ -96,6 +96,8 @@ export interface CancelPlan {
   };
   /** A local-only project's own bare repository (<projects home>/.local-git/<owner>/<name>.git), when this setup made it: it goes with the folder. */
   localBare?: { path: string; exists: boolean };
+  /** A Team Server project's Studio copy the office made (`<owner>/.studio-pro/<name>`): it goes with the folder. */
+  studioCopy?: { path: string; deletable: boolean; why?: string };
   /** The Mendix app: its .mpr goes with the folder and the repository; a Portal / Team Server app never does. */
   mendix: { mpr: boolean; portalUrl?: string };
   /** Something that stops it now, in words. */
@@ -114,6 +116,16 @@ export interface CancelRequest {
 const stepOf = (steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[], id: StepView['id']) => steps.find((s) => s.id === id);
 
 /**
+ * The repo step's words for a project on Team Server with no GitHub (wizard/steps.ts): its code goes to Team Server, and
+ * its origin is a bare repository on this machine. Setups saved before release 81 said "local only, nothing on GitHub"
+ * for these too: both are read below.
+ */
+export const TEAM_SERVER_NO_GITHUB = 'on Mendix Team Server, nothing on GitHub';
+/** The repo step's prefixes for a bare repository on this machine (a test office's, a local-only or Team Server project's). */
+const OFF_GITHUB = /^(offline|local only, nothing on GitHub|on Mendix Team Server, nothing on GitHub):/i;
+const LOCAL_BARE = /^(?:local only|on Mendix Team Server), nothing on GitHub: a local bare repository at (.+)$/i;
+
+/**
  * What this setup made itself: the GitHub repository and the folder only when its provenance record says
  * it created them (the repo and clone steps write it as they make something). The steps' log lines
  * ("created owner/name on GitHub", "cloned into …") are only a hint (`legacyRepo`, `legacyFolder`, for a
@@ -128,7 +140,7 @@ export function madeBySetup(
   const repo = stepOf(steps, 'repo');
   const clone = stepOf(steps, 'clone');
   // A local-only project's bare repository (wizard/local-only.ts) is nothing on GitHub either.
-  const offline = /^(offline|local only, nothing on GitHub):/i.test(repo?.detail ?? '');
+  const offline = OFF_GITHUB.test(repo?.detail ?? '');
   const saysCreated = repo?.status === 'done' && /^created\s/i.test(repo.detail ?? '');
   const saysCloned = clone?.status === 'done' && /^(cloned into|offline floor at)\s/i.test(clone.detail ?? '');
   const made = !!prov?.repo?.createdBySetup;
@@ -150,7 +162,7 @@ export function madeBySetup(
 export function localBareMade(steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[]): string | undefined {
   const repo = stepOf(steps, 'repo');
   if (repo?.status !== 'done') return undefined;
-  const m = /^local only, nothing on GitHub: a local bare repository at (.+)$/i.exec(repo.detail ?? '');
+  const m = LOCAL_BARE.exec(repo.detail ?? '');
   const at = m?.[1].trim();
   if (!at || !/\.git$/i.test(at)) return undefined;
   const segs = at.replace(/\\/g, '/').split('/');
@@ -173,6 +185,7 @@ export function cancelConsequences(p: CancelPlan, r: Pick<CancelRequest, 'delete
   }
   lines.push(r.deleteFolder ? `The local folder ${p.dir} deleted, for good${p.mendix.mpr ? ', with the Mendix app (.mpr) in it' : ''}.` : `The local folder ${p.dir} kept.`);
   if (p.localBare?.exists) lines.push(r.deleteFolder ? `The project’s local repository ${p.localBare.path} (its origin on this machine) deleted, for good.` : `The project’s local repository ${p.localBare.path} kept (it goes only with the folder).`);
+  if (p.studioCopy) lines.push(r.deleteFolder ? (p.studioCopy.deletable ? `The project’s Studio copy ${p.studioCopy.path} (the clone Studio Pro opens) deleted, for good.` : `The project’s Studio copy ${p.studioCopy.path} kept: ${p.studioCopy.why}.`) : `The project’s Studio copy ${p.studioCopy.path} kept (it goes only with the folder).`);
   if (!p.repoDelete.offline) lines.push(r.deleteRepo ? `The GitHub repository ${p.repo} deleted, for good.` : `The GitHub repository ${p.repo} kept.`);
   lines.push('The setup itself removed: New project no longer lists it.');
   lines.push('A Mendix Portal / Team Server app is never deleted by the office: delete it in the Portal yourself if there is one.');

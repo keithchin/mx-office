@@ -44,6 +44,8 @@ export interface DeletePlan {
   archiveDir: string;
   /** Whether the local folder can be deleted, and why not when it can't. */
   folder: { deletable: boolean; why?: string };
+  /** The Studio copy the office made for a Team Server project (`<owner>/.studio-pro/<name>`): it goes with the folder. */
+  studioCopy?: { path: string; deletable: boolean; why?: string };
   /** Whether the office's GitHub token can delete the repository. */
   repoDelete: { possible: boolean; why?: string; settingsUrl?: string };
   /** A Mendix app that the office never deletes: the Portal's address for it, when known. */

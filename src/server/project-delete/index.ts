@@ -6,6 +6,7 @@
 // off the event loop, fs/promises), so the office never stalls. The audit log is never touched but to
 // record project.delete.
 
+import { removeStudioCopy, studioCopyPlan } from './studio-copy.js';
 import { readdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { DELETE_STEPS, cleanRequest, confirmMatches, confirmTarget, worktreesWithWork, type DeleteJobView, type DeletePlan, type DeleteRequest, type DeleteStepId } from '../../shared/project-delete.js';
@@ -84,11 +85,12 @@ export class ProjectDeletes {
     if (!f) return 'No such project';
     // Test mode with a real gh: it isn't even asked what its token may do.
     const realGhInTest = this.deps.testMode() && !this.deps.ghIsFake();
-    const [worktrees, refusal, repoDelete, mendix] = await Promise.all([
+    const [worktrees, refusal, repoDelete, mendix, studioCopy] = await Promise.all([
       officeWorktrees(f.dir),
       folderRefusal(f.dir, this.folderRules(f)),
       realGhInTest ? Promise.resolve({ possible: false, why: 'the office is in test mode, and test mode never deletes a real GitHub repository' } as DeletePlan['repoDelete']) : canDeleteRepo(this.deps.gh, f.repo, f.dir),
       mendixOf(f.dir),
+      studioCopyPlan(f.dir, this.folderRules(f)),
     ]);
     return {
       floor: f.id,
@@ -100,6 +102,7 @@ export class ProjectDeletes {
       worktrees,
       archiveDir: path.join(this.deps.dataDir, 'deleted', `${f.id}-<date-time>`),
       folder: refusal ? { deletable: false, why: refusal } : { deletable: true },
+      ...(studioCopy ? { studioCopy } : {}),
       repoDelete,
       ...(mendix ? { mendix } : {}),
       ...(this.deps.blocked(f.id) ? { blocked: this.deps.blocked(f.id) } : {}),
@@ -280,7 +283,9 @@ export class ProjectDeletes {
         const why = await folderRefusal(f.dir, this.folderRules(f));
         if (why) throw new Error(`refusing to delete ${f.dir}: ${why}`);
         await removeTree(f.dir);
-        return { detail: `deleted ${f.dir}` };
+        // The Studio copy the office made for it (a Team Server project), under the same guards.
+        const copy = await removeStudioCopy(f.dir, this.folderRules(f));
+        return { detail: `deleted ${f.dir}${copy ? `; ${copy}` : ''}` };
       }
       case 'repo': {
         if (!job.deleteRepo || !f.repo)

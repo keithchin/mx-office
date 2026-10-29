@@ -29,6 +29,7 @@ Where the records come from (nothing new is asked of GitHub):
 - **Report files** on main: the JSON reports under `reports/testing/` and the toolkit's `docs/report.json`. The evidence revision is the commit that last added or changed the file. The tested revision comes only from the file itself (`appRevision`, `testedRevision`, or `project.gitCommit` in `docs/report.json`), the tests-from revision from `testRevision`. Otherwise both are unknown.
 - **The office's own gate-check** of main, which the setup panel runs when main moves. The commit gate-check read is both revisions. The evidence is the office's store.
 - **The office's own microflow test runs** (see [Microflow tests](#microflow-tests)): the work folder's commit is both revisions, the evidence the JUnit file in the office's store.
+- **The office's own folder name check** (see [Folder name case](#folder-name-case)): a failed run at a commit whose folder names will break the Linux build. The evidence is the office's store.
 
 Reading the same run or report again never records it twice. The records are kept in `<data>/testing/<project>.jsonl`, append-only and hash-chained. Unlike the [audit log](audit-log.md) and the acceptance records, the office never checks this chain: nothing reads it back to verify it, so an edited or truncated file isn't flagged. Treat the chain as a way to check by hand, not as a guarantee the office enforces.
 
@@ -179,6 +180,15 @@ Each fix is audited (`testing.prereq`). With both ready, the team's unit tests a
 ### Test accounts without seeding the model
 
 A production-minded app keeps its seed off in the model (a Boolean constant such as `Core.SeedDemoData` defaulting to false, no known password, demo users off), so an app instance has no account to sign in with. Don't work round it with a demo admin and a throwaway password in the model: the model ships, to every sandbox and cloud environment. Instead, declare **instance constants** in `.agent-office/instance-constants.json` (committed; values must not be secrets): the constants agents' instances run with (`"constants": {"Core.SeedDemoData": true}`), the constant the seed reads its password from (`"seedPassword": "Core.SeedPassword"`) and, optionally, the users the seed makes (`"seedUsers"`). The office passes them to `mxcli run --constant` for that run only and generates a strong password per instance, which the agents' smoke runs and journeys sign in with and only the asking agent can see (`office-app status`). See [office-app › Instance constants](../reference/office-workers-cli.md#office-app).
+
+## Folder name case
+
+Windows doesn't tell `Styling` from `styling`; Linux and macOS do, and so does the Linux cloud build. A folder in the wrong case looks fine in a Windows preview and then goes missing in the cloud build (a real case: the cloud build ignored `themesource/Styling`, because Mendix module folders are lower case). So the office checks the files of each commit people look at: a Developer change's candidates and its merge commit (when the Developer changes are read), and main's head (when this page is read). It reads the commit's file list with one `git ls-tree`, never a checkout, once per commit. Two rules:
+
+- **Paths that differ only by case**, such as `themesource/Styling/main.scss` and `themesource/styling/main.scss`, or two folders `Styling` and `styling` side by side. Linux sees two, Windows one, so files go missing or get mixed up.
+- **Mendix's code folders in lower case**: `themesource`, `javasource` and `javascriptsource` themselves (not `Themesource`), and the module folders right under them (`themesource/styling`, not `themesource/Styling`). They're looked for next to the `.mpr` file.
+
+A commit with a finding gets a failed run, **Folder name case (Linux build): …**, named after the first problem. It shows where the checks at that commit show: a Developer change's receipt, the local merge's confirm step, and the runs on this page, where each finding has its own row with what to do, for example *themesource/Styling: module folders under themesource must be lower case (themesource/styling). The Linux cloud build ignores it; Windows previews hide the difference. Rename it with git mv (two steps on Windows: to a temporary name first).* A clean commit records nothing. Once a fix is committed, the new commit has no failed run.
 
 ## Test first
 

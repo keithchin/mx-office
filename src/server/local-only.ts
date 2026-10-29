@@ -8,20 +8,36 @@ import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** What a refused GitHub call says, and what degraded features show. */
-export const LOCAL_ONLY_TEXT = 'Local only: not on GitHub, so issues, pull requests and PR checks are unavailable for this project';
+export const LOCAL_ONLY_TEXT = 'Not on GitHub: issues, pull requests and PR checks are unavailable for this project';
 
 /** The rule each hire on a local-only project is told (one line, under the hire prompt's 300 characters). */
 export const LOCAL_ONLY_HIRE_LINE = 'This project is local only (not on GitHub): never push to GitHub or run gh commands that publish; work on local branches, and the Lead merges into main locally.';
 
-const TTL_MS = 30_000;
-const cache = new Map<string, { at: number; stamp: string; local: boolean }>();
+/** The rule for a project on Mendix Team Server with no GitHub ("off GitHub" too, but its code goes to Team Server). */
+export const TEAM_SERVER_HIRE_LINE = 'This project is not on GitHub (its code is on Mendix Team Server): never push to GitHub, to Team Server, or run gh commands that publish; work on local branches, and the Lead merges into main locally.';
 
-/** Whether the project (or worktree) at `dir` is local only; false when it can't tell. */
+const TTL_MS = 30_000;
+const cache = new Map<string, { at: number; stamp: string; local: boolean; teamServer: boolean }>();
+
+/**
+ * Whether the project (or worktree) at `dir` is off GitHub (`"localOnly": true`; the key keeps its old name); false
+ * when it can't tell. A project on Team Server with no GitHub is off GitHub too: `offGitHubAt` says which kind.
+ */
 export function localOnlyAt(dir: string | undefined, now = Date.now()): boolean {
-  if (!dir) return false;
+  return read(dir, now).local;
+}
+
+/** Off GitHub, and why: `teamserver` (the code goes to Team Server), `machine` (it stays here); undefined: on GitHub. */
+export function offGitHubAt(dir: string | undefined, now = Date.now()): 'teamserver' | 'machine' | undefined {
+  const r = read(dir, now);
+  return r.local ? (r.teamServer ? 'teamserver' : 'machine') : undefined;
+}
+
+function read(dir: string | undefined, now: number): { local: boolean; teamServer: boolean } {
+  if (!dir) return { local: false, teamServer: false };
   const f = path.join(dir, 'agent-office.project.json');
   const hit = cache.get(f);
-  if (hit && now - hit.at < TTL_MS) return hit.local;
+  if (hit && now - hit.at < TTL_MS) return hit;
   let stamp = '-';
   try {
     const s = statSync(f);
@@ -31,18 +47,22 @@ export function localOnlyAt(dir: string | undefined, now = Date.now()): boolean 
   }
   if (hit && hit.stamp === stamp) {
     hit.at = now;
-    return hit.local;
+    return hit;
   }
   let local = false;
+  let teamServer = false;
   if (stamp !== '-') {
     try {
-      local = (JSON.parse(readFileSync(f, 'utf8')) as { localOnly?: unknown }).localOnly === true;
+      const j = JSON.parse(readFileSync(f, 'utf8')) as { localOnly?: unknown; teamServer?: unknown };
+      local = j.localOnly === true;
+      teamServer = !!j.teamServer && typeof j.teamServer === 'object';
     } catch {
       // unreadable: not local only
     }
   }
-  cache.set(f, { at: now, stamp, local });
-  return local;
+  const e = { at: now, stamp, local, teamServer };
+  cache.set(f, e);
+  return e;
 }
 
 /** Forgets what was read (the settings step just wrote the file; tests). */
@@ -53,6 +73,8 @@ type HireContext = { line: string; record(role: string, workerId: string, sessio
 /** A hire's context (the portfolio's brain line, if any) with a local-only project's rule after it. */
 export async function withLocalOnlyLine(base: Promise<HireContext | undefined>, dir: string | undefined): Promise<HireContext | undefined> {
   const b = await base;
-  if (!localOnlyAt(dir)) return b;
-  return { line: b ? `${b.line} ${LOCAL_ONLY_HIRE_LINE}` : LOCAL_ONLY_HIRE_LINE, record: b ? (...a) => b.record(...a) : async () => undefined };
+  const off = offGitHubAt(dir);
+  if (!off) return b;
+  const rule = off === 'teamserver' ? TEAM_SERVER_HIRE_LINE : LOCAL_ONLY_HIRE_LINE;
+  return { line: b ? `${b.line} ${rule}` : rule, record: b ? (...a) => b.record(...a) : async () => undefined };
 }

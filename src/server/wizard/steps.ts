@@ -12,7 +12,7 @@ import { findMpr } from '../liveapp/checkout.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-token.js';
 import { DISCOVERY_TITLE, discoveryBrief } from './brief.js';
-import { discoveryTask, localBareOf, withLocalOnly } from './local-only.js';
+import { discoveryTask, localBareOf, offGitHubWhere, withLocalOnly } from './local-only.js';
 import { withSourceFolder } from './source-step.js';
 import { mendixVersions, mxbuildPath, officeGitEnv, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
@@ -119,7 +119,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix), ...extraEnv }, timeoutMs, onLine: said(io), allowFail });
   // The local bare repository: a test office's stand-in for GitHub, or a local-only project's own (local-only.ts).
   const bare = (job: JobState) => (job.plan.localOnly ? localBareOf(deps.projectsDir(), job.plan.owner, job.plan.name) : path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`));
-  const where = (job: JobState) => (job.plan.localOnly ? 'local only, nothing on GitHub' : 'offline');
+  const where = (job: JobState) => (job.plan.localOnly ? offGitHubWhere(job.plan) : 'offline');
   const dirOf = (job: JobState) => {
     if (!job.dir || !existsSync(job.dir)) throw new Error("The project isn't there yet: Retry from the clone step");
     return job.dir;

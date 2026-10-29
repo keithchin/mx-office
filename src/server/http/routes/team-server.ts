@@ -1,5 +1,6 @@
 // Team Server for a project (team-server/index.ts):
-//   GET  /api/team-server?floor=   the record (app id, remote, Portal link), the last sync, whether the office has a token
+//   GET  /api/team-server?floor=   the record (app id, remote, Portal link), the last sync, whether the office has a token,
+//                                  where the code lives, the Studio copy and the app's cloud environments (cached; &envs=fresh)
 //   POST /api/team-server          {floor, action: 'sync'}: push main to Team Server now (admins)
 //                                  {floor, action: 'connect', projectId?, create?}: Connect to Team Server (admins;
 //                                  the page's confirm step said it creates an app in the Portal and pushes the code)
@@ -32,7 +33,10 @@ export const teamServerRoutes = {
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such project' });
-      return send(res, 200, teamServerOf(ctx).view(floor, ctx.meOf(session.account?.id).admin), NO_STORE);
+      const ts = teamServerOf(ctx);
+      // The app's cloud environments, cached (Deploy API, read-only): `?envs=fresh` reads them now.
+      await ts.environments(floor, url.searchParams.get('envs') === 'fresh');
+      return send(res, 200, ts.view(floor, ctx.meOf(session.account?.id).admin), NO_STORE);
     },
   },
   act: {

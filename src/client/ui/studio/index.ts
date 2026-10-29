@@ -233,8 +233,9 @@ function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
       'div.body',
       {},
       h('p', {}, h('code', {}, s.mpr ?? 'the project'), s.version ? ` opens in Studio Pro ${s.version}.` : ' opens in Studio Pro.'),
+      s.target ? teamServerHints(s.target) : null,
       h('p.st-warn', { role: 'alert' }, "Studio Pro locks the project while it's open, and agents write it with mxcli: one writer at a time. The office sees Studio Pro open and pauses the agents' mxcli writes automatically until you close it."),
-      h('p.st-note', {}, 'When you close Studio Pro, commit your changes so the agents build on them.'),
+      h('p.st-note', {}, s.target ? 'When you close Studio Pro, commit your changes there: they go to Team Server, and the office brings them into main.' : 'When you close Studio Pro, commit your changes so the agents build on them.'),
       behind ? h('p.st-warn.st-behind', { role: 'status' }, behind) : null,
       s.state?.staleLock ? h('p.st-note', {}, "The project's .mpr.lock is already there with no Studio Pro running: a stale lock, left by an earlier Studio Pro. Studio Pro takes it over when it opens.") : null,
       busy,
@@ -252,11 +253,22 @@ function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
   setTimeout(() => yes.focus(), 30);
 }
 
+/** A project on Team Server: Studio Pro opens its Studio copy (origin Team Server), and what to know before Publish. */
+function teamServerHints(t: NonNullable<StudioInfo['target']>): HTMLElement {
+  return h(
+    'div.st-ts',
+    { 'data-st': 'teamserver' },
+    h('p', {}, h('b', {}, 'Team Server project. '), t.ready ? 'It opens the Studio copy ' : 'The office first makes the Studio copy ', h('code', {}, t.dir), t.ready ? ', brought up to date with Team Server.' : ' from Team Server (a minute or two the first time).'),
+    h('ul', {}, ...t.hints.map((x) => h('li', {}, x))),
+  );
+}
+
 async function post(floor: string, s: StudioInfo) {
   toast(`Opening in Studio Pro${s.version ? ` ${s.version}` : ''}…`);
   const r = await askOffice<StudioOpenResult>('/api/studio/open', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, by: myName() }) }, SYNC_WAIT_MS);
   if (isFailed(r)) toast(`Couldn't open the project in Studio Pro: ${r.failed}`, 'error');
   else if (!r.ok) toast(r.error, 'error');
   else if (r.sync?.state === 'moved') toast(syncLine(r.sync)!);
+  if (!isFailed(r) && r.ok && r.note) toast(r.note);
   if (store.floor === floor) void refresh();
 }

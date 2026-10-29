@@ -4,7 +4,8 @@
 
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { cleanProjectId, portalUrl, TEAMSERVER_REMOTE, type TeamServerRecord } from '../../shared/team-server.js';
+import { cleanProjectId, portalUrl, TEAMSERVER_REMOTE, type CloudEnvironments, type TeamServerRecord } from '../../shared/team-server.js';
+import { environmentsStale, peekEnvironments } from './environments.js';
 
 export const PROJECT_FILE = 'agent-office.project.json';
 const TTL_MS = 30_000;
@@ -77,8 +78,18 @@ export function writeRecord(dir: string, rec: TeamServerRecord): boolean {
 /** Forgets what was read (tests; a write elsewhere). */
 export const forgetTeamServer = () => cache.clear();
 
-/** A setup view with the project's Team Server app and remote (the Overview's Repository row), read now like localOnly. */
-export function withTeamServerView<T extends object>(dir: string, v: T): T & { teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean } } {
+/** Reads the app's cloud environments again in the background (set by team-server/index.ts, which has the token). */
+let refreshEnvironments: ((projectId: string) => void) | undefined;
+export const onEnvironmentsWanted = (fn: ((projectId: string) => void) | undefined) => void (refreshEnvironments = fn);
+
+/**
+ * A setup view with the project's Team Server app and remote (the Overview's Repository row), read now like localOnly,
+ * and the app's cloud environments as last read (a stale read is asked for again in the background, never waited on).
+ */
+export function withTeamServerView<T extends object>(dir: string, v: T): T & { teamServer?: { projectId: string; url: string; portalUrl: string; mirror?: boolean; environments?: CloudEnvironments } } {
   const rec = teamServerAt(dir);
-  return rec ? { ...v, teamServer: { projectId: rec.projectId, url: rec.url, portalUrl: portalUrl(rec.projectId), ...(rec.mirror ? { mirror: true } : {}) } } : v;
+  if (!rec) return v;
+  if (environmentsStale(rec.projectId)) refreshEnvironments?.(rec.projectId);
+  const envs = peekEnvironments(rec.projectId);
+  return { ...v, teamServer: { projectId: rec.projectId, url: rec.url, portalUrl: portalUrl(rec.projectId), ...(rec.mirror ? { mirror: true } : {}), ...(envs ? { environments: envs } : {}) } };
 }

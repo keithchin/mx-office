@@ -13,6 +13,10 @@ import type { JobState, StepImpl } from './job.js';
 import type { SetupDeps } from './steps.js';
 import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { forgetLocalOnly } from '../local-only.js';
+import { TEAM_SERVER_NO_GITHUB } from '../../shared/setup-cancel.js';
+
+/** The repo step's words for a project off GitHub, which Cancel & undo reads (shared/setup-cancel.ts): said for what it is. */
+export const offGitHubWhere = (plan: Pick<JobState['plan'], 'teamServer'>) => (plan.teamServer ? TEAM_SERVER_NO_GITHUB : 'local only, nothing on GitHub');
 
 /** The Discovery brief's file in a local-only project. */
 export const DISCOVERY_FILE = 'docs/discovery-brief.md';
@@ -23,16 +27,23 @@ export const localBareOf = (projectsDir: string, owner: string, name: string) =>
 const BEGIN = '<!-- agent-office:local-only -->';
 const END = '<!-- /agent-office:local-only -->';
 
-/** The rule a local-only project's agents read in its CLAUDE.md. */
-export function localOnlyRules(bare: string): string {
+/**
+ * The rule a local-only project's agents read in its CLAUDE.md. `teamServer`: a project on Mendix Team Server with no
+ * GitHub, which is "off GitHub" too (the same `localOnly` key) but whose code does leave the machine, to Team Server.
+ */
+export function localOnlyRules(bare: string, teamServer = false): string {
   return [
     BEGIN,
-    '## Local only: this project is not on GitHub',
+    teamServer ? '## Not on GitHub: the code goes to Mendix Team Server' : '## Local only: this project is not on GitHub',
     '',
-    'It was created in Mx Office with "Keep this project off GitHub": its analysis quotes confidential client source code.',
+    teamServer
+      ? 'It was created in Mx Office on Mendix Team Server without a GitHub mirror: the office pushes main to Team Server (see the Team Server rule below).'
+      : 'It was created in Mx Office with "Keep this project off GitHub": its analysis quotes confidential client source code.',
     '',
     `- Never push to GitHub, never add a GitHub remote, and never run \`gh\` commands that publish anything (\`gh repo create\`, \`gh issue create\`, \`gh pr create\`, \`gh release\`, \`gh gist\`).`,
-    `- \`origin\` is a bare git repository on this machine (\`${bare.replace(/\\/g, '/')}\`): pushing your branch there is fine, it never leaves the machine.`,
+    teamServer
+      ? `- \`origin\` is a bare git repository on this machine (\`${bare.replace(/\\/g, '/')}\`): pushing your branch there is fine. Only main goes on to Team Server, pushed by the office after a merge.`
+      : `- \`origin\` is a bare git repository on this machine (\`${bare.replace(/\\/g, '/')}\`): pushing your branch there is fine, it never leaves the machine.`,
     '- Work on a local branch. Where your Playbook says to open a pull request, commit, push the branch to origin and tell the Lead it is ready; the Lead merges it into main locally (`git merge --no-ff`) and pushes main to origin.',
     `- The Discovery brief is \`${DISCOVERY_FILE}\`, not a GitHub issue. PR checks, GitHub issues and pull requests are unavailable here.`,
     END,
@@ -51,7 +62,7 @@ export function withRules(md: string, rules: string): string {
 export function discoveryTask(job: Pick<JobState, 'issue' | 'discoveryFile' | 'dir' | 'plan'>): { prompt: string; title: string; issue?: number } | undefined {
   if (job.discoveryFile) {
     const abs = job.dir ? `${job.dir.replace(/\\/g, '/').replace(/\/+$/, '')}/${job.discoveryFile}` : job.discoveryFile;
-    return { prompt: `Work on the Discovery brief in this repo: read \`${job.discoveryFile}\` (in the project's main checkout: ${abs}) and follow it exactly. This project is local only: there is no GitHub issue, and nothing is pushed to GitHub.`, title: `Discovery (${job.discoveryFile}, ${job.plan.discovery.model})` };
+    return { prompt: `Work on the Discovery brief in this repo: read \`${job.discoveryFile}\` (in the project's main checkout: ${abs}) and follow it exactly. This project is not on GitHub: there is no GitHub issue, and nothing is pushed to GitHub.`, title: `Discovery (${job.discoveryFile}, ${job.plan.discovery.model})` };
   }
   if (job.issue) return { prompt: discoveryPrompt(job.issue), title: `Discovery #${job.issue} (${job.plan.discovery.model})`, issue: job.issue };
   return undefined;
@@ -71,12 +82,13 @@ export function withLocalOnly(deps: SetupDeps, steps: Record<StepId, StepImpl>):
       if (saved.localOnly !== true) {
         writeFileSync(f, `${JSON.stringify({ ...saved, localOnly: true }, null, 2)}\n`);
         forgetLocalOnly();
-        did.push('local only recorded');
+        // Said for what it is: no GitHub, and where the code goes (Team Server, or nowhere off this machine).
+        did.push(job.plan.teamServer ? 'no GitHub recorded (the code goes to Team Server)' : 'local only recorded (the code stays on this machine)');
       }
       // The project's rule, where every agent reads it.
       const claude = path.join(job.dir, 'CLAUDE.md');
       const before = existsSync(claude) ? readFileSync(claude, 'utf8') : '';
-      const after = withRules(before, localOnlyRules(localBareOf(deps.projectsDir(), job.plan.owner, job.plan.name)));
+      const after = withRules(before, localOnlyRules(localBareOf(deps.projectsDir(), job.plan.owner, job.plan.name), !!job.plan.teamServer));
       if (after !== before) {
         writeFileSync(claude, after);
         did.push('CLAUDE.md: never push to GitHub');
@@ -99,7 +111,7 @@ export function withLocalOnly(deps: SetupDeps, steps: Record<StepId, StepImpl>):
       if (!job.plan.discovery.issue) return { status: 'skipped', detail: 'not asked for' };
       if (!job.dir || !existsSync(path.join(job.dir, ...DISCOVERY_FILE.split('/')))) throw new Error(`${DISCOVERY_FILE} isn't in the project: Retry from the settings step`);
       job.discoveryFile = DISCOVERY_FILE;
-      return { status: 'done', detail: `local only: no GitHub issue; the Discovery brief is ${DISCOVERY_FILE}` };
+      return { status: 'done', detail: `${job.plan.teamServer ? 'no GitHub' : 'local only'}: no GitHub issue; the Discovery brief is ${DISCOVERY_FILE}` };
     },
   };
 }

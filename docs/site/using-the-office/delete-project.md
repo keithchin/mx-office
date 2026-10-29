@@ -17,6 +17,7 @@ Open the project, then **⚙️ Settings › ⚠️ Danger zone** ([section=dang
 | The office's data for it archived, then removed | yes | yes |
 | Taken off the office (`floors.json`), its project id retired | yes | yes |
 | The local folder | kept | deleted, if you tick **Also delete the local folder** |
+| A Team Server project's Studio copy (`<owner>/.studio-pro/<name>`) | kept | deleted with the folder, only when the office made it for this project (its mark in the copy's `.git`) and it passes the same guards |
 | The GitHub repository | kept | deleted, if you tick **Also delete the GitHub repository** |
 
 Both boxes start unticked, so **Delete this project** with nothing ticked does what Remove from office does. A Mendix app in the Portal (and its Team Server repository) is never deleted by the office, also when the office created it ([On Mendix Team Server](../get-started/first-project.md#on-mendix-team-server)): the dialog says so, with a link to that app in the Portal (from `teamServer` in `agent-office.project.json`), so you can clean it up there. Delete project never calls the Mendix Portal or Team Server at all; **Delete the GitHub repository** is only ever about GitHub.

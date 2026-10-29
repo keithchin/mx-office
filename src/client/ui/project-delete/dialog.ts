@@ -143,7 +143,7 @@ export function openDeleteDialog(floor: string, name: string, mode: DeleteMode) 
           ? h(
               'div.pd-choices',
               {},
-              choice(folder, `Also delete the local folder ${plan.dir}`, plan.folder.deletable ? 'Everything in it, including work nobody committed. There is no recycle bin.' : `Can’t: ${plan.folder.why}`),
+              choice(folder, `Also delete the local folder ${plan.dir}${plan.studioCopy ? `, and the Studio copy ${plan.studioCopy.path}${plan.studioCopy.deletable ? '' : ` (kept: ${plan.studioCopy.why})`}` : ''}`, plan.folder.deletable ? 'Everything in it, including work nobody committed. There is no recycle bin.' : `Can’t: ${plan.folder.why}`),
               plan.repo ? choice(repo, `Also delete the GitHub repository ${plan.repo}`, repoNote) : null,
             )
           : null,

@@ -1,6 +1,7 @@
 // A fake Mendix Portal and Team Server on 127.0.0.1, so no test ever calls the real Mendix API:
 //   POST /v2/projects            the Projects API's create (MxToken auth), answering 202 { jobId }, or a refusal set by the test
 //   GET  /v2/projects/jobs/<id>  the job: `steps` statuses one per look, then completed with a projectId (or failed)
+//   GET  /api/v4/apps/<id>/environments  the Deploy API's environments (MxToken auth): `environments[id]`, or `envStatus`
 //   /<projectId>.git/...         Team Server's git over smart HTTP: Basic auth with user `pat` and the token (anything
 //                                else is a 401 with Team Server's challenge), served by git's own git-http-backend.
 // A completed job makes the app's repository with a template commit (App.mpr, mprcontents/mprname) and a Studio Pro
@@ -16,7 +17,7 @@ import path from 'node:path';
 
 export interface FakeTeamServer {
   url: string;
-  endpoints: { projectsApi: string; git: string };
+  endpoints: { projectsApi: string; git: string; deployApi: string };
   root: string;
   token: string;
   requests: { method: string; url: string; auth?: string }[];
@@ -27,6 +28,11 @@ export interface FakeTeamServer {
   /** A job that fails instead, with this message. */
   failJob?: string;
   creates: { name: string; summary?: string }[];
+  /** The Deploy API's answer per app id (the body as sent), and a status to answer instead. */
+  environments: Record<string, unknown>;
+  /** GET /api/v4/apps/<id>'s answer per app id. */
+  apps: Record<string, unknown>;
+  envStatus?: number;
   /** Makes an app's repository with the template (an existing app, for linking). */
   makeApp(id?: string): string;
   /** A bare repository's ref. */
@@ -69,12 +75,14 @@ export async function fakeTeamServer(token = 'fake-mendix-pat-0123456789abcdef')
 
   const fake: FakeTeamServer = {
     url: '',
-    endpoints: { projectsApi: '', git: '' },
+    endpoints: { projectsApi: '', git: '', deployApi: '' },
     root,
     token,
     requests: [],
     steps: ['scheduled', 'running'],
     creates: [],
+    environments: {},
+    apps: {},
     makeApp,
     head: (projectId, ref = 'main') => git(path.join(root, `${projectId}.git`), ['rev-parse', ref]),
     close: () => new Promise((done) => server.close(() => (rmSync(root, { recursive: true, force: true }), done()))),
@@ -83,6 +91,19 @@ export async function fakeTeamServer(token = 'fake-mendix-pat-0123456789abcdef')
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     fake.requests.push({ method: req.method ?? 'GET', url: req.url ?? '', ...(req.headers.authorization ? { auth: req.headers.authorization } : {}) });
+    const env = /^\/api\/v4\/apps\/([\w-]+)\/environments$/.exec(url.pathname);
+    const appAt = /^[/]api[/]v4[/]apps[/]([0-9a-zA-Z_-]+)$/.exec(url.pathname);
+    if (appAt) {
+      if (req.headers.authorization !== `MxToken ${token}`) return send(res, 401, { error: { message: 'Unauthorized' } });
+      const body = fake.apps[appAt[1]];
+      return body === undefined ? send(res, 404, { error: { message: 'Not Found' } }) : send(res, 200, body);
+    }
+    if (env) {
+      if (req.headers.authorization !== `MxToken ${token}`) return send(res, 401, { error: { message: 'Unauthorized' } });
+      if (fake.envStatus) return send(res, fake.envStatus, { error: { message: 'refused' } });
+      const body = fake.environments[env[1]];
+      return body === undefined ? send(res, 404, { error: { message: 'Not Found' } }) : send(res, 200, body);
+    }
     if (url.pathname.startsWith('/v2/')) {
       if (req.headers.authorization !== `MxToken ${token}`) return send(res, 401, { error: { message: 'Unauthorized', detail: 'Invalid access token', code: 401 } });
       if (req.method === 'POST' && url.pathname === '/v2/projects') {
@@ -155,6 +176,6 @@ export async function fakeTeamServer(token = 'fake-mendix-pat-0123456789abcdef')
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
   const port = (server.address() as AddressInfo).port;
   fake.url = `http://127.0.0.1:${port}`;
-  fake.endpoints = { projectsApi: `${fake.url}/v2`, git: fake.url };
+  fake.endpoints = { projectsApi: `${fake.url}/v2`, git: fake.url, deployApi: `${fake.url}/api/v4` };
   return fake;
 }

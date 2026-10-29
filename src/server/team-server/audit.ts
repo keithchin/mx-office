@@ -20,6 +20,7 @@ export function auditTs(a: { action: TsAction; floor?: string; by?: string; byId
 
 /** A sync's result in the log: a push or pull is a notice, a refusal a warning, nothing to do isn't logged. */
 export function auditSync(floor: string | undefined, projectId: string, s: TeamServerSync, by?: { name: string; id?: string }) {
-  if (s.state === 'same') return;
+  // Nothing to do, or no network yet (a sleep): nothing worth an audit line.
+  if (s.state === 'same' || s.state === 'unreachable') return;
   auditTs({ action: 'team-server.sync', floor, by: by?.name, byId: by?.id, projectId, summary: s.message, details: { state: s.state, ...(s.sha ? { sha: s.sha } : {}) }, severity: s.state === 'pushed' || s.state === 'pulled' ? 'notice' : 'warning' });
 }

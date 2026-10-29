@@ -14,6 +14,7 @@ import type { Ctx } from '../office/context.js';
 import { checkStudio, machine, machineProblem, type StudioDeps } from './open.js';
 import type { FloorSyncState } from '../../shared/studio.js';
 import { POLL_MS, StudioWatch, machineWatchDeps } from './watch.js';
+import { studioFolderOf, studioTargetOf } from './targets.js';
 
 export type { StudioInfo, StudioOpen };
 
@@ -46,7 +47,12 @@ export function startStudioMode(ctx: Pick<Ctx, 'floors' | 'toFloor' | 'toastFloo
     ),
   );
   watch = w;
-  const look = () => void w.poll(ctx.floors.values()).catch((err) => console.error('agent-office: Studio mode failed to look', err));
+  // A project whose Studio Pro opens a copy of its own (targets.ts) is watched on that copy.
+  const floors = () => [...ctx.floors.values()].map((f) => {
+    const at = studioFolderOf(f);
+    return at === f.dir ? f : { id: f.id, dir: f.dir, def: f.def, studio: at };
+  });
+  const look = () => void w.poll(floors()).catch((err) => console.error('agent-office: Studio mode failed to look', err));
   const timer = setInterval(look, POLL_MS);
   timer.unref?.();
   const soon = new Set<NodeJS.Timeout>();
@@ -107,9 +113,14 @@ export const busyAgents = (floor: Pick<Floor, 'workers'>): string[] =>
  * the floor sync's last look (floor-sync/), passed in so this module doesn't need that one.
  */
 export function studioInfo(floor: Pick<Floor, 'id' | 'dir' | 'workers'>, admin: boolean, d: StudioDeps = machine(), sync?: FloorSyncState): StudioInfo {
-  const c = checkStudio(floor.dir, d);
+  // A Studio copy (targets.ts) once it has the model; until it's made, the project's own folder says what would open.
+  const target = studioTargetOf(floor)?.target;
+  const copy = target?.ready ? checkStudio(target.dir, d) : undefined;
+  const atCopy = copy?.mpr ? target!.dir : undefined;
+  const c = atCopy ? copy! : checkStudio(floor.dir, d);
   const blocked = c.mpr ? undefined : machineProblem(d);
-  const rel = (p: string) => p.slice(floor.dir.length).replace(/^[\\/]+/, '') || p;
+  const base = atCopy ?? floor.dir;
+  const rel = (p: string) => p.slice(base.length).replace(/^[\\/]+/, '') || p;
   return {
     hasMpr: !!c.mpr,
     ...(c.mpr ? { mpr: rel(c.mpr) } : {}),
@@ -122,5 +133,6 @@ export function studioInfo(floor: Pick<Floor, 'id' | 'dir' | 'workers'>, admin: 
     ...(studioStateOf(floor.id) ? { state: studioStateOf(floor.id) } : {}),
     ...(blocked ? { machine: blocked } : {}),
     ...(sync ? { sync } : {}),
+    ...(target ? { target } : {}),
   };
 }
