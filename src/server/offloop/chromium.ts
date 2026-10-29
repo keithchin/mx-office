@@ -76,7 +76,8 @@ export const chromiumHosts = () => hosts;
 function startHost(o: LaunchOffOptions): Promise<{ ws: string; host: OffChild }> {
   const args = ['-e', HOST, playwrightPath(), JSON.stringify({ headless: true, timeout: o.timeout, host: '127.0.0.1', ...(o.executablePath ? { executablePath: o.executablePath } : {}) })];
   return new Promise((resolve, reject) => {
-    const host = spawnOff(process.execPath, args, { stdin: true, windowsHide: true });
+    // ELECTRON_RUN_AS_NODE: under a desktop wrapper process.execPath is Electron, which then runs as plain Node.
+    const host = spawnOff(process.execPath, args, { stdin: true, windowsHide: true, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
     hosts++;
     let out = '';
     let err = '';
