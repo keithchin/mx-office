@@ -646,11 +646,7 @@ function lastWords(s: string): string {
   return (lines.at(-1) ?? '').slice(0, 300);
 }
 
-/**
- * Runs a command to the end; never rejects. `last` is the last line it said on stderr (or stdout). Started from
- * the process-starter thread (offloop/exec.ts): `claude auth status` on every page's connection held the event
- * loop for 2.5 s on Windows (the stall profiles of 2026-10-28, signins.ts lookClaude → spawn).
- */
+/** Runs a command to the end, never rejects; started off the event loop (offloop/exec.ts: its start held it 2.5 s, 28 Oct). */
 function run(cmd: string, args: string[], env: Record<string, string>, input?: string): Promise<{ code: number; out: string; last: string }> {
   return new Promise((resolve) => {
     execFileOff(cmd, args, { env, timeout: LOOK_TIMEOUT_MS, maxBuffer: 1024 * 1024, input: input ?? '' }, (err, stdout, stderr) => {
