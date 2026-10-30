@@ -3,7 +3,8 @@
 // what its last hook said (a turn ended, a subagent or a background command still writing, a session the
 // hooks lag on), so the team view lagged the work. Three kinds of evidence count here, all already passing
 // through the office and none read from disk:
-//   - output: its terminal printed something (workers/manager.ts, every chunk; cheap, a number per worker);
+//   - output: its terminal printed enough to be work (workers/manager.ts, every chunk: a few chunks and some bytes
+//             within 20 s, so a TUI at rest redrawing its status line doesn't count; cheap, numbers per worker);
 //   - tool:   one of its hooks fired (a tool call, a subagent's, providers/claude.ts);
 //   - commit: it ran `git commit` (its PostToolUse, roster/adapter.ts hears it through workers/tool-runs.ts).
 // A worker is *active* while its newest pulse is under ACTIVE_MS old. Listeners hear only the flips (quiet →
@@ -83,8 +84,24 @@ function arm(workerId: string) {
   timers.set(workerId, t);
 }
 
-/** A sign of work from a worker. Cheap: a number set, and a flip told only when it was quiet. */
-export function notePulse(workerId: string, kind: PulseKind = 'output', at = clock()) {
+/**
+ * Output counts only when there's enough of it: a few chunks and some bytes within OUTPUT_WINDOW_MS. A TUI at rest
+ * still redraws now and then (a status line, a resize), and that mustn't read as work.
+ */
+export const OUTPUT_WINDOW_MS = 20_000;
+export const OUTPUT_MIN_CHUNKS = 3;
+export const OUTPUT_MIN_BYTES = 512;
+const windows = new Map<string, { since: number; chunks: number; bytes: number }>();
+
+/** A sign of work from a worker. Cheap: a number set, and a flip told only when it was quiet. `bytes`: an output chunk's size. */
+export function notePulse(workerId: string, kind: PulseKind = 'output', at = clock(), bytes = OUTPUT_MIN_BYTES) {
+  if (kind === 'output') {
+    let w = windows.get(workerId);
+    if (!w || at - w.since > OUTPUT_WINDOW_MS) windows.set(workerId, (w = { since: at, chunks: 0, bytes: 0 }));
+    w.chunks++;
+    w.bytes += bytes;
+    if (w.chunks < OUTPUT_MIN_CHUNKS || w.bytes < OUTPUT_MIN_BYTES) return;
+  }
   let p = pulses.get(workerId);
   const was = !!activeVia(p, at);
   if (!p) pulses.set(workerId, (p = {}));
@@ -105,6 +122,7 @@ export const isActive = (workerId: string, now = clock()) => !!pulseOf(workerId,
 /** A worker left: forgotten. */
 export function forgetPulse(workerId: string) {
   pulses.delete(workerId);
+  windows.delete(workerId);
   const t = timers.get(workerId);
   if (t) clearTimeout(t);
   timers.delete(workerId);
@@ -115,6 +133,7 @@ export function resetPulses() {
   for (const t of timers.values()) clearTimeout(t);
   timers.clear();
   pulses.clear();
+  windows.clear();
 }
 
 /** A command a worker ran that makes a commit (`git commit`, `git merge` that commits), for the commit pulse. */

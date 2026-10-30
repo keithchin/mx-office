@@ -14,8 +14,16 @@ test('a pulse makes a worker active for a while; a commit counts for longer; fli
   const off = onPulseFlip((id, active) => flips.push(`${id}:${active}`));
   try {
     assert.equal(isActive('w1'), false);
+    // A TUI at rest redrawing a little isn't work: too few chunks, too few bytes.
+    notePulse('w0', 'output', now, 40);
+    notePulse('w0', 'output', now, 40);
+    notePulse('w0', 'output', now, 40);
+    assert.equal(isActive('w0'), false);
     notePulse('w1', 'output');
     notePulse('w1', 'output');
+    assert.equal(isActive('w1'), false, 'two chunks are not enough yet');
+    notePulse('w1', 'output');
+    assert.equal(pulseOf('w1')?.via, 'output');
     notePulse('w1', 'tool');
     assert.deepEqual(flips, ['w1:true'], 'only the flip from quiet is told, not every chunk');
     assert.equal(pulseOf('w1')?.via, 'tool');

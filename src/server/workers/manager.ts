@@ -775,7 +775,7 @@ export class WorkerManager {
     proc.onData((data) => {
       term.write(data);
       w.screenDirty = w.unsaved = true;
-      notePulse(info.id); // its terminal printed: a sign of work for the roster's working/idle (./pulse.ts)
+      notePulse(info.id, 'output', undefined, data.length); // its terminal printed: maybe work, for the roster's working/idle (./pulse.ts)
       if (w.viewers.size) this.events.data(info.id, data, [...w.viewers.keys()]);
     });
     proc.onExit(({ exitCode, error, lost }) => {
