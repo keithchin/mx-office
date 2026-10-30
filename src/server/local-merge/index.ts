@@ -28,6 +28,8 @@ import type { LocalMergeBranch, LocalMergeConfirm, LocalMergeReview, LocalMergeV
 import { dcsOf, impactAt, kindAt, resultsAt, somePaths, unitsAt } from './describe.js';
 import { mergeAsks, settleMergeAsks } from './asks.js';
 import { fixText } from '../../shared/text-repair.js';
+import { ensureCheck, officeDeps, type MergeCheckDeps } from '../merge-check/index.js';
+import type { MergeCheckView } from '../../shared/merge-check.js';
 
 export { mergeLocal } from './merge.js';
 
@@ -84,6 +86,17 @@ export interface LocalMergeDeps {
   deliver?: (workerId: string, text: string, id: string) => string | undefined;
   /** The workers to tell after a merge: the branch's own and the team lead's. */
   recipients?: (ownerId: string | undefined) => { id: string; name: string }[];
+  /** The office's mx check (merge-check/): the security gate in the office, a fake in the tests. */
+  check?: MergeCheckDeps;
+}
+
+/** The confirm's model check at `sha` (started when none is recorded or running); never throws. */
+async function mergeCheckAt(ctx: Ctx, floor: Floor, sha: string, d?: MergeCheckDeps): Promise<MergeCheckView | undefined> {
+  try {
+    return await ensureCheck(d ?? (await officeDeps(ctx)), floor, sha, 'Mx Office (merge confirm)');
+  } catch {
+    return undefined;
+  }
 }
 
 /** The autonomy level of the project's team (Guided when there's no team). */
@@ -280,8 +293,10 @@ export async function confirmLocal(ctx: Ctx, floor: Floor, branch: string, sha: 
   ]);
   const level = levelOf(ctx, floor);
   const review = reviewAt(bookOf(ctx.cfg.dataDir, floor.id).reviews, branch, c.full);
+  // The office's own mx check at exactly this commit, started now when none is recorded or running (merge-check/).
+  const mxCheck = what.kind === 'notes' ? undefined : await mergeCheckAt(ctx, floor, c.full, deps.check);
   return {
     ok: true,
-    confirm: { floor: floor.id, branch, main, sha: c.full, subject, head: c.head, newer, kind: what.kind, files: what.files, paths: somePaths(what.paths), units, dcs, checks: results.checks, journeys: results.journeys, dataImpact: impact, ...(review ? { review } : {}), levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') },
+    confirm: { floor: floor.id, branch, main, sha: c.full, subject, head: c.head, newer, kind: what.kind, files: what.files, paths: somePaths(what.paths), units, dcs, checks: results.checks, journeys: results.journeys, dataImpact: impact, ...(review ? { review } : {}), ...(mxCheck ? { mxCheck } : {}), levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') },
   };
 }

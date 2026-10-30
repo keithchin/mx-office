@@ -4,6 +4,8 @@
 // A review pins one commit ("Approve at @sha"), and Merge merges exactly that commit: never whatever the branch's
 // head has become since. Newer commits stay on the branch for a later review.
 
+import type { MergeCheckView } from './merge-check.js';
+
 /** A person's review of a team branch at the exact commit they saw. */
 export interface LocalMergeReview {
   branch: string;
@@ -100,6 +102,8 @@ export interface LocalMergeConfirm {
   dataImpact: { status: 'clear' | 'impact' | 'unknown' | 'none'; lines: string[] };
   /** The review that lets it merge, if any (a merge without one is refused). */
   review?: LocalMergeReview;
+  /** The office's own mx check at exactly this commit: recorded, running, or started by this look (server/merge-check/). */
+  mxCheck?: MergeCheckView;
   levelName: string;
   pmDecides: boolean;
 }

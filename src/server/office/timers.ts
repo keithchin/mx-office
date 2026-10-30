@@ -28,6 +28,7 @@ import { startHeldQueue } from '../dev-changes/stuck-hold.js';
 import { startAgentProcs } from '../agent-procs/index.js';
 import { startTeamServer } from '../team-server/index.js';
 import { startCardSweep } from '../card-sweep/index.js';
+import { startMergeCheck } from '../merge-check/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -110,6 +111,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopTeamServer = startTeamServer(ctx);
   // Cards whose subject is done (a commit on main, a branch gone, the question answered) closed with the reason (card-sweep/).
   const stopCardSweep = startCardSweep(ctx);
+  // An agent's merge ask or review request: the office runs mx check at that exact commit itself (merge-check/).
+  const stopMergeCheck = startMergeCheck(ctx);
 
   return () => {
     stopRuns();
@@ -139,6 +142,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopAgentProcs();
     stopTeamServer();
     stopCardSweep();
+    stopMergeCheck();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

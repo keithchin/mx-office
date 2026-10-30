@@ -2,11 +2,13 @@
 // Developer change receipt's "Review and merge @C", so both go through the same logic. It lists the commit and its
 // subject (and how many newer commits stay out), the DC(s) it belongs to, the files and model units it changes
 // (or "notes only"), the checks and journeys recorded at exactly that commit, the data-impact finding, and the
-// review that lets it merge. Merge merges that commit; with `reviewFirst` (the receipt, a notes branch) your
+// review that lets it merge, and the office's own mx check at exactly that commit (started when the confirm opens with
+// none recorded; the line updates when it ends: server/merge-check/). Merge merges that commit; with `reviewFirst` (the receipt, a notes branch) your
 // approval of exactly that commit is recorded first. ✕ top-right, and ✕ or Esc gives focus back to the opener.
 
 import { dcWords, filesWords, mergingWords, type LocalMergeBranch, type LocalMergeConfirm, type LocalMergeDone } from '../../../shared/local-merge';
 import { h, openModal, toast } from '../dom';
+import { checkPending, mergeCheckWords } from '../../../shared/merge-check';
 
 const short = (sha: string) => sha.slice(0, 7);
 
@@ -62,6 +64,7 @@ export function confirmBody(c: LocalMergeConfirm, reviewFirst: boolean): HTMLEle
       h('dt', {}, 'What it changes'),
       h('dd', { 'data-lmc': 'files', 'data-kind': c.kind }, c.kind === 'notes' ? h('b', {}, 'Notes only: ') : '', what, c.paths.length ? h('small.lmc-paths', {}, c.paths.join(', ')) : ''),
       ...(c.units.length ? [h('dt', {}, 'Model units'), h('dd', { 'data-lmc': 'units' }, c.units.map((u) => u.split(':').slice(1).join(':') || u).join(', '))] : []),
+      ...(c.mxCheck ? [h('dt', {}, 'Model check'), h('dd', { 'data-lmc': 'mxcheck', 'data-status': c.mxCheck.status, role: 'status', 'aria-live': 'polite' }, mergeCheckWords(c.mxCheck))] : []),
       ...results('Checks', c.checks, c.sha),
       ...results('Journeys', c.journeys, c.sha),
       h('dt', {}, 'Data impact'),
@@ -91,7 +94,21 @@ export async function openMergeConfirm(o: ConfirmOpts): Promise<void> {
   const cancel = h('button.btn', { type: 'button' }, 'Cancel') as HTMLButtonElement;
   const go = h('button.btn.primary', { type: 'button', 'data-act': 'confirm-merge', disabled: !canGo }, approved ? `Merge @${short(c.sha)} into ${c.main}` : `Approve @${short(c.sha)} and merge`) as HTMLButtonElement;
   const box = h('div.modal.lmc-dlg', { role: 'dialog', 'aria-modal': 'true', 'aria-label': `Merge @${short(c.sha)} into ${c.main}` }, h('header', {}, h('h2', {}, c.kind === 'notes' ? `Merge notes @${short(c.sha)} into ${c.main}?` : `Merge @${short(c.sha)} into ${c.main}?`)), confirmBody(c, !!o.reviewFirst), err, h('footer', {}, h('span.grow'), cancel, go));
-  const modal = openModal(box, { onClose: () => o.opener?.focus?.() });
+  let open = true;
+  const modal = openModal(box, { onClose: () => ((open = false), o.opener?.focus?.()) });
+  // The office's mx check at this commit under way: the confirm looks again until it ends (a few minutes at most).
+  void (async () => {
+    for (let i = 0; i < 40 && open && checkPending(c.mxCheck); i++) {
+      await new Promise((r) => setTimeout(r, 15_000));
+      if (!open) return;
+      const res = await fetch(`/api/local-merge/confirm?floor=${encodeURIComponent(o.floor)}&branch=${encodeURIComponent(o.branch)}&sha=${encodeURIComponent(c.sha)}`, { credentials: 'same-origin' }).catch(() => undefined);
+      const next = res?.ok ? ((await res.json().catch(() => undefined)) as LocalMergeConfirm | undefined) : undefined;
+      if (!next?.mxCheck || !open) continue;
+      c = { ...c, mxCheck: next.mxCheck };
+      const dd = box.querySelector<HTMLElement>('[data-lmc="mxcheck"]');
+      if (dd) ((dd.textContent = mergeCheckWords(next.mxCheck)), (dd.dataset.status = next.mxCheck.status));
+    }
+  })();
   cancel.addEventListener('click', () => modal.close());
   go.addEventListener('click', () => {
     go.disabled = true;
