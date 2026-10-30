@@ -52,6 +52,15 @@ export const CONDITIONAL = /^\W*(if|when|once|after|as soon as|whenever)\b/i;
 export const FUTURE = /\b(will|would|'ll) (need|want|ask)\b/i;
 /** Someone else's question reported, not one put to the Project Manager. */
 const REPORTED = /\b(asked|asks|asking|wondered|told)\b/i;
+/**
+ * A status line or a pleasantry, never an ask (release 82: "From the chat" cards were filed from a Coordinator's
+ * ordinary sentences): a report's own label ("Done:", "Status:", "✅ …"), an offer ("let me know if …", "happy to
+ * …", "feel free …"), or "please note / see / find".
+ */
+const STATUS_LINE = /^\W*(✅|✔|☑|done\b|merged\b|status\b|summary\b|progress\b|update\b|next( up)?\s*:|fyi\b|for (your )?information\b|no (blockers|action)\b|nothing (needs|for) you\b)/i;
+const PLEASANTRY = /\blet me know if\b|\b(happy|glad) to\b|\bfeel free\b|\bplease (note|see|find|refer)\b|\bif (you('d| would)? (like|want|prefer|need)|anything)\b|\bjust so you know\b|\bno need to\b/i;
+/** A question put to the Project Manager names them or proposes something ("Should I …?", "OK to merge?"); "What's next? Row 14." doesn't. */
+const ADDRESSES = /\b(you|your|I|we|us|me|shall|should|ok|okay|go ahead|want|prefer|agree|approve|merge)\b/i;
 
 /** The message with code, quotes and markdown emphasis out of the way: a `?` in them asks nothing. */
 function plain(text: string): string {
@@ -87,7 +96,8 @@ export function realAsk(text: string): string | undefined {
     .filter(Boolean);
   const tail = paragraphs.slice(-TAIL_PARAGRAPHS).join('\n');
   for (const s of sentences(tail)) {
-    if (/\?\W*$/.test(s) && !REPORTED.test(s)) return s.slice(0, 160);
+    if (STATUS_LINE.test(s) || PLEASANTRY.test(s)) continue;
+    if (/\?\W*$/.test(s) && !REPORTED.test(s) && ADDRESSES.test(s)) return s.slice(0, 160);
     if (CONDITIONAL.test(s) || FUTURE.test(s) || RELAYED.test(s)) continue;
     if (REQUEST.test(s)) return s.slice(0, 160);
     const wait = WAITING.exec(s);

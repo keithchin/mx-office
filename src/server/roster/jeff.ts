@@ -155,7 +155,8 @@ export class Jeff {
       const rule = lead ? this.filedThisTurn(floor, now, since) : this.ruleWaiting(floor, now);
       const title = lead ? chatAskTitle(ask ?? questionLine(text)) : questionLine(text) || `${now.name} is waiting on you`;
       const duplicate = lead ? this.chatAskedAlready(floor, now, role, title.replace(CHAT_PREFIX, '')) : this.raisedAlready(floor, now, title);
-      const call = waitingCall({ policy: d.settings.jeff.waitingPolicy ?? 'agree', says, rule, ask, duplicate });
+      // The lead's chat is mostly status: an ask is filed from it only when its words really ask something (release 82), whatever the policy.
+      const call = waitingCall({ policy: lead ? 'agree' : (d.settings.jeff.waitingPolicy ?? 'agree'), says, rule, ask, duplicate });
       let acted = false;
       const over = now.status === 'done' || now.status === 'idle';
       // An ask naming an open or answered escalation (ESC-<id>, its decision id, the same denied command) isn't filed again (escalation-fold.ts).

@@ -25,6 +25,8 @@ export const isEscalationVerdict = (v: unknown): v is EscalationVerdict => typeo
  * office knows (noted and superseded: dismiss; done: reply "Done"), so a rollback still shows it.
  */
 export type EscalationOutcome = 'noted' | 'done' | 'superseded';
+/** Why the office closed a card by itself (server/card-sweep/). */
+export type AutoResolveKind = 'commit-on-main' | 'branch-gone' | 'answered';
 export const isEscalationOutcome = (v: unknown): v is EscalationOutcome => v === 'noted' || v === 'done' || v === 'superseded';
 /** The legacy verdict and text written beside an outcome. */
 export const OUTCOME_VERDICT: Record<EscalationOutcome, { verdict: EscalationVerdict; text: string }> = { noted: { verdict: 'dismiss', text: '' }, done: { verdict: 'reply', text: 'Done' }, superseded: { verdict: 'dismiss', text: '' } };
@@ -84,6 +86,11 @@ export interface Escalation {
     dispatchId?: string;
     /** Closed as a duplicate of this escalation (outcome superseded). */
     supersededBy?: string;
+    /**
+     * Closed by the office because its subject is done (server/card-sweep/): the commit it asks about is on main,
+     * its branch is gone, or the same question was answered. Nothing was sent to the agent; `reason` says why.
+     */
+    auto?: { kind: AutoResolveKind; reason: string };
   };
   /** Jeff's rating of how soon to resolve it, and its rank among the floor's open ones (jeff-rank.ts). */
   jeffRank?: JeffRank;
