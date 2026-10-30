@@ -13,6 +13,7 @@ import type { BgItem } from './background-work.js';
 import type { Coverage, TeamShape } from './coverage.js';
 import type { LevelId } from '../budget/types.js';
 import type { AutonomyRecordView } from './autonomy-step.js';
+import type { DeliveryRecord } from './delivery.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -230,4 +231,6 @@ export interface RosterView {
   level?: LevelId;
   /** How its autonomy level was set (the New project flow's step) and the office's policy; added by GET /api/roster. */
   autonomyRecord?: AutonomyRecordView;
+  /** Each message to a member and what the office did with it (typed, held, not delivered), newest last (shared/roster/delivery.ts). */
+  deliveries?: readonly DeliveryRecord[];
 }

@@ -146,9 +146,9 @@ export const rosterRoutes = {
           break;
         }
         case 'tell':
-          // A question for the Coordinator from the console: now or after its current turn, and its relays to busy Leads as picked.
+          // A question for the Coordinator from the console (or, with `to`, straight to another member from the docked chat): now or after its current turn, and its relays to busy Leads as picked.
           if (typeof body.prompt !== 'string') return send(res, 400, { error: 'Say what to ask' });
-          error = await roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner);
+          error = await roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner, undefined, undefined, isRoleId(body.to) ? body.to : undefined);
           break;
         case 'nudge':
           // Needs you's Nudge: an idle member with an open task, told to carry on or escalate. A team still waiting for its

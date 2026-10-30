@@ -30,6 +30,7 @@ import { Nudges } from './nudge.js';
 import { BackToWork } from './back-to-work.js';
 import { Interrupts } from './interrupts.js';
 import { AutoHandoff } from './handoff.js';
+import { deliveriesOf } from './delivery-log.js';
 import { Awareness } from './awareness.js';
 import { Tasks } from './resume.js';
 import { setFloorPause } from './pause.js';
@@ -460,6 +461,8 @@ export class Roster {
       ...(byStage ? { byStage } : {}),
       shape: d.shape,
       coverage: d.coverage,
+      // What the office did with each message to a member, per recipient (delivery-log.ts): the docked chat's delivery lines.
+      deliveries: deliveriesOf(floor.id).slice(-20),
     };
   }
 
