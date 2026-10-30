@@ -194,7 +194,8 @@ office-app journey <J-id|path> [--commit <sha>]           play a journey on it, 
 office-app smoke [--page /p/addr]... [--as <user>]         open pages as one of the project's test users, recorded at its commit
 office-app check --name "<what>" --result passed|failed [--detail "..."] [--shot <png>]... [--commit <sha>]
                                                           record a check you ran yourself, at the commit, as reported by you
-office-app test [--commit <sha|main|HEAD>] [--no-wait]    the microflow tests at that commit, JUnit recorded there
+office-app test [--commit <sha|main|HEAD>] [--files a.test.mdl,b.test.mdl] [--tag <tag>]... [--no-wait]
+                                                          the microflow tests at that commit (all, or those files / the files with that @tag), JUnit recorded there
 office-app stop                                           stop it (its processes and database go)
 ```
 
@@ -223,7 +224,7 @@ office-app stop                                           stop it (its processes
 - **Results are bound to the commit.** Each run is a test-run record (`office-journey`) whose tested revision is the instance's commit. The [Testing](../using-the-office/testing.md) page lists it, the [Live app](../using-the-office/live-app.md)'s readiness counts its journeys for exactly that commit, and a Developer change's **Checks** fact says *journeys passed at @C*.
 - **Every start is a check.** An instance that answered is recorded at its commit as *app start* passed; one that didn't start as a run that couldn't complete, with the reason (shown as failed).
 - **Checks you ran yourself** (a measurement, your own script, screenshots): `office-app check` records them at your instance's commit (or `--commit`), labelled *reported by* and your name everywhere: the office records what you say you saw, it didn't watch it. Up to 5 screenshots (`.png`, `.jpg`, `.webp`, by full path, 5 MB each) are copied into the office's evidence folder; anything else is not kept. Prefer `journey`/`smoke` when they can do the check.
-- **Microflow tests** run through the office's own runner (see [Microflow tests](../using-the-office/testing.md#microflow-tests)), one at a time per project, at the commit given.
+- **Microflow tests** run through the office's own runner (see [Microflow tests](../using-the-office/testing.md#microflow-tests)), one at a time per project, at the commit given. `--files` runs only those test files (a path, or a unique file name; comma-separated or repeated) and `--tag` the files with that `@tag` ([A subset of the test files](../using-the-office/testing.md#a-subset-of-the-test-files)). While it waits it prints the run's progress as it changes (*Running the tests: 41 of 123 started, 40 finished*), and it waits until the run's own time limit plus 10 minutes. A run stopped at the project's time limit prints what passed or failed and *never ran (N): …* for the rest.
 
 The same is in the MCP server as `app_start`, `app_status`, `app_stop`, `journey_run`, `app_smoke`, `app_check` and `app_test` ([MCP tools](mcp-tools.md)).
 

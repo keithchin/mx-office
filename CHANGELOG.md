@@ -6,7 +6,8 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Microflow test runs that finish, say how far they are, and keep what they got.** A run on a big suite always ended *Timed out after 16 min with no results*: the office cut every run off at 16 minutes although mxcli's own timeout only starts once the runtime is up, so a suite still being added to the app was stopped, and the office stopped mxcli's children before mxcli itself, which then printed *Cleaning up...* and looked hung there. Now a run's time limit covers the whole run and is sized to the suite (10 min plus 15 s a test, 15 to 45 min) unless an admin sets the project's own (5 to 180 min, Testing › Quality); the Quality card and `office-app test` show progress (*Running the tests: 41 of 123 started, 40 finished*); a run stopped at its limit keeps what passed or failed, lists the tests that never ran and says which phase it was in; mxcli's whole output is kept with the run. A run also ends as soon as mxcli does, even when a runtime it left behind holds its output, and shortly after mxcli writes its results even if mxcli never exits.
+- **Run some microflow tests only.** `office-app test --files loans.test.mdl,stock.test.mdl` and/or `--tag smoke` (files carrying `@tag smoke`), and the MCP tool `app_test` with `files` / `tags`; the run records the subset.
 
 ## 2026-10-29 · release 81 (`c16195f`)
 

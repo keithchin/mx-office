@@ -250,7 +250,8 @@ export interface MxcliRunState {
   /** Whether this office can run mxcli here at all, and why not. */
   available: boolean;
   why?: string;
-  tests: { running: boolean; since?: number; commit?: string; last?: string };
+  /** While running: how far it has got (in words) and its time limit; a subset run: which files (release 82). */
+  tests: { running: boolean; since?: number; commit?: string; last?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; subset?: string };
   quality: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string };
 }
 
@@ -263,4 +264,6 @@ export interface QualityPart {
   /** Whether the office scores each new main commit by itself ("Score main automatically with mxcli", off by default). */
   auto?: boolean;
   main?: string;
+  /** The project's own time limit for microflow test runs (minutes); undefined: sized to the suite. */
+  testLimit?: number;
 }

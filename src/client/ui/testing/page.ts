@@ -60,6 +60,11 @@ export function testingTab(root: HTMLElement) {
     void loadQuality();
     return undefined;
   };
+  const askLimit = async (minutes: number | null): Promise<string | undefined> => {
+    const res = await fetch('/api/testing/runner', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, limitMinutes: minutes, by: store.me.account?.name ?? store.profile.name }) }).catch(() => undefined);
+    const out = (await res?.json().catch(() => ({}))) as { error?: string } | undefined;
+    return res?.ok ? undefined : (out?.error ?? 'the office could not be reached');
+  };
   async function loadQuality() {
     const f = floor;
     if (!f) return;
@@ -67,7 +72,7 @@ export function testingTab(root: HTMLElement) {
     try {
       const q = await get<QualityPart>(`/api/testing?floor=${encodeURIComponent(f)}&part=quality`);
       if (f !== store.floor) return;
-      qslot.replaceChildren(qualityPanel(q, askRun));
+      qslot.replaceChildren(qualityPanel(q, askRun, askLimit));
       const running = q.runs.tests.running || q.runs.quality.running;
       // A run just ended: its record is in, so the rest of the page is read again.
       if (wasRunning && !running) void load(true);

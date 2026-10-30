@@ -26,9 +26,13 @@ import { pickMxbuild } from '../liveapp/mxbuild.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
 import { execFileOffP } from '../offloop/exec.js';
 import { testingSwitches } from './switches.js';
+import { limitFor, testLimitOf } from './runner-settings.js';
+import { testFilesAt } from './workfolder.js';
+import { progressWords, type RunProgress } from '../../shared/testing/run-progress.js';
+import { isSubset, pickFiles, subsetWords, type RunSubset } from '../../shared/testing/test-files.js';
 
-/** mxcli test's runtime timeout for the office's run. */
-export const TEST_TIMEOUT_MS = 15 * 60_000;
+/** A run's time limit when nothing else says (tests); the office sizes it to the suite or takes the project's own (runner-settings.ts). */
+export const TEST_TIMEOUT_MS = 45 * 60_000;
 
 type FloorLike = Pick<Floor, 'id' | 'dir'> & { workers?: Pick<Floor['workers'], 'list'> };
 
@@ -42,6 +46,10 @@ interface RunSlot {
   /** The last run's record (the test-run store's id) and whether it decided anything. */
   record?: string;
   harness?: string;
+  /** How far the run now has got (read off mxcli's output), and what it covers: its files, tests and time limit. */
+  progress?: RunProgress;
+  plan?: { paths: string[]; tests: number; limitMs: number; auto: boolean };
+  subset?: RunSubset;
 }
 interface FloorRuns {
   tests: RunSlot;
@@ -85,6 +93,8 @@ export interface MxDeps {
   flags?: (bin: string) => Promise<TestFlags>;
   /** Stand-in for app-instance/constants.ts testRunConstants (tests). */
   constants?: (floorDir: string, sha: string) => Promise<TestRunOpts['constants']>;
+  /** Stand-in for runner-settings.ts limitFor (tests): a run's time limit for its number of tests. */
+  limit?: (tests: number) => { ms: number; auto: boolean };
   /** Hears each finished run's record (the callers raise what only a person can clear: agent-app/raise.ts). */
   onDone?: (draft: TestRunDraft) => void;
 }
@@ -97,6 +107,8 @@ export interface TestAsk {
   agentId?: string;
   /** A commit the project's repository has (an agent's candidate): its full sha. */
   commit?: string;
+  /** Only some test files (office-app test --files / --tag): checked against the commit's files before it starts. */
+  subset?: RunSubset;
 }
 
 /** The full sha of `rev` in the project's repository (worktrees share its objects), or undefined. */
@@ -129,15 +141,21 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
   if (!sha) return `The project's repository has no commit ${who.commit}: commit your work first (the run uses committed files only)`;
   const onMain = sha === main.sha;
   const label = onMain ? `main at ${sha.slice(0, 7)}` : `commit ${sha.slice(0, 7)}`;
+  const subset = isSubset(who.subset) ? who.subset : undefined;
+  if (subset) {
+    // A name that matches no file is said now, not as a run that never started.
+    const picked = pickFiles(await testFilesAt(floor.dir, sha), subset);
+    if ('why' in picked) return `Nothing to run for ${subsetWords(subset)} at ${sha.slice(0, 7)}: ${picked.why}`;
+  }
   if (slot.running) return busy();
-  Object.assign(slot, { running: true, since: Date.now(), commit: sha, by: who.name, record: undefined, harness: undefined });
+  Object.assign(slot, { running: true, since: Date.now(), commit: sha, by: who.name, record: undefined, harness: undefined, progress: undefined, plan: undefined, subset });
   audit.record({
     floor: floor.id,
     actor: who.agentId ? agent(who.name, who.agentId) : human(who.name, who.accountId),
     action: 'testing.mxcli-test',
     target: { kind: 'commit', id: sha, label },
-    summary: `Started the microflow tests (mxcli test --local --require-assertions) on ${label}, in the office's work folder`,
-    details: { mxcli: tool.version, ...(onMain ? { branch: main.branch } : {}) },
+    summary: `Started the microflow tests (mxcli test --local --require-assertions) on ${label}${subset ? ` (${subsetWords(subset)})` : ''}, in the office's work folder`,
+    details: { mxcli: tool.version, ...(onMain ? { branch: main.branch } : {}), ...(subset ? { subset } : {}) },
     severity: 'info',
   });
   const done = (async () => {
@@ -146,7 +164,9 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
       const flags = await (deps.flags ?? testFlags)(tool.bin).catch(() => undefined);
       // The project's instance constants and a generated seed password, for this run only.
       const constants = await (deps.constants ?? ((d: string, c: string) => testRunConstants(dataDir, d, c)))(floor.dir, sha).catch(() => undefined);
-      const { draft } = await runMicroflowTests({ ...(constants ? { constants } : {}), dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
+      const limit = deps.limit ?? (await limitFor(dataDir, floor.id));
+      const live = { subset, limit, onPlan: (p: NonNullable<RunSlot['plan']>) => void (slot.plan = p), onProgress: (p: RunProgress) => void (slot.progress = p) };
+      const { draft } = await runMicroflowTests({ ...live, ...(constants ? { constants } : {}), dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
       try {
         deps.onDone?.(draft);
       } catch {
@@ -160,7 +180,9 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
         if (t.harness) c.harness++;
         else c[t.status]++;
       }
-      slot.last = draft.harnessError ? `Harness error: ${draft.harnessError}` : `${c.passed} passed, ${c.failed} failed, ${c.harness} harness error${c.harness === 1 ? '' : 's'}, ${c.skipped} skipped`;
+      const counts = `${c.passed} passed, ${c.failed} failed, ${c.harness} harness error${c.harness === 1 ? '' : 's'}, ${c.skipped} ${draft.harnessError ? 'never ran' : 'skipped'}`;
+      const of = subset ? ` (${subsetWords(subset)})` : '';
+      slot.last = draft.harnessError ? `Harness error: ${draft.harnessError}${draft.results.length ? ` [kept: ${counts}]` : ''}${of}` : `${counts}${of}`;
     } catch (err) {
       slot.last = err instanceof NoTestsError ? err.message : `The run could not be recorded: ${(err as Error).message}`;
     } finally {
@@ -170,9 +192,18 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
   return { commit: sha, done };
 }
 
-/** The project's microflow test run now, or its last one (what an agent's office-app test waits on). */
-export function testRunOf(floorId: string): Readonly<RunSlot> {
-  return { ...runsOf(floorId).tests };
+/** A running test run's progress in words and its time limit (the Testing page, office-app test). */
+function testProgress(s: RunSlot): { progress?: string; limitMinutes?: number; limitAuto?: boolean } {
+  return {
+    ...(s.progress ? { progress: progressWords(s.progress, Date.now()) } : { progress: 'Getting the work folder ready' }),
+    ...(s.plan ? { limitMinutes: Math.max(1, Math.ceil(s.plan.limitMs / 60_000)), limitAuto: s.plan.auto } : {}),
+  };
+}
+
+/** The project's microflow test run now, or its last one (what an agent's office-app test waits on): its progress in words, not the raw object. */
+export function testRunOf(floorId: string): Readonly<Omit<RunSlot, 'progress' | 'plan'> & { progress?: string; limitMinutes?: number; limitAuto?: boolean }> {
+  const { progress: _p, plan: _l, ...s } = runsOf(floorId).tests;
+  return { ...s, ...(s.running ? testProgress(runsOf(floorId).tests) : {}) };
 }
 
 /** Runs report + lint on `sha` unless that commit and mxcli version are already recorded. */
@@ -241,10 +272,11 @@ export async function runState(dataDir: string, floor: FloorLike, deps: MxDeps =
   const r = runsOf(floor.id);
   const tool = await toolOf(deps)(dataDir, floor.dir);
   const slot = (s: RunSlot) => ({ running: s.running, ...(s.since ? { since: s.since } : {}), ...(s.commit ? { commit: s.commit } : {}), ...(s.last ? { last: s.last } : {}) });
+  const t = r.tests;
   return {
     available: !('why' in tool),
     ...('why' in tool ? { why: tool.why } : {}),
-    tests: slot(r.tests),
+    tests: { ...slot(t), ...(t.running ? testProgress(t) : {}), ...(t.subset ? { subset: subsetWords(t.subset) } : {}) },
     quality: { ...slot(r.quality), ...(r.quality.deferredFor && !r.quality.running && (deps.auto ?? testingSwitches().autoScore) ? { deferred: 'Waiting for the agents to finish before scoring the new main commit' } : {}) },
   };
 }
@@ -254,6 +286,6 @@ export async function qualityPart(dataDir: string, floor: FloorLike, admin: bool
   const main = await mainOf(floor.dir);
   // Started (not waited for) before the state is read, so the answer already says it's running.
   await qualityOnMain(dataDir, floor, main, deps);
-  const [records, state] = await Promise.all([qualityStore(dataDir, floor.id).all(), runState(dataDir, floor, deps)]);
-  return { quality: buildQualityView(records, main?.sha), runs: state, admin, auto: deps.auto ?? testingSwitches().autoScore, ...(main ? { main: main.sha } : {}) };
+  const [records, state, limit] = await Promise.all([qualityStore(dataDir, floor.id).all(), runState(dataDir, floor, deps), testLimitOf(dataDir, floor.id)]);
+  return { quality: buildQualityView(records, main?.sha), runs: state, admin, auto: deps.auto ?? testingSwitches().autoScore, ...(main ? { main: main.sha } : {}), ...(limit ? { testLimit: limit } : {}) };
 }

@@ -22,7 +22,7 @@ weight: 2
 | `journey_run` | journey, file, commit | `office-app journey` |
 | `app_smoke` | paths[], as | `office-app smoke` |
 | `app_check` | **name**, **result**, detail, shots[], commit | `office-app check` |
-| `app_test` | **commit**, wait | `office-app test` |
+| `app_test` | **commit**, wait, files, tags | `office-app test` (`--files`, `--tag`) |
 
 ## Allowed without asking
 

@@ -265,7 +265,7 @@ test("mxcli v0.27+: the run boots on the built-in database (--db-type hsqldb) on
     const prepare = async () => (prepared++, { db: 'project_test', notes: [] });
     const ports = async () => ({ ports: [8401, 8402, 8403], release: () => void released++ });
     const flags = testFlagsIn('Flags:\n      --db-type string   ...\n      --app-port int\n      --admin-port int\n      --serve-port int\n      --mxbuild-path string');
-    assert.deepEqual(flags, { dbType: true, ports: true, mxbuildPath: true, constant: false });
+    assert.deepEqual(flags, { dbType: true, ports: true, mxbuildPath: true, constant: false, verbose: false });
     const { draft } = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'v0.27.0', sha: s.sha, actor: 'Ann', timeoutMs: 60_000, prepare, ports, flags, pgEnv: { PGPASSWORD: 'pw' } });
     const call = s.calls().find((c) => c.args[0] === 'test')!;
     const at = (f: string) => call.args[call.args.indexOf(f) + 1];

@@ -85,8 +85,21 @@ export interface TestRunRecord {
   /** The whole run could not complete (no runtime, no JUnit written, a timeout): a harness error, never failed tests. */
   harnessError?: string;
   importer: string;
+  /** An office microflow test run of some test files only (release 82): what was asked and the files it picked. */
+  subset?: RunSubsetKept;
+  /** An office microflow test run's time limit, and whether it was sized to the suite. */
+  limit?: { minutes: number; auto: boolean };
+  /** Where the office keeps the run's whole output ("office:testing/evidence/<project>/<run>.log"). */
+  log?: string;
   /** When the office ingested it (ms). */
   ingestedAt: number;
+}
+
+/** The files asked for (by path or name) and the tags, with the test files that run used. */
+export interface RunSubsetKept {
+  files?: string[];
+  tags?: string[];
+  paths: string[];
 }
 
 export interface RunEnvironment {

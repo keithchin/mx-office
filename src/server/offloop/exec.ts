@@ -65,6 +65,7 @@ parentPort.on('message', (m) => {
     child.stderr?.on('data', (d) => post({ id: m.id, ev: 'stderr', data: d.toString('utf8') }));
     child.stdin?.on('error', () => {});
     child.on('error', (err) => post({ id: m.id, ev: 'error', err: errOf(err) }));
+    child.on('exit', (code, signal) => post({ id: m.id, ev: 'exit', code, signal }));
     child.on('close', (code, signal) => {
       kids.delete(m.id);
       post({ id: m.id, ev: 'close', code, signal });
@@ -163,8 +164,9 @@ export function execFileOffP(file: string, args: readonly string[], opts: OffOpt
 
 /**
  * A program started off the event loop, as far as the office uses spawn's child: `pid` (once it's
- * started), 'stdout' and 'stderr' events with utf8 text, 'error' (with execFile's fields), 'close'
- * (code, signal), and `write`, `end` and `kill`. Its 'spawn' event says it started.
+ * started), 'stdout' and 'stderr' events with utf8 text, 'error' (with execFile's fields), 'exit' (code,
+ * signal: the program itself ended, though a child it started may still hold its output open), 'close'
+ * (code, signal: its output closed too), and `write`, `end` and `kill`. Its 'spawn' event says it started.
  */
 export class OffChild extends EventEmitter {
   pid: number | undefined;
@@ -210,6 +212,7 @@ export function spawnOff(file: string, args: readonly string[], opts: SpawnOffOp
       child.emit('spawn');
     } else if (m.ev === 'stdout' || m.ev === 'stderr') child.emit(m.ev, m.data ?? '');
     else if (m.ev === 'error') child.emit('error', errFrom(m.err!));
+    else if (m.ev === 'exit') child.emit('exit', m.code ?? null, m.signal ?? null);
     else if (m.ev === 'close' || m.ev === 'lost') {
       settle(m.id);
       if (m.ev === 'lost') child.emit('error', errFrom(m.err!));
@@ -231,6 +234,7 @@ export function spawnOff(file: string, args: readonly string[], opts: SpawnOffOp
   local.stdin?.on('error', () => undefined);
   local.on('spawn', () => fallback.emit('spawn'));
   local.on('error', (e) => fallback.emit('error', e));
+  local.on('exit', (code, signal) => fallback.emit('exit', code, signal));
   local.on('close', (code, signal) => {
     fallback.closed = true;
     fallback.exitCode = code;

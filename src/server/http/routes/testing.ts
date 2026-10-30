@@ -7,6 +7,8 @@
 // POST /api/testing/run starts one of the office's own mxcli runs on main, admins only, one at a time.
 // Release 39: /api/testing/switches reads (signed-in users) and changes (admins, audited) the two
 // office-wide safety switches, judging merged tasks and scoring main automatically (testing/switches.ts).
+// Release 82: /api/testing/run takes `files` / `tags` (a subset of the test files), and POST /api/testing/runner
+// sets a project's time limit for its microflow test runs (admins, audited; testing/runner-settings.ts).
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
@@ -25,6 +27,8 @@ import { audit, human } from '../../audit/index.js';
 import { fixPrereq, testPrereqs } from '../../testing/prereqs.js';
 import { raiseForPm } from '../../agent-app/raise.js';
 import { testBlocker } from '../../../shared/testing/test-reason.js';
+import { setTestLimit } from '../../testing/runner-settings.js';
+import { cleanSubset } from '../../../shared/testing/test-files.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
@@ -144,9 +148,35 @@ export const testingRoutes = {
       if (body.what !== 'tests' && body.what !== 'quality') return send(res, 400, { error: 'what: tests or quality' });
       const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
       const who = { name: name || 'An admin', ...(session.account?.id ? { accountId: session.account.id } : {}) };
-      const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, who, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, undefined, ask); } }) : await startQuality(ctx.cfg.dataDir, floor, who);
+      const subset = cleanSubset(body.files, body.tags);
+      if (typeof subset === 'string') return send(res, 400, { error: subset });
+      const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, { ...who, subset }, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, undefined, ask); } }) : await startQuality(ctx.cfg.dataDir, floor, who);
       if (typeof r === 'string') return send(res, 409, { error: r });
       return send(res, 202, { ok: true, commit: r.commit });
+    },
+  },
+  /** POST /api/testing/runner {floor, limitMinutes: number | null}: the project's time limit for its microflow test runs (5-180 min; null: sized to the suite). Admins only, audited. */
+  runner: {
+    method: 'POST',
+    path: '/api/testing/runner',
+    auth: 'session',
+    async handle(ctx, { req, res, session }) {
+      if (!fromUs(req, ctx)) return send(res, 403, { error: 'Forbidden' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only an admin can change the microflow test runs’ time limit' });
+      let body: Record<string, unknown>;
+      try {
+        const v = JSON.parse((await readBody(req, 4 * 1024)) || '{}');
+        body = v && typeof v === 'object' ? v : {};
+      } catch {
+        return send(res, 400, { error: 'Send JSON' });
+      }
+      if (refuseStale(ctx, req, res)) return;
+      const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
+      const r = await setTestLimit(ctx.cfg.dataDir, floor.id, body.limitMinutes, { name: name || 'An admin', ...(session.account?.id ? { accountId: session.account.id } : {}) });
+      if (typeof r === 'string') return send(res, 400, { error: r });
+      return send(res, 200, { ok: true, limitMinutes: r });
     },
   },
   /** GET /api/testing/switches: the office-wide Testing switches, and whether you may change them. */
