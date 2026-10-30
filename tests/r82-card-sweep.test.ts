@@ -37,9 +37,9 @@ test('merge asks and review requests whose commit is on main are closed; one sti
     git(dir, 'merge', '-q', '--no-ff', '-m', 'merge row 12', merged);
     const main = git(dir, 'rev-parse', 'HEAD');
     const all = [
-      esc({ title: `Approve merge of ${merged.slice(0, 7)} (office/blake-1)` }),
-      esc({ title: `Please review ${merged.slice(0, 9)}` }),
-      esc({ title: `Approve merge of ${pending.slice(0, 7)}` }),
+      esc({ title: `Approve merge of ${merged.slice(0, 12)} (office/blake-1)` }),
+      esc({ title: `Please review ${merged.slice(0, 12)}` }),
+      esc({ title: `Approve merge of ${pending.slice(0, 12)}` }),
       esc({ title: 'Merge office/gone-branch please', at: 0 }),
       esc({ title: 'Merge office/gone-branch please (new)', at: 10 * 60_000 }),
       esc({ title: 'Is the copy on the form right?' }),
