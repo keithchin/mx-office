@@ -13,6 +13,7 @@
 import type { Ctx } from '../office/context.js';
 import type { Floor } from '../floor.js';
 import { runGit, type Git } from '../gitgraph/index.js';
+import { mainOf } from '../testing/repo.js';
 import type { MxCheckResult } from '../../shared/security.js';
 import type { MergeCheckView } from '../../shared/merge-check.js';
 import { commitAskOf } from '../card-sweep/rules.js';
@@ -71,9 +72,12 @@ export async function checkAsked(d: MergeCheckDeps, floor: Pick<Floor, 'id' | 'd
   const ask = commitAskOf(e);
   if (!ask?.shas.length) return [];
   const out: MergeCheckView[] = [];
+  const main = (await mainOf(floor.dir).catch(() => undefined))?.sha;
   for (const s of ask.shas.slice(0, 2)) {
     const sha = (await d.git(['rev-parse', '--verify', '--quiet', `${s}^{commit}`], floor.dir).catch(() => '')).trim();
     if (!sha) continue;
+    // Already on main: the card sweep closes the ask; nothing to check for a merge.
+    if (main && (sha === main || (await d.git(['merge-base', '--is-ancestor', sha, main], floor.dir).then(() => true, () => false)))) continue;
     out.push(await ensureCheck(d, floor, sha, `Mx Office (${e.by}'s merge ask ESC-${e.id})`));
   }
   return out;

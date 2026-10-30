@@ -49,6 +49,7 @@ test('a merge ask starts mx check at its exact commit once; a recorded one is sh
     commit(dir, 'App.mpr', 'model v1');
     git(dir, 'checkout', '-q', '-b', 'office/blake-1');
     const asked = commit(dir, 'App.mpr', 'Row 12: form page');
+    git(dir, 'checkout', '-q', 'main');
     const d = fakeDeps();
     const floor = { id: 'f1', dir };
     const e = { id: 'e1', by: 'Blake', at: 1, title: `Approve merge of ${asked.slice(0, 7)} (office/blake-1)`, details: '', options: [], status: 'open' as const, workerId: 'w' };
@@ -73,6 +74,10 @@ test('a merge ask starts mx check at its exact commit once; a recorded one is sh
     } finally {
       rmSync(noApp, { recursive: true, force: true });
     }
+    // An ask for a commit already on main starts nothing.
+    const onMain = git(dir, 'rev-parse', 'HEAD');
+    assert.deepEqual(await checkAsked(d, floor, { ...e, id: 'e2', title: `Approve merge of ${onMain.slice(0, 7)}` }), []);
+    git(dir, 'checkout', '-q', 'office/blake-1');
     // Looking only (start false) says none, starts nothing.
     const other = commit(dir, 'App.mpr', 'Row 13');
     assert.equal((await ensureCheck(d, floor, other, 'x', false)).status, 'none');
