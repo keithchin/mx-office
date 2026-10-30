@@ -40,7 +40,7 @@ test('freeFolder: a recorded run within its time is said in plain words; past it
     assert.match(why ?? '', /a previous run still holds the work folder \(mxcli, started at \d\d:\d\d, may run until \d\d:\d\d\)/);
     assert.deepEqual(killed, [], 'nothing stopped within its time');
     assert.equal(await freeFolder(dir, d(T + 3 * 60 * 60_000)), undefined, 'three hours on: free');
-    assert.deepEqual(killed, [101, 100], 'its tree stopped, children first');
+    assert.deepEqual(killed, [100, 101], 'its tree stopped, root first (so it starts no clean-up of its own), then its children');
     assert.equal(await readOwner(dir), undefined, 'the record goes');
     // Nothing of it running any more: the record just goes.
     writeFileSync(`${dir}.owner.json`, JSON.stringify({ pid: 100, startedAt: T, deadline: T + 1, program: 'mxcli' }));

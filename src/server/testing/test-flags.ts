@@ -6,7 +6,8 @@
 //   * `--app-port` / `--admin-port` / `--serve-port` (the same versions): ports the office picks, so a test run
 //     never waits for (or fights over) the fixed 8081/8091;
 //   * `--mxbuild-path`: the app's mxbuild, as the live app and the app instances pick it;
-//   * `--constant`: the project's instance constants for the run (app-instance/constants.ts).
+//   * `--constant`: the project's instance constants for the run (app-instance/constants.ts);
+//   * `--verbose`: a line per test while they run, for the office's progress and a stopped run's partial results.
 // An older mxcli has none of the first two: its `--local` makes `<app>_test` through `psql -U postgres` (a
 // superuser) every time, even when the database is there (mxcli-run.ts says what to do about it).
 
@@ -22,6 +23,8 @@ export interface TestFlags {
   mxbuildPath: boolean;
   /** `--constant Module.Name=value` (this run only): the project's instance constants and a generated seed password. */
   constant?: boolean;
+  /** `--verbose`: each phase and, while the tests run, a line per test (the office's progress and partial results, release 82). */
+  verbose?: boolean;
 }
 
 export const NO_FLAGS: TestFlags = { dbType: false, ports: false, mxbuildPath: false };
@@ -29,7 +32,7 @@ export const NO_FLAGS: TestFlags = { dbType: false, ports: false, mxbuildPath: f
 /** The flags a `mxcli test --help` text lists. */
 export function testFlagsIn(help: string): TestFlags {
   const has = (f: string) => new RegExp(`(^|\\s)--${f}\\b`, 'm').test(help);
-  return { dbType: has('db-type'), ports: has('app-port') && has('admin-port') && has('serve-port'), mxbuildPath: has('mxbuild-path'), constant: has('constant') };
+  return { dbType: has('db-type'), ports: has('app-port') && has('admin-port') && has('serve-port'), mxbuildPath: has('mxbuild-path'), constant: has('constant'), verbose: has('verbose') };
 }
 
 const cache = new Map<string, { mtime: number; flags: Promise<TestFlags> }>();

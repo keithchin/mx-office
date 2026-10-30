@@ -222,6 +222,7 @@ export const routes: readonly Route[] = [
   testingRoutes.fixPrereq,
   testingRoutes.change,
   testingRoutes.run,
+  testingRoutes.runner,
   testingRoutes.switches,
   testingRoutes.setSwitches,
   stuckRoutes.view,

@@ -4,7 +4,8 @@
 // rules, and the rules that could not run, shown as such (missing findings, never zero). Stale when main
 // has moved since. An admin starts the office's own mxcli runs from here: the microflow tests on main and
 // a quality run, each one at a time, in the office's work folder. While "Score main automatically with
-// mxcli" is off (the default) the card says so next to the button.
+// mxcli" is off (the default) the card says so next to the button. Release 82: a running test run says how far it
+// has got (tests started and finished) and its time limit, and an admin sets the project's own limit here.
 
 import type { QualityPart, QualityView, ScoreCell } from '../../../shared/testing/quality';
 import { h } from '../dom';
@@ -63,9 +64,26 @@ export function qualityHeader(v: QualityView, auto = true): HTMLElement {
 export const TESTS_TIP = 'Needs a local Mendix runtime on the office’s computer (mxcli test --local --require-assertions); without one the run is recorded as a harness error, never as failed tests. Admins only.';
 
 export type RunAsk = (what: 'tests' | 'quality') => Promise<string | undefined>;
+/** Sets the project's time limit for microflow test runs (minutes, or null: sized to the suite); an error, or undefined. */
+export type LimitAsk = (minutes: number | null) => Promise<string | undefined>;
+
+/** The project's time limit for its microflow test runs: a minutes field (empty: sized to the suite) and Save. */
+function limitField(current: number | undefined, setLimit: LimitAsk): HTMLElement {
+  const input = h('input.tst-limit-in', { type: 'number', min: '5', max: '180', step: '1', inputmode: 'numeric', placeholder: 'auto', value: current ? String(current) : '', 'aria-label': 'Time limit for a microflow test run, in minutes (empty: sized to the suite)' }) as HTMLInputElement;
+  const note = h('small.tst-from', { role: 'status' });
+  const save = h('button.btn.small', { type: 'button' }, 'Save') as HTMLButtonElement;
+  save.onclick = async () => {
+    save.disabled = true;
+    const v = input.value.trim();
+    const err = await setLimit(v ? Number(v) : null);
+    note.textContent = err ?? (v ? `Runs stop after ${v} min.` : 'Sized to the suite (15 to 45 min).');
+    save.disabled = false;
+  };
+  return h('div.tst-q-limit', {}, h('label.tst-k', { title: 'A run that reaches it is stopped; what passed or failed by then is kept, and the tests that never ran are listed. Empty: 10 min plus 15 s a test, 15 to 45 min.' }, 'Test run time limit (min): ', input), save, note);
+}
 
 /** The whole Quality card: the header, plus the office's mxcli runs and their buttons. */
-export function qualityPanel(p: QualityPart, ask: RunAsk): HTMLElement {
+export function qualityPanel(p: QualityPart, ask: RunAsk, setLimit?: LimitAsk): HTMLElement {
   const r = p.runs;
   const note = h('small.tst-from', { role: 'status' });
   const button = (what: 'tests' | 'quality', label: string, running: boolean, title?: string) => {
@@ -79,15 +97,24 @@ export function qualityPanel(p: QualityPart, ask: RunAsk): HTMLElement {
     };
     return b;
   };
-  const line = (title: string, s: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string }) =>
-    h('li', {}, h('span.tst-k', {}, `${title}: `), s.running ? pill(`Running on ${rev(s.commit)}`, 'info') : s.deferred ? pill('Waiting', 'muted', s.deferred) : null, s.last ? h('span', {}, ` ${s.last}`) : !s.running ? h('span.tst-muted', {}, ' not run since the office started') : null);
+  const line = (title: string, s: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; subset?: string }) =>
+    h(
+      'li',
+      {},
+      h('span.tst-k', {}, `${title}: `),
+      s.running ? pill(`Running on ${rev(s.commit)}`, 'info') : s.deferred ? pill('Waiting', 'muted', s.deferred) : null,
+      s.running && s.progress ? h('span.tst-progress', {}, ` ${s.progress}`) : null,
+      s.running && s.limitMinutes ? h('small.tst-from', {}, ` · stops after ${s.limitMinutes} min${s.limitAuto ? ' (sized to the suite)' : ''}`) : null,
+      s.running && s.subset ? h('small.tst-from', {}, ` · ${s.subset}`) : null,
+      !s.running && s.last ? h('span', {}, ` ${s.last}`) : !s.running ? h('span.tst-muted', {}, ' not run since the office started') : null,
+    );
   const runs = h(
     'div.tst-q-runs',
     {},
     h('ul.tst-q-runlist', {}, line('Microflow tests', r.tests), line('Quality scores', r.quality)),
     !r.available ? h('p.tst-muted', {}, `The office can’t run mxcli here: ${r.why ?? 'not available'}`) : null,
     p.admin
-      ? h('div.tst-q-btns', {}, button('tests', 'Run microflow tests on main', r.tests.running, TESTS_TIP), button('quality', 'Score main now', r.quality.running), p.auto === false ? h('small.tst-from.tst-auto-off', {}, 'Automatic scoring is off') : null, note)
+      ? h('div', {}, h('div.tst-q-btns', {}, button('tests', 'Run microflow tests on main', r.tests.running, TESTS_TIP), button('quality', 'Score main now', r.quality.running), p.auto === false ? h('small.tst-from.tst-auto-off', {}, 'Automatic scoring is off') : null, note), setLimit ? limitField(p.testLimit, setLimit) : null)
       : h('p.tst-muted', {}, 'An admin can run the microflow tests on main (mxcli test --local --require-assertions) and score main now.'),
   );
   return h('section.tst-card.tst-quality', {}, h('h3.tst-h', {}, 'Quality', h('small.tst-hsub', {}, 'mxcli report and lint, per commit, in the office’s own work folder')), qualityHeader(p.quality, p.auto !== false), runs);

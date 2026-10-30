@@ -11,7 +11,7 @@
 // the verdict comes from the JUnit content, and with no JUnit at all the run is a harness error.
 // A test's id is "<repo-relative file>#<@test name>". Pure (no Node imports).
 
-import { IMPORTER_VERSION, type RunEnvironment, type TestResult, type TestRunDraft } from './record.js';
+import { IMPORTER_VERSION, type RunEnvironment, type RunSubsetKept, type TestResult, type TestRunDraft } from './record.js';
 import { idsIn } from './links.js';
 
 export interface JUnitCase {
@@ -123,6 +123,14 @@ export interface MxcliRunEnvelope {
   /** mxcli's last words, for a harness error. */
   tail?: string;
   actor: string;
+  /** Only some test files ran (office-app test --files / --tag): what was asked and the files it picked. */
+  subset?: RunSubsetKept;
+  /** The run's time limit, and whether it was sized to the suite. */
+  limit?: { minutes: number; auto: boolean };
+  /** Where mxcli's whole output (masked) is kept in the office's data folder. */
+  logLocator?: string;
+  /** No JUnit file: what mxcli said live for each test, and the tests it never got to (shared/testing/test-files.ts partialResults). */
+  partial?: TestResult[];
 }
 
 export const MXCLI_TEST_SUITE = 'microflow tests (mxcli test)';
@@ -134,7 +142,7 @@ export const MXCLI_TEST_SUITE = 'microflow tests (mxcli test)';
  */
 export function draftFromMxcliRun(env: MxcliRunEnvelope, junit: string | undefined): TestRunDraft {
   const parsed = junit !== undefined ? parseJUnit(junit, [env.environment.workFolder, env.workFolderReal]) : undefined;
-  const results = parsed?.cases.map(resultOf) ?? [];
+  const results = parsed?.cases.map(resultOf) ?? (junit === undefined ? (env.partial ?? []) : []);
   let harnessError: string | undefined;
   if (env.failure) harnessError = env.failure;
   else if (junit === undefined) harnessError = `mxcli wrote no JUnit file (exit ${env.exitCode ?? 'none'})${env.tail ? `: ${env.tail}` : ''}`;
@@ -155,6 +163,9 @@ export function draftFromMxcliRun(env: MxcliRunEnvelope, junit: string | undefin
     actor: { kind: 'office', name: env.actor },
     environment: env.environment,
     exitCode: env.exitCode,
+    ...(env.subset ? { subset: env.subset } : {}),
+    ...(env.limit ? { limit: env.limit } : {}),
+    ...(env.logLocator ? { log: `office:${env.logLocator}` } : {}),
     ...(harnessError ? { harnessError: harnessError.slice(0, 600) } : {}),
     importer: `${IMPORTER_VERSION}+junit/1`,
   };

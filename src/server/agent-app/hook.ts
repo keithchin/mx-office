@@ -7,8 +7,9 @@
 //   POST /office/app/stop
 //   POST /office/app/journey {journey | file+text}   a journey on it, recorded against its commit
 //   POST /office/app/smoke {paths, as}  a smoke click-through on it, recorded against its commit
-//   POST /office/app/test {commit}      the microflow tests at that commit (testing/mxcli-office.ts), JUnit recorded there
-//   GET  /office/app/test               that run's state, and its record once it's in
+//   POST /office/app/test {commit, files, tags}  the microflow tests at that commit (testing/mxcli-office.ts), JUnit recorded
+//                                       there; files / tags: only those test files, or the ones with that @tag (release 82)
+//   GET  /office/app/test               that run's state (its progress while it runs), and its record once it's in
 //   POST /office/app/check {name, result, detail, shots, commit}   a check it ran itself, recorded at the commit as reported by it (./checks.ts)
 
 import type http from 'node:http';
@@ -24,6 +25,7 @@ import { runJourney, runSmoke } from './journey.js';
 import { raiseForPm } from './raise.js';
 import { recordAgentCheck } from './checks.js';
 import { testBlocker } from '../../shared/testing/test-reason.js';
+import { cleanSubset, isSubset, subsetWords } from '../../shared/testing/test-files.js';
 
 const ACTIONS = ['', '/start', '/stop', '/journey', '/smoke', '/test', '/check'];
 
@@ -108,10 +110,12 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
   // /test: the microflow tests at a commit, through the office's own runner.
   const commit = await resolve(str(body.commit, 200));
   if (!commit) return send(res, 400, { error: `The project's repository has no commit ${String(body.commit ?? 'main')}` });
-  const r = await startMicroflowTests(ctx.cfg.dataDir, floor, { name: me.name, agentId: me.id, commit }, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, me.id, ask); } });
+  const subset = cleanSubset(body.files, body.tags);
+  if (typeof subset === 'string') return send(res, 400, { error: subset });
+  const r = await startMicroflowTests(ctx.cfg.dataDir, floor, { name: me.name, agentId: me.id, commit, subset }, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, me.id, ask); } });
   if (typeof r === 'string') return send(res, 409, { error: r });
   void r.done.catch(() => undefined);
-  return send(res, 200, { started: r.commit, line: `Microflow tests started at ${r.commit.slice(0, 7)} in the office's work folder: office-app test --wait (or GET /office/app/test) says when they're done` });
+  return send(res, 200, { started: r.commit, ...(isSubset(subset) ? { subset } : {}), line: `Microflow tests started at ${r.commit.slice(0, 7)}${isSubset(subset) ? ` (${subsetWords(subset)})` : ''} in the office's work folder: office-app test --wait (or GET /office/app/test) says how far they are and when they're done` });
 }
 
 /** The project's microflow test run, and its record's results once it's in. */
@@ -119,5 +123,5 @@ async function testState(ctx: Ctx, floorId: string) {
   const run = testRunOf(floorId);
   const rec = run.record ? (await testingStore(ctx.cfg.dataDir, floorId).all()).find((r) => r.id === run.record) : undefined;
   const results = rec?.results.map((t) => ({ name: t.name, status: t.status, ...(t.harness ? { harness: true } : {}), ...(t.detail ? { detail: t.detail.slice(0, 300) } : {}) }));
-  return { run, ...(rec ? { record: { id: rec.id, commit: rec.testedRevision, ...(rec.harnessError ? { harnessError: rec.harnessError } : {}), results } } : {}) };
+  return { run, ...(rec ? { record: { id: rec.id, commit: rec.testedRevision, ...(rec.harnessError ? { harnessError: rec.harnessError } : {}), ...(rec.subset ? { subset: rec.subset } : {}), ...(rec.limit ? { limit: rec.limit } : {}), results } } : {}) };
 }

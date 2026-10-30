@@ -13,6 +13,7 @@
 import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileOffP, type OffError } from '../offloop/exec.js';
+import { readTestFile, type TestFile } from '../../shared/testing/test-files.js';
 
 const GIT_ENV = { GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
 
@@ -95,5 +96,37 @@ export async function checkoutAt(floorDir: string, sha: string, dir: string, dat
     throw err;
   } finally {
     await rm(`${dir}.index`, { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * The microflow test files at commit `sha` with their tests and tags, read from the project's git objects (no
+ * checkout): for refusing a subset that names no file before a run starts (release 82). [] when git can't say.
+ */
+export async function testFilesAt(floorDir: string, sha: string): Promise<TestFile[]> {
+  try {
+    const paths = testPathsIn((await git(floorDir, ['ls-tree', '-r', '--name-only', '-z', sha])).split('\0').filter(Boolean));
+    if (!paths.length) return [];
+    const { stdout } = await execFileOffP('git', ['-C', floorDir, 'cat-file', '--batch'], { input: paths.map((p) => `${sha}:${p}\n`).join(''), timeout: 60_000, maxBuffer: 64 * 1024 * 1024, windowsHide: true, env: { ...process.env, ...GIT_ENV } });
+    // Each object: "<oid> blob <size>\n<content>\n"; sizes are bytes, so the text is cut as UTF-8.
+    const buf = Buffer.from(stdout, 'utf8');
+    const out: TestFile[] = [];
+    let at = 0;
+    for (const p of paths) {
+      const nl = buf.indexOf(10, at);
+      if (nl < 0) break;
+      const head = buf.subarray(at, nl).toString('utf8').split(' ');
+      const size = Number(head[2]);
+      if (head[1] !== 'blob' || !Number.isFinite(size)) {
+        at = nl + 1;
+        out.push(readTestFile(p, ''));
+        continue;
+      }
+      out.push(readTestFile(p, buf.subarray(nl + 1, nl + 1 + size).toString('utf8')));
+      at = nl + 1 + size + 1;
+    }
+    return out;
+  } catch {
+    return [];
   }
 }

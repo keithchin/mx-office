@@ -37,15 +37,21 @@ export const APP_USAGE = `  office-app start [--commit <sha|main|HEAD>] [--const
                                                 record a check you ran yourself (a measurement, your own
                                                 script, screenshots) at your instance's commit, labelled
                                                 as reported by you: it shows in the change's Checks
-  office-app test [--commit <sha|main|HEAD>] [--no-wait]
+  office-app test [--commit <sha|main|HEAD>] [--files a.test.mdl,b.test.mdl] [--tag <tag>]... [--no-wait]
                                                 the microflow tests (tests/*.test.mdl) at that commit, run
                                                 by the office (mxcli's built-in database, no superuser);
-                                                the JUnit result is recorded at that commit
+                                                the JUnit result is recorded at that commit. --files: only
+                                                those test files (path or file name); --tag: the files
+                                                with that @tag in a comment block. Shows progress while
+                                                it waits; a run stopped at the project's time limit keeps
+                                                what passed or failed and says which tests never ran
   office-app stop                               stop your instance (its processes and database go)`;
 
 const ENV = ['AGENT_OFFICE_HOOK_URL', 'AGENT_OFFICE_WORKER_ID', 'AGENT_OFFICE_HOOK_TOKEN'];
 const START_WAIT_MS = 15 * 60_000;
-const TEST_WAIT_MS = 25 * 60_000;
+/** How long office-app test waits past the run's own time limit (the office says it once the run has started). */
+const TEST_WAIT_PAST_LIMIT_MS = 10 * 60_000;
+const TEST_WAIT_DEFAULT_MS = 60 * 60_000;
 const POLL_MS = 5_000;
 
 export class AppUsageError extends Error {}
@@ -78,6 +84,8 @@ export function parseApp(argv) {
     else if (flag === '--result') out.result = val();
     else if (flag === '--detail') out.detail = val();
     else if (flag === '--shot') (out.shots ??= []).push(val());
+    else if (flag === '--files') (out.files ??= []).push(...val().split(',').map((x) => x.trim()).filter(Boolean));
+    else if (flag === '--tag' || flag === '--tags') (out.tags ??= []).push(...val().split(',').map((x) => x.trim()).filter(Boolean));
     else if (flag === '--const' || flag === '--constant') {
       // --const Module.Name=value: the value may hold '=' itself, so only the flag's own '=' is split off.
       const v = a.startsWith(`${flag}=`) ? a.slice(flag.length + 1) : i + 1 < rest.length ? rest[++i] : '';
@@ -89,6 +97,7 @@ export function parseApp(argv) {
   }
   if (!['start', 'status', 'stop', 'journey', 'smoke', 'test', 'check'].includes(cmd)) throw new AppUsageError(`Unknown command: ${cmd}`);
   if (out.constants && cmd !== 'start') throw new AppUsageError('--const is for office-app start');
+  if ((out.files || out.tags) && cmd !== 'test') throw new AppUsageError('--files and --tag are for office-app test');
   if (cmd === 'check' && (!out.name || !['passed', 'failed'].includes(out.result))) throw new AppUsageError('check needs --name "<what you checked>" and --result passed|failed');
   if (cmd === 'journey') {
     if (!out.file && words.length !== 1) throw new AppUsageError('journey takes one journey: its id (J-12), its path in the repository, or a file of yours');
@@ -155,25 +164,32 @@ async function startApp(commit, wait, io, say = () => {}, constants) {
   return a;
 }
 
-/** Starts the microflow tests and, with `wait`, polls until that run's record is in. */
-async function runTests(commit, wait, io, say = () => {}) {
-  const s = await appCall('/test', { commit }, io);
+/** Starts the microflow tests (all, or a subset: { files, tags }) and, with `wait`, polls until that run's record is in, saying its progress as it changes. */
+async function runTests(commit, wait, io, say = () => {}, subset = {}) {
+  const s = await appCall('/test', { commit, ...(subset.files?.length ? { files: subset.files } : {}), ...(subset.tags?.length ? { tags: subset.tags } : {}) }, io);
   say(s.line);
   if (!wait) return { started: s.started, words: s.line, ok: true };
-  const until = Date.now() + TEST_WAIT_MS;
+  const t0 = Date.now();
+  let until = t0 + TEST_WAIT_DEFAULT_MS;
+  let said = '';
   for (;;) {
-    await sleep(POLL_MS);
+    await sleep(io.pollMs ?? POLL_MS);
     const t = await appCall('/test', undefined, io);
+    if (t.run?.running && t.run?.limitMinutes) until = t0 + t.run.limitMinutes * 60_000 + TEST_WAIT_PAST_LIMIT_MS;
+    if (t.run?.running && t.run.progress && t.run.progress !== said) say((said = t.run.progress));
     if (!t.run?.running && t.run?.commit === s.started) {
       const r = t.record;
       if (!r) return { words: t.run.last ?? 'The run ended without a record', ok: false, state: t };
       const failed = (r.results ?? []).filter((x) => x.status === 'failed');
       const lines = [`Microflow tests @${String(r.commit).slice(0, 7)}: ${t.run.last ?? ''} (record ${r.id})`];
-      if (r.harnessError) lines.push(`  did not run: ${r.harnessError}`);
-      for (const x of r.results ?? []) if (x.status !== 'passed') lines.push(`  ${x.harness ? 'harness error' : x.status}: ${x.name}${x.detail ? ` — ${x.detail}` : ''}`);
+      if (r.subset) lines.push(`  subset: ${r.subset.paths.join(', ')}`);
+      if (r.harnessError) lines.push(`  did not complete: ${r.harnessError}`);
+      const never = (r.results ?? []).filter((x) => x.status === 'skipped' && /^never ran/.test(x.detail ?? ''));
+      for (const x of r.results ?? []) if (x.status !== 'passed' && !never.includes(x)) lines.push(`  ${x.harness ? 'harness error' : x.status}: ${x.name}${x.detail ? ` — ${x.detail}` : ''}`);
+      if (never.length) lines.push(`  never ran (${never.length}): ${never.map((x) => x.name).slice(0, 30).join(', ')}${never.length > 30 ? ', ...' : ''}`);
       return { words: lines.join('\n'), ok: !r.harnessError && !failed.length && (r.results ?? []).length > 0, state: t };
     }
-    if (Date.now() > until) return { words: `Still running after ${TEST_WAIT_MS / 60_000} min: office-app test --no-wait, then GET status later`, ok: false };
+    if (Date.now() > until) return { words: `Still running after ${Math.round((Date.now() - t0) / 60_000)} min: office-app test --no-wait, then GET status later`, ok: false };
   }
 }
 
@@ -244,8 +260,18 @@ export const APP_TOOLS = [
   {
     name: 'app_test',
     title: 'Run the microflow tests at a commit',
-    description: "Runs the project's microflow tests (tests/*.test.mdl) at a commit, by the office in its own work folder with its test database (no superuser for anyone), and waits for the result; the JUnit result is recorded at that commit. When they can't run it says exactly why. Use this instead of `mxcli test --local` in your worktree.",
-    inputSchema: { type: 'object', properties: { commit: { type: 'string', description: "A commit sha or 'main'." }, wait: { type: 'boolean', description: 'Wait for the result (default true).' } }, required: ['commit'], additionalProperties: false },
+    description: "Runs the project's microflow tests (tests/*.test.mdl) at a commit, by the office in its own work folder with its test database (no superuser for anyone), and waits for the result; the JUnit result is recorded at that commit. All test files, or a subset (files, tags). A run stopped at the project's time limit keeps what passed or failed and lists the tests that never ran. When they can't run it says exactly why. Use this instead of `mxcli test --local` in your worktree.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        commit: { type: 'string', description: "A commit sha or 'main'." },
+        wait: { type: 'boolean', description: 'Wait for the result (default true).' },
+        files: { type: 'array', items: { type: 'string' }, description: "Only these test files: a path in the repository ('tests/loans.test.mdl') or a file name ('loans.test.mdl')." },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Only the test files that carry one of these tags (an @tag line in a comment block of the file).' },
+      },
+      required: ['commit'],
+      additionalProperties: false,
+    },
     annotations: { destructiveHint: false, openWorldHint: false },
   },
 ];
@@ -278,7 +304,7 @@ export async function runAppTool(name, args, io) {
     return { text: r.line };
   }
   if (name === 'app_test') {
-    const r = await runTests(revOf(a.commit, cwd).commit, a.wait !== false, io);
+    const r = await runTests(revOf(a.commit, cwd).commit, a.wait !== false, io, undefined, { files: Array.isArray(a.files) ? a.files : undefined, tags: Array.isArray(a.tags) ? a.tags : undefined });
     return { text: r.words, isError: !r.ok };
   }
   throw new Error(`Unknown tool: ${name}`);
@@ -289,7 +315,7 @@ export async function appMain(argv, io = {}) {
   const env = io.env ?? process.env;
   const out = io.out ?? ((s) => process.stdout.write(`${s}\n`));
   const err = io.err ?? ((s) => process.stderr.write(`${s}\n`));
-  const ctx = { env, fetch: io.fetch ?? fetch, cwd: io.cwd ?? process.cwd() };
+  const ctx = { env, fetch: io.fetch ?? fetch, cwd: io.cwd ?? process.cwd(), ...(io.pollMs ? { pollMs: io.pollMs } : {}) };
   try {
     const cmd = parseApp(argv);
     if (cmd.cmd === 'help') {
@@ -312,7 +338,7 @@ export async function appMain(argv, io = {}) {
     if (cmd.cmd === 'test') {
       const rev = revOf(cmd.commit, ctx.cwd);
       if (rev.note) err(rev.note);
-      const r = await runTests(rev.commit, cmd.wait, ctx, cmd.json ? undefined : err);
+      const r = await runTests(rev.commit, cmd.wait, ctx, cmd.json ? undefined : err, { files: cmd.files, tags: cmd.tags });
       out(cmd.json ? JSON.stringify(r.state ?? r, null, 2) : r.words);
       return r.ok ? 0 : 1;
     }

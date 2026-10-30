@@ -8,6 +8,8 @@
 //     process tree: children by parent id, started after it) is stopped;
 //   - before a folder is used again, a run recorded there that is past its time is stopped the same way (an
 //     office restart lost the timer), and one still within its time is said in plain words, not git's;
+//   - release 82: the run answers when mxcli itself ends (not when the last holder of its output does), and soon
+//     after its results are in; at the time limit the root goes first, then its tree (stopTree);
 //   - only processes the office recorded as its own are ever stopped: the recorded pid (when its start time
 //     matches) and processes started after it whose parent chain leads to it.
 
@@ -96,11 +98,22 @@ export function treeOf(procs: readonly Proc[], o: Pick<Owner, 'pid' | 'startedAt
   return out;
 }
 
-/** Stops a recorded run's tree (children first); the pids it stopped. */
+/**
+ * Stops a recorded run's tree; the pids it stopped. The root goes first (release 82): stopped children-first, a
+ * mxcli whose child was killed under it went on to its own clean-up (printing "Cleaning up..." as its last words,
+ * which read as a hang there) and started new children nobody had listed. Then everything it had started, and a
+ * second look for whatever it started meanwhile.
+ */
 export async function stopTree(o: Pick<Owner, 'pid' | 'startedAt'>, d: GuardDeps = {}): Promise<number[]> {
+  const kill = d.kill ?? killPid;
   const tree = treeOf(await (d.list ?? listProcs)(), o);
-  for (const pid of [...tree].reverse()) await (d.kill ?? killPid)(pid);
-  return tree;
+  if (!tree.length) return [];
+  const rootFirst = tree[0] === o.pid;
+  if (rootFirst) await kill(o.pid);
+  for (const pid of tree.slice(rootFirst ? 1 : 0).reverse()) await kill(pid);
+  const late = treeOf(await (d.list ?? listProcs)(), o).filter((p) => !tree.includes(p));
+  for (const pid of late.reverse()) await kill(pid);
+  return [...tree, ...late];
 }
 
 const queues = new Map<string, Promise<unknown>>();
@@ -128,7 +141,7 @@ export async function freeFolder(dir: string, d: GuardDeps = {}): Promise<string
   const tree = treeOf(await (d.list ?? listProcs)(), o);
   if (!tree.length) return void (await clearOwner(dir));
   if (now < o.deadline) return `a previous run still holds the work folder (${o.program}, started at ${hhmm(o.startedAt)}, may run until ${hhmm(o.deadline)}): try again after that`;
-  for (const pid of [...tree].reverse()) await (d.kill ?? killPid)(pid);
+  await stopTree(o, d);
   await clearOwner(dir);
   return undefined;
 }
@@ -153,12 +166,27 @@ export function heldWords(message: string): string {
   return message;
 }
 
+/** What a run started by runMxOwned is told about and asked (release 82). */
+export interface RunHooks {
+  /** Each line mxcli prints, as it prints it. */
+  onLine?(line: string, stream: 'stdout' | 'stderr'): void;
+  /** Whether the results are in (mxcli said it wrote the JUnit file): asked after each line. */
+  resultsIn?(): boolean;
+  /** How long mxcli may take to end once its results are in, before its tree is stopped (default 30 s). */
+  graceMs?: number;
+  /** How long its output may stay open once mxcli itself has ended (a child holding it), before the tree is stopped (default 5 s). */
+  drainMs?: number;
+}
+
 /**
  * mxcli started by the office in work folder `dir` (runMx's answer: exit code, output, stopped, never started):
  * its pid and start recorded beside the folder; at the timeout its whole tree is stopped, and once it ends,
- * whatever it started that still runs.
+ * whatever it started that still runs. It answers when mxcli itself ends (its 'exit'), not only when its output
+ * closes: a runtime or mxbuild it left behind inherits that output and kept the run waiting for the time limit
+ * (release 82). And once the results are in (`hooks.resultsIn`), mxcli gets `graceMs` to end before its tree is
+ * stopped and the run answers with them (`lingered`).
  */
-export async function runMxOwned(dir: string, bin: string, args: string[], cwd: string, timeout: number, extraEnv: Record<string, string> = {}, d: GuardDeps = {}): Promise<MxOut> {
+export async function runMxOwned(dir: string, bin: string, args: string[], cwd: string, timeout: number, extraEnv: Record<string, string> = {}, d: GuardDeps = {}, hooks: RunHooks = {}): Promise<MxOut> {
   const now = d.now ?? Date.now;
   const t0 = now();
   const max = 64 * 1024 * 1024;
@@ -167,36 +195,77 @@ export async function runMxOwned(dir: string, bin: string, args: string[], cwd: 
     let stdout = '';
     let stderr = '';
     let killed = false;
+    let lingered = false;
     let startError: string | undefined;
     let owner: Owner | undefined;
-    child.on('spawn', () => {
-      if (child.pid === undefined) return;
-      owner = { pid: child.pid, startedAt: now(), deadline: now() + timeout, program: bin.split(/[\\/]/).pop() ?? 'mxcli' };
-      void writeOwner(dir, owner);
-    });
-    child.on('stdout', (s: string) => void (stdout.length < max && (stdout += s)));
-    child.on('stderr', (s: string) => void (stderr.length < max && (stderr += s)));
-    child.on('error', (e: Error & { code?: string }) => {
-      if (!owner) startError = `${e.code ?? ''} ${e.message}`.trim();
-    });
-    const timer = setTimeout(() => {
-      killed = true;
-      // The whole tree, not just mxcli: its mxbuild and runtime would otherwise keep the folder's files open.
-      void (owner ? stopTree(owner, d) : Promise.resolve([])).finally(() => child.kill('SIGKILL'));
-    }, timeout);
-    (timer as { unref?: () => void }).unref?.();
-    child.on('close', (code: number | null) => {
-      clearTimeout(timer);
-      const done = async () => {
+    let exitCode: number | null | undefined;
+    let finished = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (ms: number, fn: () => void) => {
+      const t = setTimeout(fn, ms);
+      (t as { unref?: () => void }).unref?.();
+      timers.push(t);
+    };
+    const finish = (code: number | null) => {
+      if (finished) return;
+      finished = true;
+      for (const t of timers) clearTimeout(t);
+      void (async () => {
         // Whatever it started that outlived it (a runtime, mxbuild): stopped now, as the office's own.
         if (owner) await stopTree({ pid: owner.pid, startedAt: owner.startedAt }, d).catch(() => undefined);
         await clearOwner(dir);
         const ms = now() - t0;
         if (startError) resolve({ code: null, stdout, stderr, startError, ms });
-        else if (killed) resolve({ code: code ?? null, stdout, stderr, killed: true, ms });
-        else resolve({ code: code ?? null, stdout, stderr, ms });
-      };
-      void done();
+        else if (killed) resolve({ code, stdout, stderr, killed: true, ms });
+        else resolve({ code, stdout, stderr, ms, ...(lingered ? { lingered: true } : {}) });
+      })();
+    };
+    const partial = { stdout: '', stderr: '' };
+    let graceStarted = false;
+    const take = (stream: 'stdout' | 'stderr', s: string) => {
+      if (stream === 'stdout') stdout.length < max && (stdout += s);
+      else stderr.length < max && (stderr += s);
+      if (!hooks.onLine && !hooks.resultsIn) return;
+      const lines = (partial[stream] + s).split('\n');
+      partial[stream] = lines.pop() ?? '';
+      for (const l of lines) hooks.onLine?.(l.replace(/\r$/, ''), stream);
+      if (!graceStarted && hooks.resultsIn?.()) {
+        graceStarted = true;
+        // The results are in: mxcli has nothing left the office needs, so it isn't waited on for long.
+        later(hooks.graceMs ?? 30_000, () => {
+          lingered = true;
+          finish(exitCode ?? null);
+        });
+      }
+    };
+    child.on('spawn', () => {
+      if (child.pid === undefined) return;
+      owner = { pid: child.pid, startedAt: now(), deadline: now() + timeout, program: bin.split(/[\\/]/).pop() ?? 'mxcli' };
+      void writeOwner(dir, owner);
+    });
+    child.on('stdout', (s: string) => take('stdout', s));
+    child.on('stderr', (s: string) => take('stderr', s));
+    child.on('error', (e: Error & { code?: string }) => {
+      if (!owner) startError = `${e.code ?? ''} ${e.message}`.trim();
+    });
+    later(timeout, () => {
+      killed = true;
+      // The whole tree, root first (stopTree): its mxbuild and runtime would otherwise keep the folder's files open.
+      void (owner ? stopTree(owner, d) : Promise.resolve([])).finally(() => {
+        child.kill('SIGKILL');
+        // Its output may never close (a child nobody could stop holds it): answer anyway.
+        later(10_000, () => finish(exitCode ?? null));
+      });
+    });
+    child.on('exit', (code: number | null) => {
+      exitCode = code ?? null;
+      // mxcli ended; its output closes unless something it started still holds it. Give the output a moment, not the time limit.
+      later(hooks.drainMs ?? 5_000, () => finish(exitCode ?? null));
+    });
+    child.on('close', (code: number | null) => {
+      for (const st of ['stdout', 'stderr'] as const) if (partial[st]) hooks.onLine?.(partial[st], st);
+      partial.stdout = partial.stderr = '';
+      finish(code ?? exitCode ?? null);
     });
   });
 }
