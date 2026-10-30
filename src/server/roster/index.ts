@@ -29,6 +29,7 @@ import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { BackToWork } from './back-to-work.js';
 import { Interrupts } from './interrupts.js';
+import { AutoHandoff } from './handoff.js';
 import { Awareness } from './awareness.js';
 import { Tasks } from './resume.js';
 import { setFloorPause } from './pause.js';
@@ -66,6 +67,8 @@ export class Roster {
   readonly tasks: Tasks;
   readonly backToWork: BackToWork;
   readonly interrupts: Interrupts;
+  /** The build plan's next rows handed to a Lead whose batch is done (handoff.ts). */
+  readonly handoff: AutoHandoff;
   /** What agents are told of the project's run state after a pause and resume (awareness.ts). */
   readonly awareness: Awareness;
   /** Whether the debounces run on timers (the tests drive them by hand instead). */
@@ -101,6 +104,7 @@ export class Roster {
     this.tasks = new Tasks(this);
     this.backToWork = new BackToWork(this, this.timers);
     this.interrupts = new Interrupts(this);
+    this.handoff = new AutoHandoff(this, this.timers);
     this.awareness = new Awareness(this);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
@@ -243,6 +247,7 @@ export class Roster {
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
     this.backToWork.onWorker(floor, role, w);
+    this.handoff.onWorker(floor, role, w);
     this.subagents.onMember(floor, role, now);
     // Whoever covers Management hears the relays (the Coordinator on an Enterprise team); every Lead its notes.
     if (role === managerRole(d)) this.escalations.onCoordinator(floor, w);

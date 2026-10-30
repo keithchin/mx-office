@@ -37,6 +37,7 @@ import { portfoliosOf } from '../portfolios/index.js';
 import { profileHooksOf } from '../profiles/index.js';
 import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
+import { buildPlanOf } from './build-plan-source.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 /** The key a terminal's Enter sends. */
@@ -176,6 +177,8 @@ export function rosterOf(ctx: Ctx): Roster {
       hireContext: (id) => withLocalOnlyLine(portfoliosOf(ctx).hireContext(id), ctx.floors.get(id)?.dir),
       // Agent profiles: office-wide identities for the seats, and the moves between projects (profiles/).
       profiles: profileHooksOf(ctx),
+      // The build plan and its done rows, for handing a Lead its next rows (handoff.ts).
+      buildPlan: (tf, branch) => buildPlanOf(tf.dir, ctx.floors.get(tf.id)?.github.pulls.items ?? [], branch),
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {
