@@ -20,6 +20,7 @@ import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } 
 import { forgetSubagents } from '../workers/subagents.js';
 import { backgroundOf, backgroundOpen, forgetBackground, resetBackground } from '../workers/background-work.js';
 import { forgetLastWords } from '../judge/turns.js';
+import { forgetPulse, pulseOf } from '../workers/pulse.js';
 import { Delivery } from './deliver.js';
 import { Escalations } from './escalations.js';
 import { excerpt, readJournalSoon } from './journal-io.js';
@@ -265,6 +266,7 @@ export class Roster {
     this.delivery.forget(floor, workerId);
     forgetSubagents(workerId);
     forgetBackground(workerId);
+    forgetPulse(workerId);
     this.subagents.live.forget(workerId);
     forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
@@ -423,6 +425,8 @@ export class Roster {
         ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),
         // What it left running after its turn (a Monitor, a background command): "Waiting on background work".
         ...(bg.length ? { background: bg } : {}),
+        // Seen at work lately (its terminal, a hook, a commit) while its status says otherwise: shown as active (workers/pulse.ts).
+        ...(w && status !== 'working' && status !== 'benching' && pulseOf(w.id, now) ? { recent: pulseOf(w.id, now) } : {}),
       };
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);

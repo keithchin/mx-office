@@ -11,6 +11,7 @@ import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
 import { noteSubagentDispatch, noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import { noteCommandRun } from '../workers/tool-runs.js';
+import { notePulse } from '../workers/pulse.js';
 import { noteBackgroundHook } from '../workers/background-work.js';
 import { noteDispatch } from '../chatter/bus.js';
 import { noteTranscript } from '../convo/index.js';
@@ -186,6 +187,7 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
     case 'PreToolUse':
       if (payload?.tool_name === 'AskUserQuestion') h.setStatus('needs_input');
       else {
+        notePulse(info.id, 'tool', now);
         info.activity = describeTool(payload);
         info.action = toolAction(payload?.tool_name, payload?.tool_input);
         // A subagent dispatched: the team chatter has who asked it what (chatter/bus.ts).
@@ -199,6 +201,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
       break;
     case 'PostToolUse':
     case 'PostToolUseFailure':
+      // A tool call came back (its own or a subagent's): a sign of work, whatever its status says (workers/pulse.ts).
+      notePulse(info.id, 'tool', now);
       noteOutcome(h, payload, event === 'PostToolUseFailure');
       // A subagent came back: its Lead has a result to review (roster/nudge.ts).
       noteSubagentHook(info.id, payload, event === 'PostToolUseFailure', now);

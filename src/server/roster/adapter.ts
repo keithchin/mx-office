@@ -25,6 +25,7 @@ import { subagentBusyMoved } from './subagent-busy.js';
 import { holdSeat, seatOf } from './git-identity.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { onCommandRun } from '../workers/tool-runs.js';
+import { COMMIT_COMMAND, notePulse, onPulseFlip } from '../workers/pulse.js';
 import { onBackgroundChange } from '../workers/background-work.js';
 import { sawCommandRun } from './escalation-fold.js';
 import { notedTranscript } from '../convo/index.js';
@@ -187,8 +188,14 @@ export function rosterOf(ctx: Ctx): Roster {
       const floor = ctx.workerFloor(workerId);
       if (floor) teamFloor(ctx, floor).changed();
     });
-    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts).
+    // A worker went active or quiet by its pulse (workers/pulse.ts): the roster's working/idle and the floors' counts follow.
+    onPulseFlip((workerId) => {
+      const floor = ctx.workerFloor(workerId);
+      if (floor && roster.isMember(floor.id, workerId)) teamFloor(ctx, floor).changed();
+    });
+    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts); a commit is a pulse.
     onCommandRun((workerId, command) => {
+      if (COMMIT_COMMAND.test(command)) notePulse(workerId, 'commit');
       const floor = ctx.workerFloor(workerId);
       if (floor) sawCommandRun(roster, teamFloor(ctx, floor), workerId, command);
     });

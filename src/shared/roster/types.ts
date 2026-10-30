@@ -106,6 +106,11 @@ export interface MemberView {
   waitingOnPm?: boolean;
   /** Its background work still shown: Monitors and background commands, running or of unknown status (shared/roster/background-work.ts). */
   background?: BgItem[];
+  /**
+   * Seen at work in the last minute or two (its terminal printed, a hook fired, it committed: server/workers/pulse.ts)
+   * while its status says idle or asleep: the team view shows it as active, not idle (shared/roster/activity.ts).
+   */
+  recent?: { via: 'output' | 'tool' | 'commit'; at: number };
   /** Its agent profile's id (shared/profiles.ts), once it has one. */
   profileId?: string;
 }

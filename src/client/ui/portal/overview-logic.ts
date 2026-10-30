@@ -7,6 +7,7 @@
 import { VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
 import { environmentWords, type CloudEnvironments } from '../../../shared/team-server';
 import { WAITING_BG } from '../../../shared/roster/background-work';
+import { ACTIVE_WORD, activeLine, type RecentVia } from '../../../shared/roster/activity';
 import type { UnknownReason } from '../../../shared/business-status';
 
 export interface TeamFace {
@@ -168,6 +169,8 @@ export interface TeamMemberLike {
   activity?: string;
   task?: string;
   waitingOnPm?: boolean;
+  /** Seen at work lately while its status lags (shared/roster/activity.ts). */
+  recent?: { via: RecentVia; at: number };
 }
 
 export interface TeamRowView {
@@ -215,8 +218,10 @@ export function teamRows(members: readonly TeamMemberLike[], leadRole: string, l
     // …or a Monitor or a background command it left running. Asleep, its session (and what ran in it) is over.
     const waits = bg(m.role) > 0 && dot === 'idle';
     const via = !waits && subs(m.role) > 0 && free;
-    const [shownDot, shownStatus]: [TeamDot, string] = waits ? ['work', WAITING_BG] : via ? ['work', VIA_SUBAGENT] : [dot, status];
-    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : waits ? 'Its turn is over; Claude Code wakes it when its background work reports' : via ? 'Waiting on its subagent' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
+    // …or its terminal, hooks or commits show it at work lately while its status lags (server/workers/pulse.ts).
+    const pulse = !waits && !via && free && m.status !== 'benched' && m.recent ? m.recent : undefined;
+    const [shownDot, shownStatus]: [TeamDot, string] = waits ? ['work', WAITING_BG] : via ? ['work', VIA_SUBAGENT] : pulse ? ['work', ACTIVE_WORD[pulse.via]] : [dot, status];
+    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : waits ? 'Its turn is over; Claude Code wakes it when its background work reports' : via ? 'Waiting on its subagent' : pulse ? activeLine(pulse, Date.now()) : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
     rows.push({ role: m.role, name: m.name, title: m.title, what, dot: shownDot, status: shownStatus, workerId: m.workerId, lead: m.role === leadRole });
   }
   return rows.sort((a, b) => Number(b.lead) - Number(a.lead));
