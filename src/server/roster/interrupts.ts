@@ -16,6 +16,8 @@ import { sendAsAnswer } from './dispatch-send.js';
 import type { TaskSource } from '../../shared/tasks.js';
 import { dispatchTaskOf, type Prepared } from './task-ids.js';
 import { EMPTY_TELL, isEmptyTell } from '../../shared/tell-text.js';
+import { ROLE_BY_ID } from '../../shared/roster/roles.js';
+import { noteDelivery } from './delivery-log.js';
 
 /** How long after the Project Manager's question the Coordinator's relays of it follow their choices. */
 export const FANOUT_MS = 30 * 60_000;
@@ -28,14 +30,22 @@ export class Interrupts {
   /**
    * The Project Manager's prompt to whoever covers Management: typed now (`now`; held only if a
    * question is open in its terminal) or after its turn (`after`). `leads`: how its relays to busy Leads go.
+   * `to`: another member, addressed directly from the docked chat (release 82: relays through the Coordinator
+   * were logged as delivered when they weren't); the Coordinator stays the default. Every message's delivery is
+   * recorded per recipient (delivery-log.ts) for the chat to show.
    */
-  async tell(floor: TeamFloor, text: string, by: string, when: 'now' | 'after', leads: Partial<Record<RoleId, InterruptChoice>> = {}, owner?: string, decision = 'tell:lead', source?: TaskSource): Promise<string | undefined> {
+  async tell(floor: TeamFloor, text: string, by: string, when: 'now' | 'after', leads: Partial<Record<RoleId, InterruptChoice>> = {}, owner?: string, decision = 'tell:lead', source?: TaskSource, to?: RoleId): Promise<string | undefined> {
     const said = text.replace(/\r\n?/g, '\n').trim().slice(0, 20_000);
     if (isEmptyTell(said)) return EMPTY_TELL;
     const d = this.roster.data(floor.id);
-    const m = d.members[managerRole(d)];
+    const manager = managerRole(d);
+    const role = to && d.members[to] ? to : manager;
+    const direct = role !== manager;
+    if (direct && decision === 'tell:lead') decision = `tell:${role}`;
+    const m = d.members[role];
     const w = this.roster.workerOf(floor, m);
     if (!w || m.phase !== 'active') return `${m.name} isn't at work`;
+    const log = noteDelivery(floor.id, { at: this.roster.deps.now(), from: by, via: 'person', to: { name: m.name, role: ROLE_BY_ID.get(role)?.title, workerId: w.id }, excerpt: said }, () => floor.changed());
     // Work asked for is a task with its id (Slice 1B-4): a stuck item's ask, a decision card's. The lead panel's
     // quick questions ("a short status update") stay what they were: never the Coordinator's task.
     const from: TaskSource | undefined = source ?? (decision.startsWith('stuck:') ? 'stuck' : undefined);
@@ -46,15 +56,20 @@ export class Interrupts {
     const task = dispatchTaskOf(prep.task);
     // With the run state before it as it is when it's typed (awareness.ts): answered from that, never from an old "paused".
     // A durable dispatch (dispatch-send.ts): the words appended to the answer store under `decision`, the intent (with the task's ids) on disk before typing.
-    const { result, sent } = await sendAsAnswer(this.roster, floor, w, prompt, { origin: 'person', by, wake: true, hold: true, facts: true, ...(when === 'after' ? { between: true } : {}) }, { decision, by, ...(task ? { task } : {}) });
-    if (!result.ok) return result.error;
+    const { result, sent } = await sendAsAnswer(this.roster, floor, w, prompt, { origin: 'person', by, wake: true, hold: true, facts: true, onSent: () => log.typed(), ...(when === 'after' ? { between: true } : {}) }, { decision, by, ...(task ? { task } : {}) });
+    if (!result.ok) {
+      log.settle(undefined, result.error);
+      return result.error;
+    }
     const r = sent ?? { status: 'refused' as const, why: 'not sent' };
+    log.settle(r);
     if (r.status === 'refused') return r.why;
     if (from) this.roster.tasks.assign(floor, w.id, prompt, by, from, prep.task?.executionId);
-    if (Object.keys(leads).length) this.fanout.set(floor.id, { until: this.roster.deps.now() + FANOUT_MS, choices: leads });
-    else this.fanout.delete(floor.id);
+    // Straight to a Lead: there's no relay through the Coordinator to time.
+    if (!direct && Object.keys(leads).length) this.fanout.set(floor.id, { until: this.roster.deps.now() + FANOUT_MS, choices: leads });
+    else if (!direct) this.fanout.delete(floor.id);
     // The same record a prompt typed on the console makes (ws/handlers/workers.ts).
-    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.prompt', target: { kind: 'worker', id: w.id, label: m.name }, summary: `Prompted ${m.name}${r.status === 'held' ? ' (after its current turn)' : ''}`, details: { ...promptDetails(prompt), when, ...(Object.keys(leads).length ? { leads } : {}) } });
+    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.prompt', target: { kind: 'worker', id: w.id, label: m.name }, summary: `Prompted ${m.name}${r.status === 'held' ? ' (after its current turn)' : ''}`, details: { ...promptDetails(prompt), when, ...(direct ? { direct: role } : {}), ...(Object.keys(leads).length ? { leads } : {}) } });
     return undefined;
   }
 

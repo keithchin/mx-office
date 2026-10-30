@@ -17,3 +17,6 @@ export function safeEq(a: string, b: string) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
+
+/** A worker's pulse (./pulse.ts), here so the manager's one import line carries it. */
+export { notePulse } from './pulse.js';

@@ -196,3 +196,14 @@ body.lp-docked .lp-qa { display: none; }
 .lp-sent { margin: 6px 2px 0; font-size: 11px; color: var(--muted, var(--faint)); }
 .lp-sent[hidden] { display: none; }
 .lp-sent[data-sent-as='change'] { color: var(--accent, inherit); }
+
+/* ---- To: the recipient picker and the delivery lines (./recipients.ts) ---------------------------------- */
+.lp-to { flex: none; padding: 6px 12px 0; border-top: 1px solid var(--line); background: var(--paper-2); }
+.lp-to[hidden], .lp-deliv[hidden] { display: none; }
+.lp-to-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); }
+.lp-to-l { font-weight: 600; }
+.lp-to-sel { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--card); color: var(--ink); font: inherit; font-size: 12.5px; }
+.lp-deliv { margin: 6px 0 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--faint); }
+.lp-deliv-i { padding: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-deliv-i[data-state='refused'] { color: var(--bad-ink); }
+.lp-deliv-i[data-state='held'] { color: var(--warn-ink); }

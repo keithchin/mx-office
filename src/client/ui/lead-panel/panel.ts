@@ -35,6 +35,8 @@ import { onNeeds, countOf } from '../needsyou/feed';
 import { bannerWords, countWords } from '../../../shared/needs-count';
 import { Composer, type ComposerMode } from './composer';
 import { onPanelDock, panelDock, type ChatExtra, type ContextChip } from './dock';
+import { RecipientPicker } from './recipients';
+import { atRecipient } from '../../../shared/roster/delivery';
 import { initialsOf, lastAgentId, leadHeading, leadOf, statusLine, terminalWanted, unreadSince, type Lead, type QUICK, type SendPlan } from './logic';
 
 export interface PanelDeps {
@@ -79,6 +81,8 @@ export class LeadPanel {
   private readonly term: PmTerminal;
   private readonly chat: ChatView;
   private readonly composer: Composer;
+  /** Who a message goes to (the Coordinator by default, or a Lead) and the delivery lines (./recipients.ts). */
+  private readonly to = new RecipientPicker(() => this.draw());
   private readonly head = { av: h('span.lp-av', { 'aria-hidden': 'true' }), name: h('span.lp-name-n'), role: h('span.lp-name-r'), status: h('div.lp-status', { role: 'status', 'aria-live': 'polite' }) };
   private readonly tabs: HTMLButtonElement[];
   private readonly expandBtn: HTMLButtonElement;
@@ -141,7 +145,7 @@ export class LeadPanel {
       this.tabRow,
     );
     this.waitBtn = h('button.lp-wait', { type: 'button', hidden: true, onclick: () => deps.toNeeds() }) as HTMLButtonElement;
-    this.chatPane = h('section.lp-pane.lp-chat', { id: 'lp-pane-chat', role: 'tabpanel', 'aria-labelledby': 'lp-tab-chat' }, this.waitBtn, this.chat.el, this.composer.el);
+    this.chatPane = h('section.lp-pane.lp-chat', { id: 'lp-pane-chat', role: 'tabpanel', 'aria-labelledby': 'lp-tab-chat' }, this.waitBtn, this.chat.el, this.to.el, this.composer.el);
     this.conn = h('span.lp-conn');
     this.termNote = h('p.lp-term-off', { hidden: true });
     this.termPane = h(
@@ -288,6 +292,15 @@ export class LeadPanel {
   }
 
   private drawComposer(w: ReturnType<LeadPanel['worker']>) {
+    this.to.update(this.roster, this.lead?.member?.role);
+    const rec = this.to.current;
+    if (rec) {
+      // A Lead picked: its own worker says whether it's mid-turn; a message goes straight to it.
+      const m = this.roster?.members.find((x) => x.role === rec.role);
+      const rw = m?.workerId ? store.workers.get(m.workerId) : undefined;
+      const mid = !!rw && rw.status === 'working';
+      return this.composer.show({ name: rec.name, canPrompt: rec.ok, team: !!this.roster, midTurn: mid ? workingFor(rw.workingSince, Date.now()).replace(/^working,?\s*/, '') || 'now' : undefined, hint: rec.ok ? `To ${rec.name} (${rec.title}) directly, not through the Coordinator. Its delivery shows under the conversation.` : `${rec.name} isn't at a desk: pick someone else.` });
+    }
     const name = this.lead && this.lead.kind !== 'none' ? this.lead.name : 'the lead';
     const busy = !!w && w.status === 'working' && this.view.canPrompt;
     const nobody = !!panelDock() && this.lead?.kind !== 'lead';
@@ -454,6 +467,19 @@ export class LeadPanel {
 
   // ---- Asking -------------------------------------------------------------------------------------
   private async send(text: string, plan: SendPlan): Promise<boolean> {
+    // "@Name …" at the start picks the recipient for this message; a Lead picked goes to it directly, its delivery recorded.
+    const at = atRecipient(text, this.to.recipients);
+    if (at) {
+      this.to.pick(at.role);
+      text = at.rest;
+    }
+    const rec = this.to.current;
+    if (rec) {
+      if (!rec.ok || !text.trim()) return false;
+      const r = await this.run('tell', { prompt: text, when: plan.via === 'tell' ? 'after' : 'now', to: rec.role });
+      if (r) toast(`Sent to ${rec.name}: its delivery shows under the conversation`);
+      return !!r;
+    }
     if (!this.view.canPrompt || !this.view.workerId) return false;
     if (plan.via === 'tell') {
       const r = await this.run('tell', { prompt: text, when: 'after' });

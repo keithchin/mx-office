@@ -13,6 +13,7 @@ import type { BgItem } from './background-work.js';
 import type { Coverage, TeamShape } from './coverage.js';
 import type { LevelId } from '../budget/types.js';
 import type { AutonomyRecordView } from './autonomy-step.js';
+import type { DeliveryRecord } from './delivery.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -106,6 +107,11 @@ export interface MemberView {
   waitingOnPm?: boolean;
   /** Its background work still shown: Monitors and background commands, running or of unknown status (shared/roster/background-work.ts). */
   background?: BgItem[];
+  /**
+   * Seen at work in the last minute or two (its terminal printed, a hook fired, it committed: server/workers/pulse.ts)
+   * while its status says idle or asleep: the team view shows it as active, not idle (shared/roster/activity.ts).
+   */
+  recent?: { via: 'output' | 'tool' | 'commit'; at: number };
   /** Its agent profile's id (shared/profiles.ts), once it has one. */
   profileId?: string;
 }
@@ -225,4 +231,6 @@ export interface RosterView {
   level?: LevelId;
   /** How its autonomy level was set (the New project flow's step) and the office's policy; added by GET /api/roster. */
   autonomyRecord?: AutonomyRecordView;
+  /** Each message to a member and what the office did with it (typed, held, not delivered), newest last (shared/roster/delivery.ts). */
+  deliveries?: readonly DeliveryRecord[];
 }

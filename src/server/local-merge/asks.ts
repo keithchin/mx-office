@@ -1,9 +1,10 @@
 // Agents' merge asks (shared/merge-target.ts mergeAskOf): an escalation that asks the Project Manager to merge a
 // named commit ("approve merge of 3e9a360 (office/carl-1)"). Read for the receipt's merge targets (./targets.ts)
 // and the panel's rows (./index.ts: which commit an agent asked for, and the change it names). Once that commit
-// is on main (merged here or otherwise), the ask is marked as gone (the decision card's "Resolved / Still
-// needed"), never answered for the person: the first rebuild run left 37 such asks for merges done a day before
-// in Needs you, burying the new ones. Looked at after each merge, and at most once a minute from the panel.
+// is on main (merged here or otherwise), the ask is closed by the office with that reason recorded (card-sweep/
+// autoResolve; release 82: marking it gone still left the count stuck at 5 to 11 for merges long done): the first
+// rebuild run left 37 such asks for merges done a day before in Needs you, burying the new ones. Looked at after
+// each merge, and at most once a minute from the panel; the card sweep looks at every project's too.
 
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
@@ -56,19 +57,21 @@ export async function settledAsks(asks: readonly MergeAsk[], git: Git, dir: stri
 
 const looked = new Map<string, number>();
 
-/** Marks open merge asks whose commits are on main as gone (the person says Resolved or Still needed). Never throws. */
+/** Closes open merge asks whose commits are on main, the reason recorded (card-sweep/). Never throws. */
 export async function settleMergeAsks(ctx: Ctx, floor: Floor, git: Git, target: string, main: string, opts: { force?: boolean; now?: number } = {}): Promise<number> {
   const now = opts.now ?? Date.now();
   if (!opts.force && now - (looked.get(floor.id) ?? 0) < 60_000) return 0;
   looked.set(floor.id, now);
   try {
-    const open = escalationsOf(ctx, floor.id).filter((e) => e.status === 'open' && !e.sourceGone);
+    const open = escalationsOf(ctx, floor.id).filter((e) => e.status === 'open');
     const asks = open.map((e) => mergeAskOf(e)).filter((a): a is MergeAsk => !!a);
     if (!asks.length) return 0;
     const done = await settledAsks(asks, git, floor.dir, target, main);
     const tf = teamFloor(ctx, floor);
     let n = 0;
-    for (const d of done) if (rosterOf(ctx).escalations.markGone(tf, d.id, d.what)) n++;
+    const { autoResolve } = await import('../card-sweep/index.js');
+    for (const d of done) if (autoResolve(rosterOf(ctx), tf, { id: d.id, kind: 'commit-on-main', reason: d.what })) n++;
+    if (n) rosterOf(ctx).touch(tf);
     return n;
   } catch {
     return 0;

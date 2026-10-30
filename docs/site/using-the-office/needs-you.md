@@ -92,6 +92,18 @@ Two kinds of item are drawn **only by the Portal Overview's Needs you card** (`s
 
 In a classic theme, neither shows in Needs you. To settle an unconfirmed answer, open the project's Overview in a Portal theme. An answered client question also shows its record state on its own card on the [Questions](questions.md) page.
 
+## Cards that close themselves
+
+A card whose subject is done is closed by the office, with the reason on it (*Closed by the office: The commit it asks about (@abc1234) is on main now*), so the count is what's really waiting. Nothing is sent to the agent, and the closed card stays in the escalation's history. Every two minutes per project, and a few seconds after an escalation is raised or a merge lands, from local git only (audited `escalation.auto-resolved`):
+
+- **A merge ask or review request whose commit is on main**: every commit it names that still exists is reachable from main (origin's or the local one). This replaces the older *line gone, Resolved or Still needed?* step for merge asks.
+- **One about an agent branch that's gone**: it names only agent branches (`office/…`, `dev/…`, `feat/…`), none of them exists locally or on origin, none of its commits is left, and it's at least 30 minutes old.
+- **A question answered on another card**: a card the office filed from an agent's words (*From the chat: …*, or a reply's list) about the same thing as a later card from the same agent that you answered.
+
+A permission card, and a card you said is *Still needed* or told the agent about, is never closed this way.
+
+**Chat cards only from real asks.** *From the chat* cards are filed from the lead's turn-ending message only when its words ask you something (a question to you, a request, *waiting on you*, an AWAITING-PM line), whatever Jeff's policy says. Status lines (*Done:*, *Status:*, *✅ …*), offers (*let me know if …*, *happy to …*) and *please note* never become cards.
+
 ## One card per decision
 
 Sources fold into one card only when they share an **explicit id**: a BRD question key, a register decision id (`OW-1`), a PR number, a stage, a journey or test id. Similar wording never merges anything. Two more explicit links fold cards. A **stage gate** that names the questions it asks you to confirm (*Stage 2 gate: … Q-01..Q-11*) takes those questions' cards under it, the gate leading: one card and one count instead of twelve. And the items the office reads from an agent's turn-ending reply share **the reply they came from** with the agent's own escalation raised in that turn (within 15 minutes), so one blocker is one card, not five. **Separate** splits a source off, and that choice is kept. **Likely duplicates** among an agent's `AWAITING-PM` asks or proposals are offered on one clean-up card, and the office closes them only after you confirm. The rules are in [Decision cards](command-center.md#decision-cards).

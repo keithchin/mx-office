@@ -62,6 +62,17 @@ It's sent once per stop, and at most **twice per task an hour**. Never when:
 
 Turn it off in ⚙️ Settings › 👥 Team › **Review loop** (*Back to work*). It's on by default.
 
+## The next build-plan rows, handed over
+
+On the real build the Lead Developer stopped after every batch of build-plan rows and waited for a nudge. Now, 20 seconds after a Lead's turn ends, the office looks: when its batch is done (it has no open task, or every build-plan row its task names, *rows 12–15*, has build evidence on main or a branch, including its own branch's *Row N: …* commits) and `architecture/build-plan.md` has next rows for its role, the office hands them over itself, as its new task:
+
+> Your last batch is done. Next in architecture/build-plan.md for you: rows 16–18 (Phase 3 — Approvals): …
+
+- **Which rows**: the plan's next rows not done and not *blocked*, in plan order, at most **4** and all from one phase. A row's role is its *Owner* (or *Role*, *Lead*, *Team*) column when the plan has one, else its Kind: BUILD, RUN and HARNESS rows are the Lead Developer's (or whoever covers Development), PROVE rows the Lead Tester's, BRIEF rows the Chief Analyst's.
+- **Never past a checkpoint**: a row whose Kind is CHECKPOINT, GATE, SIGN-OFF, REVIEW, DEMO or MILESTONE, or whose step says checkpoint, sign-off, Project Manager review, demo or acceptance, stops the hand-off before it, whoever's row it is; the activity feed says *No rows handed to Blake: row 16 is a checkpoint*. A row whose *Depends on* names rows not done ends the batch too.
+- **Never when** back to work wouldn't nudge: the autonomy level is 1, *Back to work* is off, the project is paused (⏸ Pause project, a safe restart, the budget's auto-pause, the daily spend cap), Studio Pro has the project open, the Lead asks you something, has an escalation open, is answering a standup, has someone at its terminal, messages waiting for it, or subagents or background work still running.
+- **Recorded**: the activity feed (*➡️ Handed Blake the build plan's next rows 16–18*), the audit log (`roster.handoff`, with the rows) and `<office data>/handoff/<project>.json`. The same rows are never handed twice (if the last hand-off didn't land them, the Lead shows idle with an open task in Needs you), and at most four hand-offs an hour per Lead. The Project Coordinator is never handed rows.
+
 **💤 Idle with an open task** in [Needs you](../using-the-office/command-center.md#needs-you): a member idle for 10 minutes with a task open and nothing escalated, with a **Nudge** button that sends the same prompt, as yours.
 
 ## You choose before your actions interrupt busy agents

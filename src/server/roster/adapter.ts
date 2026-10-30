@@ -25,6 +25,7 @@ import { subagentBusyMoved } from './subagent-busy.js';
 import { holdSeat, seatOf } from './git-identity.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { onCommandRun } from '../workers/tool-runs.js';
+import { COMMIT_COMMAND, notePulse, onPulseFlip } from '../workers/pulse.js';
 import { onBackgroundChange } from '../workers/background-work.js';
 import { sawCommandRun } from './escalation-fold.js';
 import { notedTranscript } from '../convo/index.js';
@@ -36,6 +37,7 @@ import { portfoliosOf } from '../portfolios/index.js';
 import { profileHooksOf } from '../profiles/index.js';
 import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
+import { buildPlanOf } from './build-plan-source.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 /** The key a terminal's Enter sends. */
@@ -175,6 +177,8 @@ export function rosterOf(ctx: Ctx): Roster {
       hireContext: (id) => withLocalOnlyLine(portfoliosOf(ctx).hireContext(id), ctx.floors.get(id)?.dir),
       // Agent profiles: office-wide identities for the seats, and the moves between projects (profiles/).
       profiles: profileHooksOf(ctx),
+      // The build plan and its done rows, for handing a Lead its next rows (handoff.ts).
+      buildPlan: (tf, branch) => buildPlanOf(tf.dir, ctx.floors.get(tf.id)?.github.pulls.items ?? [], branch),
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {
@@ -187,8 +191,22 @@ export function rosterOf(ctx: Ctx): Roster {
       const floor = ctx.workerFloor(workerId);
       if (floor) teamFloor(ctx, floor).changed();
     });
-    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts).
+    // A worker went active or quiet by its pulse (workers/pulse.ts): the roster's working/idle and the floors' counts follow.
+    // Coalesced per project (a burst of flips, say every agent starting at once, is one refresh of the roster).
+    const flipTimers = new Map<string, NodeJS.Timeout>();
+    onPulseFlip((workerId) => {
+      const floor = ctx.workerFloor(workerId);
+      if (!floor || !roster.isMember(floor.id, workerId) || flipTimers.has(floor.id)) return;
+      const t = setTimeout(() => {
+        flipTimers.delete(floor.id);
+        if (ctx.floors.has(floor.id)) teamFloor(ctx, floor).changed();
+      }, 2_000);
+      t.unref?.();
+      flipTimers.set(floor.id, t);
+    });
+    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts); a commit is a pulse.
     onCommandRun((workerId, command) => {
+      if (COMMIT_COMMAND.test(command)) notePulse(workerId, 'commit');
       const floor = ctx.workerFloor(workerId);
       if (floor) sawCommandRun(roster, teamFloor(ctx, floor), workerId, command);
     });

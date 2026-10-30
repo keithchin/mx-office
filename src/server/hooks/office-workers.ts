@@ -18,6 +18,8 @@ import { agentHired, agentTold, prHanded } from '../chatter/hooks.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { tellLimitOf } from './tell-limit.js';
 import { tellReply } from './tell-reply.js';
+import { noteDelivery } from '../roster/delivery-log.js';
+import { ROLE_BY_ID } from '../../shared/roster/roles.js';
 import { EMPTY_TELL, isEmptyTell } from '../../shared/tell-text.js';
 
 /**
@@ -159,7 +161,11 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     if (prep.error !== undefined) return send(res, 500, { error: prep.error });
     const typed = prep.text;
     const status = w.status;
-    const sent = roster.delivery.send(team, w, typed, { origin: 'agent', by: who, wake: true, hold: true, ...roster.interrupts.tellOpts(team, me.id, w.id) });
+    // What the office did with it, per recipient, for the docked chat (roster/delivery-log.ts): a relay's own claim never counts.
+    const toRole = roster.roleOf(team, w.id);
+    const log = noteDelivery(floor.id, { at: Date.now(), from: who, via: 'relay', to: { name: w.name, ...(toRole ? { role: ROLE_BY_ID.get(toRole)?.title } : {}), workerId: w.id }, excerpt: text }, () => team.changed());
+    const sent = roster.delivery.send(team, w, typed, { origin: 'agent', by: who, wake: true, hold: true, onSent: () => log.typed(), ...roster.interrupts.tellOpts(team, me.id, w.id) });
+    log.settle(sent);
     if (sent.status === 'refused') return send(res, sent.why.startsWith('Spend cap') ? 409 : 400, { error: sent.why });
     agentTold(floor.id, me, w, text);
     // What a member was told to do is its task (roster/resume.ts): the office's messages end by sending it back to it.

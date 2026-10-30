@@ -20,6 +20,7 @@ import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } 
 import { forgetSubagents } from '../workers/subagents.js';
 import { backgroundOf, backgroundOpen, forgetBackground, resetBackground } from '../workers/background-work.js';
 import { forgetLastWords } from '../judge/turns.js';
+import { forgetPulse, pulseOf } from '../workers/pulse.js';
 import { Delivery } from './deliver.js';
 import { Escalations } from './escalations.js';
 import { excerpt, readJournalSoon } from './journal-io.js';
@@ -28,6 +29,8 @@ import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { BackToWork } from './back-to-work.js';
 import { Interrupts } from './interrupts.js';
+import { AutoHandoff } from './handoff.js';
+import { deliveriesOf } from './delivery-log.js';
 import { Awareness } from './awareness.js';
 import { Tasks } from './resume.js';
 import { setFloorPause } from './pause.js';
@@ -65,6 +68,8 @@ export class Roster {
   readonly tasks: Tasks;
   readonly backToWork: BackToWork;
   readonly interrupts: Interrupts;
+  /** The build plan's next rows handed to a Lead whose batch is done (handoff.ts). */
+  readonly handoff: AutoHandoff;
   /** What agents are told of the project's run state after a pause and resume (awareness.ts). */
   readonly awareness: Awareness;
   /** Whether the debounces run on timers (the tests drive them by hand instead). */
@@ -100,6 +105,7 @@ export class Roster {
     this.tasks = new Tasks(this);
     this.backToWork = new BackToWork(this, this.timers);
     this.interrupts = new Interrupts(this);
+    this.handoff = new AutoHandoff(this, this.timers);
     this.awareness = new Awareness(this);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
@@ -242,6 +248,7 @@ export class Roster {
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
     this.backToWork.onWorker(floor, role, w);
+    this.handoff.onWorker(floor, role, w);
     this.subagents.onMember(floor, role, now);
     // Whoever covers Management hears the relays (the Coordinator on an Enterprise team); every Lead its notes.
     if (role === managerRole(d)) this.escalations.onCoordinator(floor, w);
@@ -265,6 +272,7 @@ export class Roster {
     this.delivery.forget(floor, workerId);
     forgetSubagents(workerId);
     forgetBackground(workerId);
+    forgetPulse(workerId);
     this.subagents.live.forget(workerId);
     forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
@@ -423,6 +431,8 @@ export class Roster {
         ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),
         // What it left running after its turn (a Monitor, a background command): "Waiting on background work".
         ...(bg.length ? { background: bg } : {}),
+        // Seen at work lately (its terminal, a hook, a commit) while its status says otherwise: shown as active (workers/pulse.ts).
+        ...(w && status !== 'working' && status !== 'benching' && pulseOf(w.id, now) ? { recent: pulseOf(w.id, now) } : {}),
       };
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
@@ -451,6 +461,8 @@ export class Roster {
       ...(byStage ? { byStage } : {}),
       shape: d.shape,
       coverage: d.coverage,
+      // What the office did with each message to a member, per recipient (delivery-log.ts): the docked chat's delivery lines.
+      deliveries: deliveriesOf(floor.id).slice(-20),
     };
   }
 

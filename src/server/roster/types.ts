@@ -91,6 +91,11 @@ export interface RosterDeps {
   /** Whether Studio Pro has the floor's project open (Studio mode holds the agents' writes): no back-to-work nudge then. */
   studioOpen?: (floorId: string) => boolean;
   /**
+   * The build plan at main and the rows with build evidence (main, the team's branches, and `branch`'s own commits
+   * since main), for the automatic hand-off of the next rows (handoff.ts). Undefined when there's no plan.
+   */
+  buildPlan?: (floor: TeamFloor, branch?: string) => Promise<{ plan: string; done: number[] } | undefined>;
+  /**
    * A project in a portfolio with a company brain (server/portfolios/): the one line its hire's first message
    * gets, and how to record what the hire was offered (its context manifest) once it's hired. Undefined for
    * every other project, whose first message stays exactly as it was.

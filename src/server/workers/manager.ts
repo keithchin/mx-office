@@ -27,7 +27,7 @@ import { WIN, binScript, defaultShell, resolveCommand, shellRun, shq, writeOffic
 import { carryOnPrompt, WorkerTasks } from './tasks.js';
 import { flushScreens, fullScreens, newTerm, offlineBanner, screenText, type HeadlessTerminal } from './terminal.js';
 import { NO_TEAM, type HookEnv, type OpenedPr, type RepoSource, type RunAs, type TeamHooks, type Worker, type WorkerContext, type WorkerEvents, type WorkerHandle } from './types.js';
-import { clamp, safeEq, truncate } from './util.js';
+import { clamp, notePulse, safeEq, truncate } from './util.js';
 import { COLORS, NAMES, newWorker } from './worker.js';
 import { WorkerTrees, lostMessage } from './worktree.js';
 import { launchRefusal } from '../testmode.js';
@@ -774,8 +774,8 @@ export class WorkerManager {
     w.pty = proc;
     proc.onData((data) => {
       term.write(data);
-      w.screenDirty = true;
-      w.unsaved = true;
+      w.screenDirty = w.unsaved = true;
+      notePulse(info.id, 'output', undefined, data.length); // its terminal printed: maybe work, for the roster's working/idle (./pulse.ts)
       if (w.viewers.size) this.events.data(info.id, data, [...w.viewers.keys()]);
     });
     proc.onExit(({ exitCode, error, lost }) => {

@@ -29,6 +29,7 @@ import { escalationsToCoordinatorPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
 import { audit, agent, byWhom, jeff, office } from '../audit/index.js';
 import { relayedToCoordinator } from '../chatter/hooks.js';
+import { escalationRaised } from './raise-hooks.js';
 
 /** The Project Coordinator hears about new escalations this long after the last one, all in one message. */
 export const COORDINATOR_DEBOUNCE_MS = 60_000;
@@ -182,6 +183,7 @@ export class Escalations {
     this.roster.touch(floor);
     if (loud) floor.changed({ id: e.id, urgency: e.urgency as 'urgent' | 'critical', title: `${URGENCY_ICON[e.urgency]} ${who.by} needs the Project Manager`, body: e.title });
     this.roster.jeff.priority.kick(floor);
+    escalationRaised(floor.id, e);
     return e;
   }
 
