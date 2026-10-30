@@ -139,13 +139,24 @@ test('Edit in Studio Pro on a Team Server project: a Studio copy whose origin is
   assert.ok(!('error' in made), 'error' in made ? made.error : '');
   assert.equal(made.dir, copy);
   assert.match(made.note ?? '', /Made the Studio copy/);
-  assert.equal(git(copy, 'remote', 'get-url', 'origin'), p.url, 'its origin is the plain Team Server URL: Studio Pro sees a Team Server app');
+  assert.equal(git(copy, 'remote', 'get-url', 'origin'), `${p.url}/`, 'its origin is the plain Team Server URL, with the trailing slash Studio Pro writes');
+  // What Studio Pro reads to call it a Team Server app, not a "Private server" one (as in a clone Studio Pro makes itself).
+  const studioKeys = () => ({ id: git(copy, 'config', '--local', 'mendix.sprintr-project-id'), reset: git(copy, 'config', '--local', 'mendix.lineEndingResetDone'), crlf: git(copy, 'config', '--local', 'core.autocrlf') });
+  assert.deepEqual(studioKeys(), { id: p.id, reset: 'true', crlf: 'false' });
   assert.equal(git(copy, 'rev-parse', 'HEAD'), git(p.origin, 'rev-parse', 'main'), 'what main has');
   assert.equal(fake.head(p.id), git(p.origin, 'rev-parse', 'main'), 'main reached Team Server first');
   assert.ok(git(copy, 'notes', '--ref=mx_metadata', 'list'), 'Studio Pro’s history notes came along');
   assert.equal(studioFolderOf(floor), copy, 'Studio mode watches the copy now');
   assert.equal(ts.view(floor, true).studio?.ready, true);
   assert.equal(ts.view(floor, true).home, 'teamserver');
+
+  // A copy made by release 81 (no [mendix] section, origin without the slash) gets them the next time it's opened, token or not.
+  git(copy, 'config', '--local', '--remove-section', 'mendix');
+  git(copy, 'config', '--local', '--unset', 'core.autocrlf');
+  git(copy, 'remote', 'set-url', 'origin', p.url);
+  assert.ok(!('error' in (await prepareStudioCopy({ dir: p.dir, rec: p.record }))));
+  assert.deepEqual(studioKeys(), { id: p.id, reset: 'true', crlf: 'false' });
+  assert.equal(git(copy, 'remote', 'get-url', 'origin'), `${p.url}/`);
 
   // Studio Pro commits and pushes (with the person's own sign-in: here, a git with credentials), a Publish too.
   writeFileSync(path.join(copy, 'App.mpr'), 'changed in Studio Pro\n');

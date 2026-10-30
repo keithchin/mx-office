@@ -2,7 +2,8 @@
 // "Studio Pro opens a Studio copy"). The project's own folder has the bare repository on this machine (or GitHub) as
 // its origin, and Studio Pro decides how a project is versioned from origin: opened there it's a "private server"
 // project, and Publish to a Free App sandbox or a licensed node is refused. So the office keeps a second clone,
-// `<owner>/.studio-pro/<name>` beside the project, whose origin is Team Server's plain URL. Studio Pro signs in to
+// `<owner>/.studio-pro/<name>` beside the project, whose origin is Team Server's plain URL (with the trailing slash Studio Pro writes) and whose .git/config has the
+// `[mendix]` keys Studio Pro reads to call it a Team Server app (studioProConfig). Studio Pro signs in to
 // Team Server with the person's own Mendix account; the office uses its token only to make the copy and to bring it
 // up to date (per command, never written down: ./git.ts). Agents never work in it.
 //
@@ -16,6 +17,7 @@ import path from 'node:path';
 import { STUDIO_PUBLISH_HINTS, type TeamServerRecord } from '../../shared/team-server.js';
 import type { StudioTarget } from '../../shared/studio-target.js';
 import { LONGPATHS_CLONE_ARGS } from '../longpaths.js';
+import { runCommand } from '../wizard/run.js';
 import { gitRefusalWords, type TsGit } from './git.js';
 import { FETCH_MS, STALL_TUNING, UNREACHABLE } from './sync.js';
 
@@ -51,10 +53,33 @@ export function officeStudioCopyOf(dir: string): string | undefined {
   }
 }
 
+/** Team Server's URL as Studio Pro writes it in its own clones: the plain URL with a trailing slash (never a token). */
+export const studioProUrl = (url: string) => `${url.replace(/[/]+$/, '')}/`;
+
+/**
+ * The .git/config Studio Pro writes in a clone it makes of a Team Server app, which it reads back to decide the project
+ * is on Team Server (without it, it says "Private server" and Publish is refused): `mendix.sprintr-project-id` (the
+ * Portal app's id), `mendix.lineEndingResetDone`, `core.autocrlf false`, and origin as Team Server's URL with the
+ * trailing slash. Local git only: no token. Set when the copy is made and every time it's opened (a copy made by
+ * release 81 lacked it), so a value someone changed is put back.
+ */
+export async function studioProConfig(copy: string, rec: Pick<TeamServerRecord, 'url' | 'projectId'>): Promise<void> {
+  const git = (args: string[]) => runCommand('git', args, { cwd: copy, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, timeoutMs: 30_000, allowFail: true });
+  const want: [string, string][] = [
+    ['core.autocrlf', 'false'],
+    ['mendix.lineEndingResetDone', 'true'],
+    ['mendix.sprintr-project-id', rec.projectId],
+  ];
+  for (const [k, v] of want) if ((await git(['config', '--local', '--get', k])).stdout.trim() !== v) await git(['config', '--local', k, v]);
+  const origin = (await git(['remote', 'get-url', 'origin'])).stdout.trim();
+  const url = studioProUrl(rec.url);
+  if (origin !== url) await git(origin ? ['remote', 'set-url', 'origin', url] : ['remote', 'add', 'origin', url]);
+}
+
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 /** Makes the copy, or brings it up to date when that's safe. Never throws: an error is its words (token-free). */
-export async function prepareStudioCopy(d: { g?: TsGit; dir: string; rec: Pick<TeamServerRecord, 'url'>; main?: string }): Promise<{ dir: string; note?: string } | { error: string }> {
+export async function prepareStudioCopy(d: { g?: TsGit; dir: string; rec: Pick<TeamServerRecord, 'url' | 'projectId'>; main?: string }): Promise<{ dir: string; note?: string } | { error: string }> {
   const main = d.main ?? 'main';
   const copy = studioCopyDir(d.dir);
   const g = d.g;
@@ -68,13 +93,13 @@ export async function prepareStudioCopy(d: { g?: TsGit; dir: string; rec: Pick<T
       // The Studio Pro history notes (it reads the model's version from them).
       await g.auth(copy, ['fetch', '--quiet', 'origin', `+${NOTES}:${NOTES}`], { timeoutMs: FETCH_MS, allowFail: true });
       // Proof that the office made it, for project delete and Cancel & undo (officeStudioCopyOf): nothing else is ever theirs to delete.
+      await studioProConfig(copy, d.rec);
       writeFileSync(path.join(copy, '.git', STUDIO_COPY_MARK), `${JSON.stringify({ madeBy: 'mx-office', project: path.resolve(d.dir), at: Date.now() }, null, 2)}\n`);
       return { dir: copy, note: `Made the Studio copy at ${copy} from Team Server (its origin is Team Server).` };
     }
+    // What Studio Pro reads to call it a Team Server app (a copy made by release 81 gets it now), its origin included.
+    await studioProConfig(copy, d.rec);
     if (!g) return { dir: copy, note: 'No Mendix token in 🔌 Connections, so the office couldn’t bring the Studio copy up to date: Pull in Studio Pro first.' };
-    // Its origin is Team Server's plain URL, always (put right if someone changed it).
-    const origin = (await g.plain(copy, ['remote', 'get-url', 'origin'], { allowFail: true })).stdout.trim();
-    if (origin !== d.rec.url) await g.plain(copy, ['remote', origin ? 'set-url' : 'add', 'origin', d.rec.url]);
     const f = await g.auth(copy, [...STALL_TUNING, 'fetch', '--quiet', 'origin', `+refs/heads/${main}:refs/remotes/origin/${main}`], { timeoutMs: FETCH_MS, allowFail: true }).catch((err: Error) => ({ code: 1, tail: [err.message], stdout: '' }));
     if (f.code !== 0) {
       const said = f.tail.join(' ');
