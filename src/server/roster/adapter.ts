@@ -192,9 +192,17 @@ export function rosterOf(ctx: Ctx): Roster {
       if (floor) teamFloor(ctx, floor).changed();
     });
     // A worker went active or quiet by its pulse (workers/pulse.ts): the roster's working/idle and the floors' counts follow.
+    // Coalesced per project (a burst of flips, say every agent starting at once, is one refresh of the roster).
+    const flipTimers = new Map<string, NodeJS.Timeout>();
     onPulseFlip((workerId) => {
       const floor = ctx.workerFloor(workerId);
-      if (floor && roster.isMember(floor.id, workerId)) teamFloor(ctx, floor).changed();
+      if (!floor || !roster.isMember(floor.id, workerId) || flipTimers.has(floor.id)) return;
+      const t = setTimeout(() => {
+        flipTimers.delete(floor.id);
+        if (ctx.floors.has(floor.id)) teamFloor(ctx, floor).changed();
+      }, 2_000);
+      t.unref?.();
+      flipTimers.set(floor.id, t);
     });
     // A command a worker ran closes the permission card that waited for it (escalation-fold.ts); a commit is a pulse.
     onCommandRun((workerId, command) => {
