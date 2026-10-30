@@ -6,8 +6,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-30 · release 82 (`cca1437`)
+
 - **Microflow test runs that finish, say how far they are, and keep what they got.** A run on a big suite always ended *Timed out after 16 min with no results*: the office cut every run off at 16 minutes although mxcli's own timeout only starts once the runtime is up, so a suite still being added to the app was stopped, and the office stopped mxcli's children before mxcli itself, which then printed *Cleaning up...* and looked hung there. Now a run's time limit covers the whole run and is sized to the suite (10 min plus 15 s a test, 15 to 45 min) unless an admin sets the project's own (5 to 180 min, Testing › Quality); the Quality card and `office-app test` show progress (*Running the tests: 41 of 123 started, 40 finished*); a run stopped at its limit keeps what passed or failed, lists the tests that never ran and says which phase it was in; mxcli's whole output is kept with the run. A run also ends as soon as mxcli does, even when a runtime it left behind holds its output, and shortly after mxcli writes its results even if mxcli never exits.
 - **Run some microflow tests only.** `office-app test --files loans.test.mdl,stock.test.mdl` and/or `--tag smoke` (files carrying `@tag smoke`), and the MCP tool `app_test` with `files` / `tags`; the run records the subset.
+- **Studio Pro shows a Team Server project as Team Server.** The office's Studio copy now carries the git settings Studio Pro writes on its own clones (the Mendix project id, its line-ending settings and the Team Server address with its trailing slash), so **Publish** is no longer greyed out with *Private server*; copies made by release 81 are fixed the next time **Edit in Studio Pro** opens them.
+- **Chat to any Lead.** The docked chat has a **To:** picker (the Coordinator by default) and `@Name`; under the conversation each recipient shows what the office actually did with the message (typed, held for after its turn, or not delivered and why), the Coordinator's relays included.
+- **Needs you stays current.** Cards whose subject is done close themselves with the reason recorded: merge asks and reviews whose commits are on main, asks for agent branches that are gone, chat cards answered later. Permission cards and ones you marked *Still needed* never do. A Lead's ordinary status sentences no longer become chat cards.
+- **The model check at the merge commit, by the office.** When an agent asks for a merge or you open the local merge's confirm step without one, the office runs `mx check` at exactly that commit and records it; the confirm shows the result.
+- **Who is working, truthfully.** A member reads as active from its terminal output, tool calls and commits, not only its last status, on the Team card, the org chart and the projects' working counts.
+- **Next rows handed over by themselves.** When a Lead's batch of build-plan rows is done, the office hands it the next rows for its role (at most four, one phase, never past a checkpoint or an open dependency), never at autonomy 1, while paused or with Studio Pro open; recorded in the audit and the activity feed.
 
 ## 2026-10-29 · release 81 (`c16195f`)
 
