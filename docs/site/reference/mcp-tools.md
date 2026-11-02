@@ -19,7 +19,7 @@ weight: 2
 | `app_start` | **commit**, wait, constants (`{"Module.Name": value}`, this run only) | `office-app start --const` |
 | `app_status` | none (its answer has the instance's generated test password, when the project names a seed password constant) | `office-app status` |
 | `app_stop` | none | `office-app stop` |
-| `journey_run` | journey, file, commit | `office-app journey` |
+| `journey_run` | journey, ids, all, file, commit | `office-app journey` (`--ids`, `--all`: a batch, each journey recorded at the commit by its id) |
 | `app_smoke` | paths[], as | `office-app smoke` |
 | `app_check` | **name**, **result**, detail, shots[], commit | `office-app check` |
 | `app_test` | **commit**, wait, files, tags | `office-app test` (`--files`, `--tag`) |

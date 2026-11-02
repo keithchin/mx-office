@@ -205,11 +205,25 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
   // The default branch's newest commit: the Git tab's graph (GET /api/git, read off the event loop and
   // cached on the server), asked when the Overview is drawn for a project, then at most every two minutes
   // as it redraws. Never on a timer.
+  // Release 83: a local merge (or the setup's head moving past the commit shown) asks again at once, so the panel
+  // never keeps showing the old "Last commit" after main moved.
   let lastCommit: { floor: string; at: number; v?: GitGraph['history'][number] & { branch: string } } | undefined;
   const COMMIT_EVERY_MS = 120_000;
+  let headSeen: string | undefined;
+  window.addEventListener?.('mx:local-merged', (e) => {
+    const floor = (e as CustomEvent<{ floor?: string }>).detail?.floor;
+    if (floor && lastCommit?.floor === floor) {
+      lastCommit = undefined;
+      drawDetails();
+    }
+  });
   function wantCommit() {
     const floor = store.floor;
-    if (!floor || (lastCommit?.floor === floor && Date.now() - lastCommit.at < COMMIT_EVERY_MS)) return;
+    const head = deps.setup()?.head;
+    // Only a head that changed since the last ask counts (a head that never matches the graph's would ask on every draw).
+    const moved = !!head && lastCommit?.floor === floor && !!lastCommit.v && head.sha !== lastCommit.v.sha && head.sha !== headSeen;
+    if (!floor || (!moved && lastCommit?.floor === floor && Date.now() - lastCommit.at < COMMIT_EVERY_MS)) return;
+    headSeen = head?.sha;
     const keep = lastCommit?.floor === floor ? lastCommit.v : undefined;
     lastCommit = { floor, at: Date.now(), v: keep };
     void fetch(`/api/git?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' })

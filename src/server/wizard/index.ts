@@ -59,6 +59,7 @@ import { auditOperation, officeLookup, reconcileJob, reconcileOnStart } from './
 import { adopt } from './reconcile.js';
 import { auditTeamFrom, officeTeamFromDeps } from './team-from-office.js';
 import type { KnownSource } from '../../shared/team-from.js';
+import { testRuntimeNow } from '../testing/test-db.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
@@ -82,7 +83,14 @@ export class Wizard {
     this.book = new JobBook(dir, redactor([]), flowsOf(ctx), { ops: new OperationStore(path.join(dir, 'operations'), { onChange: auditOperation }) });
     // A setup the office stopped in the middle of an operation is looked at once now (reconcile.ts).
     setImmediate(() => void reconcileOnStart(this.book, this.lookup()));
-    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then((r) => r.stdout), { keepFile: path.join(dir, 'gate-runs.json') });
+    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then((r) => r.stdout), {
+      keepFile: path.join(dir, 'gate-runs.json'),
+      // Release 83: automatic gate-checks wait while a microflow test run holds the machine (a forced Re-check still runs).
+      deferWhile: () => {
+        const h = testRuntimeNow().holder;
+        return h ? `waiting for ${h.label} to finish` : undefined;
+      },
+    });
     // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
     useGateLock((dir) => this.gates.busy(dir) || toolkitBusy(dir));
   }

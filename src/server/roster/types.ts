@@ -91,6 +91,11 @@ export interface RosterDeps {
   /** Whether Studio Pro has the floor's project open (Studio mode holds the agents' writes): no back-to-work nudge then. */
   studioOpen?: (floorId: string) => boolean;
   /**
+   * What the worker has running in the office's background (agent-app/background.ts: its microflow tests, its
+   * journeys, its app instance starting), in words, or undefined: no back-to-work or review nudge meanwhile (release 83).
+   */
+  background?: (floorId: string, workerId: string, name: string) => string | undefined;
+  /**
    * The build plan at main and the rows with build evidence (main, the team's branches, and `branch`'s own commits
    * since main), for the automatic hand-off of the next rows (handoff.ts). Undefined when there's no plan.
    */

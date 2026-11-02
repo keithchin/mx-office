@@ -8,9 +8,14 @@
 //   - answered:       a card the office filed from an agent's words (its chat, a reply's list) about the same
 //                     thing as a later card from the same agent that the Project Manager answered.
 // Permission cards and the person's own (Separate, Still needed) are never swept.
+// Release 83 (a real decision was silently dropped): release 82 closed two unanswered decision cards, a Lead's
+// role decision and the Coordinator's blocking question, because they mentioned a commit that got merged. A card
+// that asks the Project Manager a question or for a decision is never closed by commit or branch facts, whatever
+// it mentions (holdsDecision): only a true merge ask or review request, whose subject (its title and first
+// paragraph) is the merge or review of the commit named there, is.
 
-import { mergeAskOf } from '../../shared/merge-target.js';
 import type { AutoResolveKind, Escalation } from '../../shared/roster/escalation.js';
+import type { EscalationTrigger } from '../../shared/roster/autonomy.js';
 import { sameAsk } from '../roster/jeff-ask.js';
 
 /** A merge ask or review request naming a branch gets this long before "branch gone" can close it (a typo, a push still to come). */
@@ -30,17 +35,64 @@ export interface CommitAsk {
   branches: string[];
 }
 
-type EscLike = Pick<Escalation, 'id' | 'by' | 'at' | 'title' | 'details' | 'options' | 'recommendation' | 'status' | 'permission' | 'from' | 'sourceGone' | 'told' | 'workerId' | 'role' | 'resolution'>;
+type EscLike = Pick<Escalation, 'id' | 'by' | 'at' | 'title' | 'details' | 'options' | 'recommendation' | 'status' | 'permission' | 'from' | 'sourceGone' | 'told' | 'workerId' | 'role' | 'resolution'> & Partial<Pick<Escalation, 'trigger' | 'refs'>>;
 
-/** A merge ask (shared/merge-target.ts) or a review request naming a commit or an agent branch. */
-export function commitAskOf(e: EscLike): CommitAsk | undefined {
-  if (e.permission) return undefined;
-  const merge = mergeAskOf(e);
-  if (merge) return { id: e.id, shas: merge.shas, branches: merge.branches.filter((b) => AGENT_BRANCH.test(b)) };
-  const text = [e.title, e.details ?? '', ...(e.options ?? []), e.recommendation ?? ''].join('\n');
-  if (!REVIEW_WORD.test(text) && !/\bmerg/i.test(text)) return undefined;
+/**
+ * Triggers that ask the Project Manager to decide or answer something (a question, a hands-on action, a blocker,
+ * a plan, scope, design or architecture call, a risk): such a card is never closed by what git says. Only a card
+ * with no trigger, or a milestone one, can be a plain merge ask or review request.
+ */
+export const DECISION_TRIGGERS: ReadonlySet<EscalationTrigger> = new Set<EscalationTrigger>(['question', 'needs-human', 'blocked', 'blocked-no-path', 'plan', 'scope', 'design', 'architecture', 'security', 'data-loss', 'budget-risk', 'budget-overrun', 'client-milestone', 'revisions-exhausted', 'repeated-failure']);
+
+const MERGE_ASK_WORD = /\bmerg(e|es|ed|ing)\b/i;
+/** An option that only answers a merge or review ask (Merge now, Approve, Hold, Later): anything else is a decision's option. */
+const MERGE_OPTION = /^\W*(yes|no|ok|approve[ds]?|approval|merge[ds]?|review(ed)?|hold|wait|later|not yet|defer|skip|reject(ed)?|request changes|changes|sign[- ]?off)\b/i;
+/** The first paragraph of a text. */
+const firstPara = (s: string) => (s.replace(/\r\n?/g, '\n').split(/\n\s*\n/).find((p) => p.trim()) ?? '').trim();
+/** The sentences of a text that end in a question mark. */
+const questionsIn = (s: string) =>
+  s
+    .replace(/https?:\/\/\S+/g, ' ')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((x) => x.trim())
+    .filter((x) => x.endsWith('?'));
+const aboutMerge = (s: string) => MERGE_ASK_WORD.test(s) || REVIEW_WORD.test(s);
+
+/**
+ * Why the card asks the Project Manager something other than a merge or a review (so the sweep must leave it
+ * open whatever commits it mentions), or undefined when it is a plain merge ask or review request.
+ */
+export function holdsDecision(e: EscLike): string | undefined {
+  if (e.permission) return 'a permission card';
+  if (e.trigger && DECISION_TRIGGERS.has(e.trigger)) return `a ${e.trigger} card`;
+  if (e.from?.kind === 'proposal') return 'a hands-on proposal';
+  if (e.from?.kind === 'awaiting') return 'an AWAITING-PM item (closed when its line is gone)';
+  if (e.refs?.questionKey || e.refs?.decisionId) return 'about a register decision or BRD question';
+  if (!aboutMerge(`${e.title}\n${firstPara(e.details ?? '')}`)) return 'its subject is not a merge or a review';
+  const other = questionsIn([e.title, e.details ?? '', e.recommendation ?? '', ...(e.options ?? [])].join('\n')).find((q) => !aboutMerge(q));
+  if (other) return `it asks a question: “${other.slice(0, 80)}”`;
+  const opt = (e.options ?? []).find((o) => !MERGE_OPTION.test(o) && !aboutMerge(o));
+  if (opt) return `it offers a decision's options (“${opt.slice(0, 60)}”)`;
+  return undefined;
+}
+
+/** The commits named in a text (a sha has a letter a-f, or is long), and its agent branches. */
+function namedIn(text: string): { shas: string[]; branches: string[] } {
   const shas = [...new Set([...text.matchAll(SHAS)].map((m) => m[1].toLowerCase()).filter((s) => /[a-f]/.test(s) || s.length >= 12))];
   const branches = [...new Set([...text.matchAll(BRANCHES)].map((m) => m[1]).filter((b) => AGENT_BRANCH.test(b)))];
+  return { shas, branches };
+}
+
+/**
+ * A true merge ask or review request (release 83): no decision held (holdsDecision), and the commits and agent
+ * branches it is about are its subject's own (its title and first paragraph, or an option that asks to merge one),
+ * never a commit it merely mentions further down ("the role split was merged in @abc1234").
+ */
+export function commitAskOf(e: EscLike): CommitAsk | undefined {
+  if (holdsDecision(e)) return undefined;
+  const subject = [e.title, firstPara(e.details ?? ''), ...(e.options ?? []).filter(aboutMerge)].join('\n');
+  if (!aboutMerge(subject)) return undefined;
+  const { shas, branches } = namedIn(subject);
   return shas.length || branches.length ? { id: e.id, shas, branches } : undefined;
 }
 

@@ -14,6 +14,7 @@
 import type { DispatchRecord } from '../../shared/dispatch.js';
 import { transcriptEvidence } from './evidence.js';
 import type { Dispatcher } from './service.js';
+import { LATE_MAX_MS } from './typed-watch.js';
 
 /** The most records one start looks at per floor (the rest wait for the next start, still unsettled). */
 export const RECONCILE_MAX = 200;
@@ -68,7 +69,11 @@ export async function reconcileOne(d: Dispatcher, floorId: string, r: DispatchRe
 export async function reconcileFloor(d: Dispatcher, floorId: string, deps: ReconcileDeps): Promise<Reconciled[]> {
   await d.ready(floorId);
   const out: Reconciled[] = [];
-  const todo = d.unsettled(floorId).filter((r) => (r.state === 'prepared' || r.state === 'in-flight' || r.state === 'held') && !d.mine.has(r.id)).slice(0, RECONCILE_MAX);
+  const all = d.unsettled(floorId);
+  // Typed but not seen received, from before the restart: still looked for (typed-watch.ts), so its card closes when it turns up (release 83).
+  const now = Date.now();
+  if (d.watch) for (const r of all) if (r.state === 'outcome-unknown' && r.channel === 'type' && r.typedAt !== undefined && now - r.typedAt < LATE_MAX_MS) d.watch(floorId, r);
+  const todo = all.filter((r) => (r.state === 'prepared' || r.state === 'in-flight' || r.state === 'held') && !d.mine.has(r.id)).slice(0, RECONCILE_MAX);
   for (const r of todo) {
     try {
       const next = await reconcileOne(d, floorId, r, deps);

@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
-import { gitGraphsOf, runGit, type Git } from '../gitgraph/index.js';
+import { gitGraphsOf, pool, runGit, type Git } from '../gitgraph/index.js';
 import { localOnlyAt, offGitHubAt } from '../local-only.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import { audit, byWhom } from '../audit/index.js';
@@ -30,6 +30,7 @@ import { mergeAsks, settleMergeAsks } from './asks.js';
 import { fixText } from '../../shared/text-repair.js';
 import { ensureCheck, officeDeps, type MergeCheckDeps } from '../merge-check/index.js';
 import type { MergeCheckView } from '../../shared/merge-check.js';
+import { forgetView, refsPrint, viewFor } from './view-cache.js';
 
 export { mergeLocal } from './merge.js';
 
@@ -69,7 +70,10 @@ export function localMergeCommits(dataDir: string, floorId: string): string[] {
 }
 
 /** Tests: forget what was read. */
-export const forgetLocalMerges = () => books.clear();
+export const forgetLocalMerges = () => {
+  books.clear();
+  forgetView();
+};
 
 export const sameSha = (a: string, b: string) => a.length >= 7 && b.length >= 7 && (a.toLowerCase().startsWith(b.toLowerCase()) || b.toLowerCase().startsWith(a.toLowerCase()));
 
@@ -203,17 +207,29 @@ async function askedOn(ctx: Ctx, floor: Floor, git: Git, head: string, branch: s
   return undefined;
 }
 
-/** The branches the team has ahead of main, with what they are and their review. Empty for a project that isn't local only. */
+/**
+ * The branches the team has ahead of main, with what they are and their review. Empty for a project that isn't local
+ * only. Answered from the project's kept view while nothing it reads has moved (./view-cache.ts: one for-each-ref).
+ */
 export async function localMergeView(ctx: Ctx, floor: Floor): Promise<LocalMergeView> {
   const level = levelOf(ctx, floor);
   const base: LocalMergeView = { floor: floor.id, localOnly: localOnlyAt(floor.dir), ...(offGitHubAt(floor.dir) === 'teamserver' ? { teamServer: true } : {}), main: 'main', branches: [], level, levelName: AUTONOMY[level].name, pmDecides: needsApproval(level, 'merge') };
   if (!base.localOnly) return base;
+  const book = bookOf(ctx.cfg.dataDir, floor.id);
+  const workers = floor.workers.list().map((w) => `${w.id}:${w.name}:${w.worktree?.branch ?? ''}`).join(',');
+  const asks = mergeAsks(ctx, floor.id).map((a) => `${a.id}@${a.at}`).join(',');
+  const keyOf = async () => [await refsPrint(runGit, floor.dir), book.reviews.length, book.merges.length, asks, workers, level, base.teamServer ? 'ts' : ''].join('|');
+  return viewFor(floor.id, await keyOf(), () => buildView(ctx, floor, base), Date.now(), keyOf);
+}
+
+async function buildView(ctx: Ctx, floor: Floor, base: LocalMergeView): Promise<LocalMergeView> {
   const g = await gitGraphsOf(ctx).graph(floor);
   const main = g.defaultBranch;
   const mainSha = await ref(runGit, floor.dir, await targetOf(runGit, floor.dir, main));
   // The graph names the branches (cached up to a minute); each head, review and kind are read now.
   const listed = g.branches.filter((b) => b.name !== main && (b.worker || b.where !== 'remote')).slice(0, 12);
-  const rows = await Promise.all(listed.map((b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main, { sha: b.sha, subject: b.subject })));
+  // Four branches at a time: each asks git several things, and a loaded machine starts processes slowly.
+  const rows = await pool(listed, 4, (b) => rowOf(ctx, floor, b.name, b.worker ? { id: b.worker.id, name: b.worker.name } : {}, runGit, main, { sha: b.sha, subject: b.subject }));
   // Merge asks for commits that are on main now are marked gone (./asks.ts), at most once a minute.
   void settleMergeAsks(ctx, floor, runGit, await targetOf(runGit, floor.dir, main), main);
   return { ...base, main, ...(mainSha ? { mainSha } : {}), branches: rows.filter((b): b is LocalMergeBranch => !!b).slice(0, 10) };
@@ -258,6 +274,7 @@ export async function reviewLocal(
   const b = bookOf(ctx.cfg.dataDir, floor.id);
   b.reviews.push(review);
   saveBook(ctx.cfg.dataDir, floor.id, b);
+  forgetView(floor.id);
   const later = c.full === c.head ? '' : ` (the head is @${c.head.slice(0, 7)}: newer commits aren't part of this review)`;
   audit.record({ floor: floor.id, actor: byWhom(by.name, by.id), action: 'local-merge.review', target: { kind: 'branch', id: r.branch, label: r.branch }, summary: `${by.name} ${r.verdict === 'approve' ? 'approved' : 'asked for changes on'} ${r.branch} at ${c.full.slice(0, 7)}${later}`, details: { sha: c.full, head: c.head, verdict: r.verdict } });
   // The row as it is now, for the panel to show at once (no second look, no lag).

@@ -251,7 +251,7 @@ export interface MxcliRunState {
   available: boolean;
   why?: string;
   /** While running: how far it has got (in words) and its time limit; a subset run: which files (release 82). */
-  tests: { running: boolean; since?: number; commit?: string; last?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; subset?: string };
+  tests: { running: boolean; since?: number; commit?: string; last?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; headroom?: string; waiting?: string; subset?: string };
   quality: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string };
 }
 
