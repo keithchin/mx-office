@@ -24,6 +24,7 @@ import { BRANCH_OK, bookOf, commitOn, levelOf, ref, reviewAt, saveBook, type Loc
 import { dcsOf, kindAt } from './describe.js';
 import { tellMainNow } from './tell.js';
 import { settleMergeAsks } from './asks.js';
+import { forgetView } from './view-cache.js';
 import { refusalWords } from '../../shared/merge-refusal.js';
 import { originNews } from '../floor-sync/bus.js';
 
@@ -100,6 +101,7 @@ export async function mergeLocal(
   originNews(floor.dir);
   book.merges.push({ branch: r.branch, sha: c.full, merge, into: main, by: by.name, at: now(), ...(newer ? { newer } : {}) });
   saveBook(ctx.cfg.dataDir, floor.id, book);
+  forgetView(floor.id);
   const owner = graph.branches.find((b) => b.name === r.branch)?.worker;
   const dcs = await dcsOf(ctx, floor.id, r.branch, owner?.id);
   const told = tellMainNow(ctx, floor, { main, merge, branch: r.branch, sha: c.full, dcs, newer, reviewedBy: review.by }, owner?.id, deps);

@@ -83,12 +83,41 @@ export async function prepareTestRun(mprBase: string, d: TestDbDeps): Promise<Pr
   return { db: name, notes };
 }
 
+/** A run that holds (or waits for) the office's one test runtime: its project and a label for the words. */
+export interface RuntimeTurn {
+  floorId?: string;
+  label: string;
+  since: number;
+}
+
 let chain: Promise<unknown> = Promise.resolve();
-/** One mxcli test runtime at a time on this machine (its ports are fixed). */
-export function serialTestRuntime<T>(fn: () => Promise<T>): Promise<T> {
-  const p = chain.then(fn, fn);
+let holder: RuntimeTurn | undefined;
+const waiting = new Set<RuntimeTurn>();
+
+/**
+ * One mxcli test runtime at a time on this machine (its ports are fixed). `who` names the run, so the others
+ * waiting can say whose run they wait for (release 83: that wait is shown, never counted against a limit).
+ */
+export function serialTestRuntime<T>(fn: () => Promise<T>, who?: { floorId?: string; label?: string }): Promise<T> {
+  const me: RuntimeTurn = { ...(who?.floorId ? { floorId: who.floorId } : {}), label: who?.label ?? 'a microflow test run', since: Date.now() };
+  waiting.add(me);
+  const go = async () => {
+    waiting.delete(me);
+    holder = { ...me, since: Date.now() };
+    try {
+      return await fn();
+    } finally {
+      holder = undefined;
+    }
+  };
+  const p = chain.then(go, go);
   chain = p.catch(() => undefined);
   return p;
+}
+
+/** The office's test runtime now: the run holding it (if any) and how many wait. In memory, never blocks. */
+export function testRuntimeNow(): { holder?: RuntimeTurn; waiting: number } {
+  return { ...(holder ? { holder: { ...holder } } : {}), waiting: waiting.size };
 }
 
 /**
