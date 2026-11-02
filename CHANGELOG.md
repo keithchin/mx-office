@@ -8,6 +8,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 Nothing waiting yet.
 
+## 2026-11-03 · release 84 (`1c1f84c`)
+
+- **Phased delivery (part 1).** A project's Build can be delivered in phases: business-outcome slices of the build plan with a foundation phase first, each with its rows, journeys, an estimate, a checkpoint and a publish switch. The team proposes phases at the Build Plan gate (`propose_phases`, `office-workers phases propose`), the Project Manager approves or edits them there, and later changes are proposed by the team or made by the PM, every one recorded in the phase history. A phase's exit criteria come only from the office's records (its journeys passed on main, the model check, no open data impact).
+- **Roadmap.** Project Management › Roadmap (shown once a project has phases): a timeline with Discovery, the phases and Cutover, status, checkpoints, today, overlap between phases shown plainly, spend against each phase's estimate with soft warnings (the project total keeps its auto-pause), what's not tied to a phase, a phase's rows, journeys, exit criteria and merges, Go or Stop at a checkpoint, team proposals to accept, decline or edit, and Edit phases. It fits beside the docked chat panel and on a phone. The Overview shows a phase strip instead of a plain *Stage 5 · Build*, and an admin at the Build Plan gate gets *Set up phases from the build plan*.
+
 ## 2026-11-02 · release 83 (`4a7645d`)
 
 - **Decision cards are never closed for you.** The Needs-you sweep closes only a plain merge ask or review whose own subject commit is on main; a card that asks you a question or for a decision stays open whatever commits it mentions (release 82 could close an unanswered decision because it named a merged commit).
