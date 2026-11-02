@@ -142,6 +142,7 @@ Approving a risky escalation (merge order, security, data loss, budget overrun) 
 - **Other projects are counted only by their waiting agents**, not by their full Needs you: the office doesn't send every page every project's list.
 - **An unconfirmed answer is invisible** away from the Portal Overview: not on the tray, Teams, push or the phone.
 - **Some urgent items are never pushed or posted**: a sev1 incident or an approval stays on the project's own Needs you.
+- **Phased delivery's team proposals are not Needs-you items yet**: a proposed set of phases or a change shows on the [Roadmap](phased-delivery.md) (with a toast when it arrives); its Needs-you item and the phase checkpoint card come with phased delivery's second part.
 - **Some `info` rows are red**: an answered-but-unrecorded client question, and "live app ready".
 
 Proposals to make unconfirmed answers and follow-through visible everywhere are in [Proposals](../architecture/proposals.md). They are **proposals**, not current behaviour.

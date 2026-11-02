@@ -27,6 +27,7 @@ import { initials } from './topbar';
 import { icon } from './icons';
 import { agentFace } from './face';
 import { portalSlot } from './slot';
+import { mountProgressExtras } from './progress-extras';
 import { budgetFacts, budgetText, commitWhen, detailRows, teamRows, type DetailFacts } from './overview-logic';
 import { needsCard } from './needs-card';
 import { briefCard } from './brief-card';
@@ -74,6 +75,7 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
   const progress = h('section.pt-ov-card.pt-prog.pt-only', { id: 'pt-progress', 'aria-label': 'Progress' }, h('h2', {}, 'Progress'));
   document.getElementById('setup')?.after(progress);
   portalSlot(document.getElementById('progress-bar'), progress);
+  mountProgressExtras(progress);
 
   // ---- The main column: Needs you and the project brief ------------------------------------------------------
   const needs = needsCard({ show: deps.show });

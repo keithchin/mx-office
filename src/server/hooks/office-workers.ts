@@ -13,6 +13,7 @@ import { officeEscalate } from './office-escalate.js';
 import { officeSubagent } from './office-subagent.js';
 import { officeRender } from './office-render.js';
 import { officeMarketplace } from './office-marketplace.js';
+import { officePhases } from './office-phases.js';
 import { agent, audit } from '../audit/index.js';
 import { agentHired, agentTold, prHanded } from '../chatter/hooks.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
@@ -79,7 +80,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
       workers: list.map((w) => workerRow(w, view, me.id)),
     });
   }
-  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent', '/render', '/marketplace'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate, /office/workers/subagent, /office/workers/render or /office/workers/marketplace' });
+  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent', '/render', '/marketplace', '/phases'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate, /office/workers/subagent, /office/workers/render, /office/workers/marketplace or /office/workers/phases' });
   let body: unknown;
   try {
     // Text an agent's shell mangled on the way (UTF-8 read as Windows-1252: "Testing â€º Prepare") is repaired before it's kept.
@@ -96,6 +97,8 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
   if (action === '/render') return officeRender(ctx, floor, me, body, res);
   // A Marketplace widget or module, for the PM to approve and the office to add: hooks/office-marketplace.ts.
   if (action === '/marketplace') return officeMarketplace(ctx, floor, me, body, res);
+  // The phase plan: proposing phases or a change for the PM, and their status: hooks/office-phases.ts.
+  if (action === '/phases') return officePhases(ctx, floor, me, body, res);
 
   if (action === '/home') {
     const ask = readHomeRequest(body);

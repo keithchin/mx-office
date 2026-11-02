@@ -82,6 +82,7 @@ import { pushCheckRoutes } from './push-check.js';
 import { teamServerRoutes } from './team-server.js';
 import { dataImpactRoutes } from './data-impact.js';
 import { csrfRoutes } from './csrf.js';
+import { phaseRoutes } from './phases.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -295,6 +296,8 @@ export const routes: readonly Route[] = [
   teamServerRoutes.act,
   dataImpactRoutes.view,
   dataImpactRoutes.act,
+  phaseRoutes.view,
+  phaseRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

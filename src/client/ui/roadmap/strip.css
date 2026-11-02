@@ -1,0 +1,35 @@
+/* The Overview's phase strip (./strip.ts), only on the Portal Progress card of a project delivered in phases
+   (.ph-phased): the Build stage widened and renamed through the card's custom properties, and the box under the
+   stages. Without phases none of this applies and the card is as it was. */
+#pt-progress.ph-phased .pg-seg[data-phase='5'] { grid-column: span 3; }
+#pt-progress.ph-phased .pg-seg[data-phase='5']::before { background: var(--ph-build-bar, var(--accent)); }
+#pt-progress.ph-phased .pg-seg[data-phase='5'] :is(.pg-seg-n, .pg-seg-d) { font-size: 0; }
+#pt-progress.ph-phased .pg-seg[data-phase='5'] .pg-seg-n::after { content: var(--ph-build-n); font-size: 13px; color: var(--accent); }
+#pt-progress.ph-phased .pg-seg[data-phase='5'] .pg-seg-d::after { content: var(--ph-build-d); font-size: 11.5px; }
+.ph-strip { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; display: grid; gap: 10px; }
+.ph-strip[hidden] { display: none; }
+.ph-line1 { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.ph-line1 b { font-weight: 600; }
+.ph-dot { color: var(--faint); }
+.ph-grow { flex: 1; }
+.ph-muted { color: var(--muted); font-size: 12.5px; }
+.ph-open { font-size: 13px; }
+.ph-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.ph-badge.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.ph-badge.bad { background: var(--bad-soft); color: var(--bad-ink); }
+.ph-badge.ovl { background: var(--purple-soft); color: color-mix(in srgb, var(--purple) 70%, var(--ink)); border: 1px dashed var(--purple); }
+.ph-chips { display: grid; gap: 4px; }
+.ph-chip { border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; font-size: 11.5px; min-width: 0; cursor: pointer; background: var(--card); color: var(--ink); text-align: left; font: inherit; font-size: 11.5px; }
+.ph-chip:hover { border-color: var(--rule-strong); }
+.ph-chip:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: 2px; }
+.ph-t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.ph-s { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.ph-chip.done { border-top: 3px solid var(--good); }
+.ph-chip.active { border-top: 3px solid var(--accent); background: var(--accent-soft); }
+.ph-chip.cp { border-top: 3px solid var(--purple); background: var(--purple-soft); }
+.ph-chip.plan { border-top: 3px dashed var(--rule-strong); }
+.ph-chip.ovl { border-top: 3px dashed var(--purple); }
+@media (max-width: 760px) {
+  .ph-chips { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  #pt-progress.ph-phased .pg-seg[data-phase='5'] { grid-column: span 2; }
+}

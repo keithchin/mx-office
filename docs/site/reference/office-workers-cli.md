@@ -45,6 +45,11 @@ office-workers export-pdf <in.html> <out.pdf> [--landscape]
                                               files inside your worktree only)
 office-workers screenshot <in.html> <out.png> [--width 1280] [--height 800] [--viewport]
                                               the same as a PNG, the full page unless --viewport
+office-workers phases status                  the phases: status, rows, journeys, open proposals
+office-workers phases propose <<'EOF'         propose the phases at the Build Plan gate, or a change
+{"reason": "…", "phases": [ … ]}              during Build ({"reason": "…", "ops": [ … ]}): JSON on
+EOF                                           stdin, as the propose_phases / propose_phase_change
+                                              MCP tools take it
 office-workers firm ask [--team <team>] "question"   (a reviewer) ask the project team; the
                                               answer comes back as your next prompt
 office-workers firm answer <id> "answer"      (a project worker) answer the Firm's question <id>
@@ -74,6 +79,8 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `screenshot` | An HTML file of your worktree as a PNG | `--width`, `--height` (200 to 3840 by 2160), `--viewport` for the visible part only; see below |
 | `marketplace add` | Ask for a Mendix Marketplace widget or module | `--id`, `--kind widget\|module`, `--version`, `--name`, `--why`; also `office-marketplace add`; see below |
 | `marketplace list` | This project's Marketplace requests and where each is | |
+| `phases status` | The project's phases and the open proposals | Same as the MCP `phases_status` |
+| `phases propose` | Propose the phases at the Build Plan gate, or a change during Build | JSON on stdin; see [phases](#phases) |
 | `firm` | The Firm: reviewers ask and report, the team answers | See [The Firm](#the-firm) |
 | `app` | Your app instance, journeys and microflow tests | Same as `office-app`; see [office-app](#office-app) |
 | `mcp` | Serve these as MCP tools on stdio | See [MCP tools](mcp-tools.md) |
@@ -166,6 +173,26 @@ office-marketplace add --id 235351 --kind widget --version 2.5.1 \
 - Then `mxcli widget init -p <app>.mpr` (the package in `widgets/` alone still gives `MDL-WIDGET25`), `mxcli widget describe <name>`, and use it in MDL.
 
 See [Add from Marketplace](../using-the-office/marketplace.md).
+
+## phases
+
+For a project delivered in phases ([Phased delivery](../using-the-office/phased-delivery.md)). At the Build Plan gate (Stage 4) the team proposes how Build is cut, from `architecture/build-plan.md`:
+
+```bash
+office-workers phases propose <<'EOF'
+{"reason": "Foundation first, then one business area a phase",
+ "phases": [
+  {"name": "Look and feel", "goal": "Tokens and page layouts every page uses", "foundation": true,
+   "rows": [1, 2, 3], "journeys": ["J-00"], "estimate": {"min": 25, "max": 40}},
+  {"name": "Bookings", "goal": "People find and book a room", "rows": [4, 5, 6, 7],
+   "journeys": ["J-01", "J-02"], "estimate": {"min": 60, "max": 90}, "days": 5}
+ ]}
+EOF
+```
+
+- A row and a journey belong to one phase (later phases re-run earlier journeys as regression). `checkpoint` and `publish` default to on.
+- During Build, propose a change with `ops` instead of `phases`: `rename`, `move-rows {rows, to}`, `reorder`, `split`, `merge`, `toggle`, `overlap {phase, teams, what}` (start a planned phase's design early), `estimate`, `journeys`, `add`. Phases are named by id (`ph-3`, as `phases status` shows). Done phases are locked.
+- Every proposal needs a `reason`. It waits on the Roadmap for the Project Manager, who accepts, declines or edits it first; the decision comes back to you as a message. Exit criteria are never yours to say: the office records them.
 
 ## The Firm
 

@@ -42,6 +42,12 @@ export interface TabDef {
    * remembered tab still know it.
    */
   hidden?: boolean;
+  /**
+   * Whether it's listed in the navigation right now (for the project you're on), when that depends on the
+   * project: left out it always is. The feature calls tabVisibilityChanged() when its answer may have changed;
+   * ?tab= and links still reach it either way.
+   */
+  shown?(): boolean;
   /** A button in the classic themes' tab row too (Portal has the navigation). Off: links, the ☰ or Portal reach it. */
   tabRow?: boolean;
   /** Draws the tab into its (empty) container, the first time it's shown, and gives back its hooks. */
@@ -64,6 +70,29 @@ export const registeredTabs = (): readonly TabDef[] => TABS;
 
 /** The registered tab with this id. */
 export const registeredTab = (id: unknown): TabDef | undefined => TABS.find((t) => t.id === id);
+
+const visibilityListeners = new Set<() => void>();
+
+/** Hears when a tab's `shown()` may have changed (the navigation draws its items again). */
+export function onTabVisibility(fn: () => void): () => void {
+  visibilityListeners.add(fn);
+  return () => visibilityListeners.delete(fn);
+}
+
+/** A feature says its tab's `shown()` may have changed. */
+export function tabVisibilityChanged(): void {
+  for (const fn of visibilityListeners) fn();
+}
+
+/** Whether a tab is listed now: a built-in one always, a registered one unless its `shown()` says not. */
+export function tabShown(id: string): boolean {
+  const t = TABS.find((x) => x.id === id);
+  try {
+    return !t?.shown || t.shown();
+  } catch {
+    return true;
+  }
+}
 
 /** Goes up with every registration (the navigation's derived groups are cached against it). */
 export const tabsVersion = (): number => version;

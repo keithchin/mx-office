@@ -16,6 +16,7 @@ import { FIRM_USAGE, firmMain } from './office-firm.js';
 import { RENDER_USAGE, formatRendered, parseRender } from './office-render.js';
 import { MARKETPLACE_TOOL, MARKETPLACE_USAGE, formatMarketplace, parseMarketplace } from './office-marketplace.js';
 import { APP_TOOLS, APP_TOOL_NAMES, APP_USAGE, appMain, runAppTool } from './office-app.js';
+import { PHASES_USAGE, PHASE_TOOLS, PHASE_TOOL_NAMES, formatPhases, parsePhases, phasesRequest } from './office-phases.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this project: status, task,
@@ -41,6 +42,7 @@ ${ESCALATE_USAGE}
 ${SUBAGENT_USAGE}
 ${RENDER_USAGE}
 ${MARKETPLACE_USAGE}
+${PHASES_USAGE}
 ${FIRM_USAGE}
   office-workers app …                          your app instance, journeys and tests (office-app):
 ${APP_USAGE}
@@ -55,9 +57,9 @@ export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 /** How long the office may take to come back when it's restarting (a dev reload, an upgrade). */
 const RETRY_MS = 6000;
 /** Sending several workers home waits on git for each; hiring may fetch from GitHub first. */
-const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 30_000, subagent: 15_000, render: 90_000, marketplace: 120_000 };
+const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 30_000, subagent: 15_000, render: 90_000, marketplace: 120_000, phases: 30_000 };
 /** Where each call goes, under /office/workers. */
-const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent', render: '/render', marketplace: '/marketplace' };
+const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent', render: '/render', marketplace: '/marketplace', phases: '/phases' };
 
 /**
  * Reads `--flag value` and `--flag=value` options, and the words that aren't options.
@@ -133,6 +135,7 @@ export function parseArgs(argv) {
   if (cmd === 'subagent' || cmd === 'subagents') return parseSubagent(rest, UsageError);
   if (cmd === 'export-pdf' || cmd === 'screenshot') return parseRender(cmd, rest, UsageError);
   if (cmd === 'marketplace') return parseMarketplace(rest, UsageError);
+  if (cmd === 'phases') return parsePhases(rest, UsageError);
   if (cmd === 'hire') {
     const { opts, words } = options(rest, ['--prompt', '--provider', '--model', '--effort', '--desk', '--issue'], ['--no-worktree', '--json']);
     if (words.length) throw new UsageError(`Unexpected argument: ${words[0]} (give the task on stdin or with --prompt)`);
@@ -381,6 +384,7 @@ export const TOOLS = [
   ESCALATE_TOOL,
   SUBAGENT_TOOL,
   MARKETPLACE_TOOL,
+  ...PHASE_TOOLS,
   ...APP_TOOLS,
 ];
 
@@ -389,7 +393,7 @@ const INSTRUCTIONS =
   'the other agents: whenever you are asked about the agents or workers (who is working on what, whose pull request merged, hiring one, sending them home), use them, ' +
   "rather than looking for the agents with git, ps or HTTP calls. list_workers says where each one's pull request stands (merged: true means it merged), hire_worker " +
   'puts a new agent to work, send_home sends agents home and deletes their worktrees and branches, tell_worker gives one a prompt, and link_pr says which pull request is a ' +
-  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), subagent is a Lead's track record and standing of its own subagents, and marketplace_add asks the Project Manager for a Mendix Marketplace widget or module that the office then adds to your branch (never install one yourself). app_start, journey_run, app_smoke, app_test, app_check, app_status and app_stop run the app at a commit and test it there (app_check records a check you ran yourself), through the office (never `mxcli run --local` or `mxcli test --local` in your worktree). Everyone in the office sees who did what. " +
+  "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), subagent is a Lead's track record and standing of its own subagents, and marketplace_add asks the Project Manager for a Mendix Marketplace widget or module that the office then adds to your branch (never install one yourself). app_start, journey_run, app_smoke, app_test, app_check, app_status and app_stop run the app at a commit and test it there (app_check records a check you ran yourself), through the office (never `mxcli run --local` or `mxcli test --local` in your worktree). propose_phases and propose_phase_change put the team's phases (or a change to them) to the Project Manager on the Roadmap, and phases_status shows them. Everyone in the office sees who did what. " +
   'The office-workers command on your PATH does the same from a shell.';
 
 /** What a tell's answer says happened (the office's own words); never "told" without the office saying it was received. */
@@ -419,6 +423,7 @@ async function runTool(name, args, io) {
   if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
   if (name === 'subagent') return { text: formatSubagent(await call('subagent', a, io)) };
   if (name === 'marketplace_add') return { text: formatMarketplace(await call('marketplace', { op: 'add', ...a }, io), 'add') };
+  if (PHASE_TOOL_NAMES.includes(name)) return { text: formatPhases(await call('phases', phasesRequest(name, a), io), name === 'phases_status' ? 'status' : 'propose') };
   if (APP_TOOL_NAMES.includes(name)) return runAppTool(name, a, io);
   throw new Error(`Unknown tool: ${name}`);
 }
@@ -561,6 +566,20 @@ export async function main(argv, io = {}) {
       const { cmd: _s, json: asJson, ...ask } = cmd;
       const answer = await call('subagent', ask, ctx);
       out(asJson ? JSON.stringify(answer, null, 2) : formatSubagent(answer));
+      return 0;
+    }
+    if (cmd.cmd === 'phases') {
+      let body = { op: 'status' };
+      if (cmd.op === 'propose') {
+        if (stdin.isTTY) throw new UsageError("Give the proposal as JSON on stdin (office-workers phases propose <<'EOF' … EOF)");
+        try {
+          body = { op: 'propose', ...JSON.parse(await readStdin(stdin)) };
+        } catch {
+          throw new UsageError('The proposal on stdin is not JSON');
+        }
+      }
+      const answer = await call('phases', body, ctx);
+      out(cmd.json ? JSON.stringify(answer, null, 2) : formatPhases(answer, cmd.op));
       return 0;
     }
     if (cmd.cmd === 'marketplace') {
