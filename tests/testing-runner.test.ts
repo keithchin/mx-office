@@ -258,7 +258,7 @@ test('stopped at the time limit while the tests ran: what passed or failed is ke
     // Stalled before any test microflow was added (the live office's case): said so, every test never ran.
     process.env.FAKE_MXCLI_MODE = 'stall-inject';
     const st = await runMicroflowTests({ ...base(s), limit: () => ({ ms: 4_000, auto: true }) });
-    assert.match(st.draft.harnessError!, /sized to the suite\) while mxcli was checking the generated test microflows, before adding any/);
+    assert.match(st.draft.harnessError!, /sized to the 4 tests it ran\) while mxcli was checking the generated test microflows, before adding any/);
     assert.ok(!/Cleaning up/.test(st.draft.harnessError!), 'mxcli is stopped first, so it never starts its own clean-up');
     assert.equal(st.draft.results.filter((r) => /^never ran/.test(r.detail ?? '')).length, 4);
   } finally {
@@ -324,6 +324,42 @@ test("runMxOwned: lines as they come, and mxcli's end is enough even while a chi
     assert.deepEqual(lines, ['one', 'two']);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('release 83: a loaded machine gives the run headroom on its limit; a wait for another project’s run is shown, not counted', { timeout: 90_000 }, async () => {
+  const s = setup();
+  try {
+    process.env.FAKE_MXCLI_MODE = '';
+    // One file of two tests: sized to those 2 tests (15 min), x2 while two runtimes load the machine.
+    const one = await runMicroflowTests({ ...base(s), subset: { files: ['stock.test.mdl'] }, limit: (tests) => ({ ms: autoLimitMinutes(tests) * 60_000, auto: true }), headroom: async () => ({ factor: 2, why: 'x2 while 2 app runtimes running' }) });
+    const call = s.calls().at(-1)!;
+    assert.equal(call.args[call.args.indexOf('--timeout') + 1], '30m');
+    assert.deepEqual(one.draft.limit, { minutes: 30, auto: true, headroom: 'x2 while 2 app runtimes running' });
+    // Through the office: another project's run holds the runtime; this one waits, says so, and its clock hasn't started.
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const { serialTestRuntime } = await import('../src/server/testing/test-db.js');
+    const other = serialTestRuntime(() => gate, { floorId: 'other', label: "Sam's on 1234567" });
+    const tool = async () => ({ bin: s.exe, version: 'v0.27.0' });
+    const run = await startMicroflowTests(s.dataDir, { id: 'f1', dir: s.floorDir }, { name: 'Rhea', agentId: 'w1' }, { tool, flags: async () => verbose, constants: async () => undefined, limit: () => ({ ms: 60_000, auto: true }), headroom: async () => undefined });
+    assert.ok(typeof run !== 'string', String(run));
+    let st = testRunOf('f1');
+    for (let i = 0; i < 100 && !st.waiting; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      st = testRunOf('f1');
+    }
+    assert.match(st.waiting ?? '', /^Waiting for another project's test run \(Sam's on 1234567\) to end .*isn't counted against the time limit/);
+    assert.equal(st.progress, st.waiting);
+    release();
+    await other;
+    await run.done;
+    assert.equal(testRunOf('f1').waiting, undefined);
+    assert.match(testRunOf('f1').last!, /passed/);
+  } finally {
+    process.env.FAKE_MXCLI_MODE = '';
+    closeConnections();
+    rmSync(s.root, { recursive: true, force: true });
   }
 });
 

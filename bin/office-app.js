@@ -170,12 +170,17 @@ async function runTests(commit, wait, io, say = () => {}, subset = {}) {
   say(s.line);
   if (!wait) return { started: s.started, words: s.line, ok: true };
   const t0 = Date.now();
+  // The run's own clock starts once it holds the office's test runtime: a wait for another project's run never counts.
+  let started = t0;
   let until = t0 + TEST_WAIT_DEFAULT_MS;
   let said = '';
   for (;;) {
     await sleep(io.pollMs ?? POLL_MS);
     const t = await appCall('/test', undefined, io);
-    if (t.run?.running && t.run?.limitMinutes) until = t0 + t.run.limitMinutes * 60_000 + TEST_WAIT_PAST_LIMIT_MS;
+    if (t.run?.running && t.run?.waiting) {
+      started = Date.now();
+      until = started + TEST_WAIT_DEFAULT_MS;
+    } else if (t.run?.running && t.run?.limitMinutes) until = started + t.run.limitMinutes * 60_000 + TEST_WAIT_PAST_LIMIT_MS;
     if (t.run?.running && t.run.progress && t.run.progress !== said) say((said = t.run.progress));
     if (!t.run?.running && t.run?.commit === s.started) {
       const r = t.record;

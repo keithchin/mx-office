@@ -100,6 +100,8 @@ export interface AppInstance {
 /** Ports the office's instances hold now: the live apps leave them alone (liveapp/index.ts). */
 const claimed = new Set<number>();
 export const instancePorts = (): ReadonlySet<number> => claimed;
+/** How many app runtimes (mxcli run) the office has running now: load on the machine (testing/machine-load.ts). */
+export const runtimesRunning = (): number => running.size;
 
 /** Holds `ports` for another runtime the office starts (a microflow test run) so the live apps and instances leave them alone; gives their release. */
 export function holdPorts(ports: readonly number[]): () => void {

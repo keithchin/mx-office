@@ -125,8 +125,8 @@ export interface MxcliRunEnvelope {
   actor: string;
   /** Only some test files ran (office-app test --files / --tag): what was asked and the files it picked. */
   subset?: RunSubsetKept;
-  /** The run's time limit, and whether it was sized to the suite. */
-  limit?: { minutes: number; auto: boolean };
+  /** The run's time limit, and whether it was sized to the tests it ran, and any headroom (release 83). */
+  limit?: { minutes: number; auto: boolean; headroom?: string };
   /** Where mxcli's whole output (masked) is kept in the office's data folder. */
   logLocator?: string;
   /** No JUnit file: what mxcli said live for each test, and the tests it never got to (shared/testing/test-files.ts partialResults). */
