@@ -63,6 +63,11 @@ export class GitGraphs {
 
   constructor(private git: Git = runGit) {}
 
+  /** The project's main moved here (a local merge): the next look reads git again, not the answer of a few seconds ago. */
+  forget(floorId: string) {
+    this.recent.delete(floorId);
+  }
+
   graph(floor: GraphFloor): Promise<GitGraph> {
     const r = this.recent.get(floor.id);
     if (r && Date.now() - r.at < FRESH_MS) return r.graph;

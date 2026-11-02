@@ -12,7 +12,9 @@
 //     by the office (Send again is the person's);
 //   - the worker stopped (asleep or gone) before its session showed it → outcome-unknown at once, said so;
 //   - the worker's session switched since the typing (woken with a new session id): its new session is looked in too;
-//   - an outcome-unknown one that turns up in the session later (until LATE_MS) is settled submitted then.
+//   - an outcome-unknown one that turns up in the session later is settled submitted then, and its card closes:
+//     looked for every 30 s until LATE_MS, then every 10 minutes for a week (release 83: a "typed into the terminal
+//     but not received" card stayed open two days after the message had arrived), again after a restart (reconcile.ts).
 // Only one check runs at a time per record, and it settles under the decision's claim, so a person's choice
 // on the card and the watch never both act.
 
@@ -28,6 +30,9 @@ export const GRACE_MS = 30_000;
 export const QUEUED_MAX_MS = 30 * 60_000;
 /** How long after typing an outcome-unknown one is still looked for (it may turn up late). */
 export const LATE_MS = 30 * 60_000;
+/** After LATE_MS an outcome-unknown one is still looked for, slowly, this long after typing (release 83). */
+export const LATE_MAX_MS = 7 * 24 * 60 * 60_000;
+export const LATE_SLOW_POLL_MS = 10 * 60_000;
 const QUEUED_POLL_MS = 5_000;
 /** How long after typing a worker found stopped is taken as stopped (its status may lag the wake by a moment). */
 export const STOPPED_AFTER_MS = 5_000;
@@ -117,14 +122,14 @@ export class TypedWatch {
     const now = this.d.now();
     const late = r.state === 'outcome-unknown';
     if (!late && !isTypedUnconfirmed(r)) return undefined;
-    if (late && now - r.typedAt > LATE_MS) return undefined;
+    if (late && now - r.typedAt > LATE_MAX_MS) return undefined;
     const seen = await this.seen(floorId, r);
     if (seen.found) return this.settle(floorId, id, r.state, async (cur) => {
       const next = await this.d.settle(floorId, cur, 'submitted', { confirmedBy: 'system', note: late ? 'seen in the agent’s session after all' : 'seen in the agent’s session' });
       await this.d.apply(floorId, next);
       return undefined;
     });
-    if (late) return LATE_POLL_MS;
+    if (late) return now - r.typedAt > LATE_MS ? LATE_SLOW_POLL_MS : LATE_POLL_MS;
     const who = r.workerName ?? 'the agent';
     // Woken with it (or typed) and then its terminal stopped before its session showed it: said now, not after the grace.
     if (now - r.typedAt >= STOPPED_AFTER_MS && this.deps.stopped?.(floorId, r)) return this.lose(floorId, id, `typed into ${who}'s terminal, but ${who} stopped (asleep or gone) before its session showed it: send it again (it wakes ${who})`);
