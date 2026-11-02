@@ -165,6 +165,10 @@ Each alert is raised once per budget. Raising the budget clears all of them, so 
 
 The **Alerts** card on the Budget tab lists the alerts standing. An admin can **Mark as seen** the forecast and threshold alerts, there or with the button beside **Budget** in Needs you. A seen alert leaves Needs you, its count, the phone and Teams, and stays on the Budget tab, dimmed, with *Seen by &lt;name&gt;, &lt;date&gt;* (in the audit log as `budget.alert.seen`). A seen **forecast** alert comes back, with its new numbers, when the forecast at completion grows by more than 10 % over what it was when it was seen. A seen **threshold** alert stays seen until the budget changes. The **100 %** alert and the budget's pause can't be marked as seen: they need a budget decision (raise it, or resume).
 
+## Spend per phase
+
+On a project delivered in phases the [Roadmap](phased-delivery.md#spend-per-phase-a-soft-warning) shares this ledger out to the phases (by the days each ran; Stages P–3 are Discovery, 6–7 Cutover; coordination and the office's background calls are *Not tied to a phase*) and badges each phase against the team's estimate: *In range*, *Pace $X*, *Upper half* or *Over by $X*. Those badges are soft warnings only: nothing pauses on a phase. The project total below keeps its auto-pause.
+
 ## Auto-pause at 100 %
 
 When spend reaches the budget and **Pause the project at 100 %** is on (the default), the office pauses the project with [⏸ Pause project](resume-and-pause.md), recorded as the budget's doing:
