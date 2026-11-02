@@ -144,6 +144,18 @@ export function backToWorkPrompt(task: string, by?: string, ongoing?: string): s
   ].join('\n');
 }
 
+/**
+ * The back-to-work nudge when the recorded task is outdated (release 83): the member was told more since, so the
+ * old task's words are never re-pasted; it carries on with its latest instruction.
+ */
+export function backToWorkLatestPrompt(latest: { by: string; at: number }, taskId?: string): string {
+  return [
+    `You stopped with work open. Carry on with the latest instruction you were given (from ${latest.by}, ${new Date(latest.at).toISOString().slice(0, 16).replace('T', ' ')} UTC), or escalate if you're blocked.`,
+    `If it's finished, say \`task done\`${taskId ? ` for ${taskId}` : ''} and what you delivered in one line, then stop. If you're waiting on your own tests or journeys, say so in one line and stop: you're not nudged while they run in the office.`,
+    '(Automatic nudge from Agent Office: one per stop, a couple per task an hour at most.)',
+  ].join('\n');
+}
+
 /** To a Lead whose subagent the scorer flagged: consider a warning or the bench, per its skills. */
 export function underperformingPrompt(name: string, model: string, why: string, skills: string[], first?: string): string {
   return [

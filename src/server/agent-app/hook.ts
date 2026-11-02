@@ -26,6 +26,7 @@ import { outcomeWords, viewLine } from '../../shared/agent-app.js';
 import { agentAppsOf, journeyDeps } from './office.js';
 import { runJourney, runSmoke } from './journey.js';
 import { batchOf, batchWords, startBatch } from './journey-batch.js';
+import { noteRun } from './background.js';
 import { raiseForPm } from './raise.js';
 import { recordAgentCheck } from './checks.js';
 import { testBlocker } from '../../shared/testing/test-reason.js';
@@ -113,10 +114,12 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
         details: words,
         recommendation: 'Tell the agent which test account and password the app is seeded with (or name them in tests/e2e/project.config.js), then it runs the check again.',
       });
-    const o =
-      action === '/journey'
-        ? await runJourney(e, { ...(str(body.journey, 300) ? { journey: str(body.journey, 300) } : {}), ...(typeof body.text === 'string' ? { text: body.text.slice(0, 512 * 1024), file: str(body.file, 300) ?? 'journey.json' } : {}) }, d)
-        : await runSmoke(e, { paths: strs(body.paths, 20), ...(str(body.as, 80) ? { as: str(body.as, 80) } : {}) }, d);
+    // Under way: the roster's nudges leave the agent alone meanwhile (./background.ts).
+    noteRun(floor.id, me.id, true);
+    const o = await (action === '/journey'
+        ? runJourney(e, { ...(str(body.journey, 300) ? { journey: str(body.journey, 300) } : {}), ...(typeof body.text === 'string' ? { text: body.text.slice(0, 512 * 1024), file: str(body.file, 300) ?? 'journey.json' } : {}) }, d)
+        : runSmoke(e, { paths: strs(body.paths, 20), ...(str(body.as, 80) ? { as: str(body.as, 80) } : {}) }, d)
+    ).finally(() => noteRun(floor.id, me.id, false));
     e.lastUsed = Date.now();
     audit.record({ floor: floor.id, actor: who, action: 'agent-app.run', target: { kind: 'commit', id: e.commit, label: `@${e.commit.slice(0, 7)}` }, summary: `${o.suite} on its app instance @${e.commit.slice(0, 7)}: ${o.status}`, details: { record: o.record, runtimeErrors: o.runtimeErrors?.length ?? 0 }, severity: o.status === 'passed' ? 'info' : 'warning' });
     return send(res, 200, { outcome: o, words: outcomeWords(o) });

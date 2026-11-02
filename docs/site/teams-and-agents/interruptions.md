@@ -58,7 +58,10 @@ It's sent once per stop, and at most **twice per task an hour**. Never when:
 - someone has its terminal open, or messages are waiting to be typed to it (they carry the resume line);
 - the project is paused (⏸ Pause project, a safe restart, the budget) or the daily spend cap is reached;
 - Studio Pro has the project open (Studio mode holds the agents' writes);
-- the autonomy level is 1 (*Directive*: you drive every step).
+- the autonomy level is 1 (*Directive*: you drive every step);
+- its own microflow tests, journeys (`office-app journey`, a batch or one) or app instance start run in the office's background (release 83: a Lead waiting on its test chain used to get its task re-pasted every stop). The review nudge waits for them too.
+
+The prompt names the member's current task. Once it was told something newer than that task (a person's or another agent's prompt, not the office's own nudges), the old task's words are never re-pasted: the nudge asks it to carry on with that latest instruction, naming the task only by its id.
 
 Turn it off in ⚙️ Settings › 👥 Team › **Review loop** (*Back to work*). It's on by default.
 
