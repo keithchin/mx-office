@@ -4,17 +4,21 @@
 // is on main (merged here or otherwise), the ask is closed by the office with that reason recorded (card-sweep/
 // autoResolve; release 82: marking it gone still left the count stuck at 5 to 11 for merges long done): the first
 // rebuild run left 37 such asks for merges done a day before in Needs you, burying the new ones. Looked at after
-// each merge, and at most once a minute from the panel; the card sweep looks at every project's too.
+// each merge, and at most once a minute from the panel; the card sweep looks at every project's too. Only a true
+// merge ask is closed (card-sweep/rules.ts commitAskOf, release 83): never a card that asks the Project Manager a
+// question or for a decision, whatever commit it mentions; and only by its own subject's commits.
 
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { mergeAskOf, type MergeAsk } from '../../shared/merge-target.js';
 import type { Git } from '../gitgraph/index.js';
+import { commitAskOf } from '../card-sweep/rules.js';
+import type { Escalation } from '../../shared/roster/escalation.js';
 
 const DAY = 86_400_000;
 
-type EscLike = { id: string; by: string; at: number; title: string; details?: string; options?: string[]; recommendation?: string; status: string; resolution?: { at: number }; sourceGone?: unknown };
+type EscLike = Escalation;
 
 function escalationsOf(ctx: Ctx, floorId: string): EscLike[] {
   try {
@@ -35,7 +39,7 @@ export function mergeAsks(ctx: Ctx, floorId: string, now = Date.now()): MergeAsk
 }
 
 /** The merge asks whose every named commit (that exists) is on `target` now: what to mark gone, with the words. */
-export async function settledAsks(asks: readonly MergeAsk[], git: Git, dir: string, target: string, main: string): Promise<{ id: string; what: string }[]> {
+export async function settledAsks(asks: readonly Pick<MergeAsk, 'id' | 'shas'>[], git: Git, dir: string, target: string, main: string): Promise<{ id: string; what: string }[]> {
   const out: { id: string; what: string }[] = [];
   for (const a of asks) {
     const known: string[] = [];
@@ -64,7 +68,8 @@ export async function settleMergeAsks(ctx: Ctx, floor: Floor, git: Git, target: 
   looked.set(floor.id, now);
   try {
     const open = escalationsOf(ctx, floor.id).filter((e) => e.status === 'open');
-    const asks = open.map((e) => mergeAskOf(e)).filter((a): a is MergeAsk => !!a);
+    // The rows' merge asks (mergeAsks) are read loosely; what is closed is only a true merge ask, by its subject's commits.
+    const asks = open.map((e) => commitAskOf(e)).filter((a): a is NonNullable<typeof a> => !!a && a.shas.length > 0);
     if (!asks.length) return 0;
     const done = await settledAsks(asks, git, floor.dir, target, main);
     const tf = teamFloor(ctx, floor);
