@@ -159,6 +159,27 @@ async function main() {
       check(!page.errors.length, `${name}: no page errors${page.errors.length ? `: ${page.errors.join(' | ')}` : ''}`);
       await page.context().close();
     }
+    // The page budget on the phased Roadmap (scripts/perf/budgets: usable within 3 s, no task over 200 ms).
+    {
+      const page = await newPage({ width: 1440, height: 900 }, 'portal-light');
+      await page.addInitScript(() => {
+        window.__long = 0;
+        new PerformanceObserver((l) => l.getEntries().forEach((e) => (window.__long = Math.max(window.__long, e.duration)))).observe({ type: 'longtask', buffered: true });
+      });
+      await page.goto(at(phased, 'command'), { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('#pt-progress', { timeout: 30000 });
+      await settle(page, 2000);
+      await page.evaluate(() => (window.__long = 0));
+      const t0 = Date.now();
+      await page.evaluate(() => (document.querySelector('#pt-nav [data-nav="roadmap"]') ?? document.querySelector('[data-nav="roadmap"]'))?.click());
+      await page.waitForSelector('.rm-tl .rm-lane[data-phase]', { timeout: 30000 });
+      const ttu = Date.now() - t0;
+      await settle(page, 1500);
+      const longest = Math.round(await page.evaluate(() => window.__long));
+      check(ttu <= 3000, `roadmap: usable ${ttu} ms after the click (budget 3000)`);
+      check(longest <= 200, `roadmap: longest task ${longest} ms (budget 200)`);
+      await page.context().close();
+    }
     // Phone widths.
     for (const theme of ['portal-light', 'portal-dark']) {
       const name = `phone-${theme.replace('portal-', '')}`;

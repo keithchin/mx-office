@@ -32,6 +32,8 @@ export function views(f, other) {
     { id: 'documents', name: 'Documents', path: lite('documents'), serverStalls: true, ready: shown('#documents-view .dv-page-body > .dv', 20), steps: [{ click: '#documents-view .dv-page-refresh', ready: "(() => { const b = document.querySelector('#documents-view .dv-page-refresh'); return !!b && !b.disabled && !!document.querySelector('#documents-view .dv-page-body > .dv'); })()" }] },
     { id: 'workers', name: 'Workers', path: lite('workers'), ready: shown('#workers-view', 10) },
     { id: 'budget', name: 'Budget', path: lite('budget'), ready: shown('#budget-view', 10) },
+    // 🗺️ Roadmap (ui/roadmap/): the summary and, on a project without phases, its one-go card (the build plan read for the first cut).
+    { id: 'roadmap', name: 'Roadmap', path: lite('roadmap'), ready: shown('#roadmap-view .rm-sum', 3) },
     { id: 'audit', name: 'Audit log', path: lite('audit'), storage: { 'agent-office.audit-lite.sub': 'events' }, ready: shown('#audit-view', 10) },
     { id: 'incidents', name: 'Incidents', path: lite('audit'), storage: { 'agent-office.audit-lite.sub': 'incidents' }, ready: shown('#audit-view', 10) },
     { id: 'settings', name: 'Settings', path: lite('settings'), ready: shown('#settings-view', 10) },
