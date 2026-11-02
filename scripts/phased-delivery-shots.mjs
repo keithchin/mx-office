@@ -62,13 +62,14 @@ async function main() {
     let cookie = await login(office.base);
     const u = new URL(office.base);
     const cookies = cookie.split('; ').map((c) => ({ name: c.slice(0, c.indexOf('=')), value: c.slice(c.indexOf('=') + 1), domain: u.hostname, path: '/' }));
-    let newPage = async (viewport, theme) => {
+    let newPage = async (viewport, theme, panelClosed = false) => {
       const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
       await ctx.addCookies(cookies);
       await ctx.addInitScript((t) => {
         localStorage.setItem('agent-office.profile', JSON.stringify({ name: 'Alex Lee', color: '#0f9b8e', skin: 0, hair: 0, style: 0 }));
-        localStorage.setItem('agent-office.color-theme', t);
-      }, theme);
+        localStorage.setItem('agent-office.color-theme', t.theme);
+        if (t.panelClosed) localStorage.setItem('agent-office.lead-panel', JSON.stringify({ collapsed: true, drafts: {}, scroll: {}, seen: {} }));
+      }, { theme, panelClosed });
       const page = await ctx.newPage();
       page.errors = [];
       page.on('pageerror', (e) => /sandboxed and lacks the 'allow-same-origin'/.test(e.message) || page.errors.push(e.message));
@@ -88,6 +89,7 @@ async function main() {
       await page.goto(at(gate, 'roadmap'), { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('.rm-empty', { timeout: 30000 });
       check(/Delivered in one go/.test(await page.textContent('.rm-empty')), 'no phases: the Roadmap says delivered in one go');
+      check(await page.evaluate(() => { const b = document.querySelector('#pt-nav [data-nav="roadmap"]'); return !b || !!b.closest('[hidden]'); }), 'no phases: Roadmap is not listed in the navigation');
       await page.screenshot({ path: path.join(out, 'roadmap-one-go-light.png') });
       await page.context().close();
     }
@@ -121,6 +123,17 @@ async function main() {
       await page.waitForSelector('.rm-tl .rm-lane[data-phase]', { timeout: 30000 });
       await settle(page, 1200);
       check((await page.locator('.rm-lane[data-phase]').count()) === 8, `${name}: a lane per phase`);
+      check(await page.evaluate(() => { const b = document.querySelector('#pt-nav [data-nav="roadmap"]'); return !!b && !b.closest('[hidden]'); }), `${name}: with phases, Roadmap is listed in the navigation`);
+      const fit = await page.evaluate(() => ({
+        cut: [...document.querySelectorAll('.rm-lane[data-phase] .rm-t')].filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent),
+        track: Math.round(document.querySelector('.rm-lane[data-phase] .rm-track')?.getBoundingClientRect().width ?? 0),
+        scrolls: (() => { const x = document.querySelector('.rm-tl-scroll'); return x ? x.scrollWidth > x.clientWidth + 1 : true; })(),
+        width: Math.round(document.querySelector('#roadmap-view')?.getBoundingClientRect().width ?? 0),
+        cols: getComputedStyle(document.querySelector('.rm-lane[data-phase]')).gridTemplateColumns,
+        sw: (() => { const x = document.querySelector('.rm-tl-scroll'); return x ? `${x.scrollWidth}/${x.clientWidth}` : ''; })(),
+      }));
+      check(!fit.cut.length, `${name} (panel open, page ${fit.width} px): no phase name cut off${fit.cut.length ? `: ${fit.cut.join(', ')}` : ''}`);
+      check(fit.track >= 300 && !fit.scrolls, `${name} (panel open): the track is ${fit.track} px wide and the timeline needs no sideways scroll (columns ${fit.cols}, scroll ${fit.sw})`);
       check((await page.locator('.rm-today').count()) === 1 && (await page.locator('.rm-band').count()) === 1, `${name}: today line and the overlap band`);
       check((await page.locator('.rm-cp.ok').count()) === 2, `${name}: two passed checkpoints`);
       const detail = await page.textContent('.rm-detail');
@@ -157,6 +170,19 @@ async function main() {
       check((await page.locator('.rm-bprow.moved').count()) === 1 && /unsaved/.test(await page.textContent('.rm-gate')), `${name}: a moved row is marked unsaved`);
       await page.screenshot({ path: path.join(out, `gate-${name}.png`), fullPage: true });
       check(!page.errors.length, `${name}: no page errors${page.errors.length ? `: ${page.errors.join(' | ')}` : ''}`);
+      await page.context().close();
+    }
+    // The Roadmap with the coordinator panel closed: the full width.
+    for (const theme of ['portal-light', 'portal-dark']) {
+      const name = theme.replace('portal-', '');
+      const page = await newPage({ width: 1440, height: 900 }, theme, true);
+      await page.goto(at(phased, 'roadmap'), { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.rm-tl .rm-lane[data-phase]', { timeout: 30000 });
+      await settle(page, 1500);
+      const track = await page.evaluate(() => Math.round(document.querySelector('.rm-lane[data-phase] .rm-track')?.getBoundingClientRect().width ?? 0));
+      check(track >= 450, `${name} (panel closed): the track is ${track} px wide`);
+      await page.screenshot({ path: path.join(out, `roadmap-panel-closed-${name}.png`), fullPage: true });
+      check(!page.errors.length, `${name} panel closed: no page errors`);
       await page.context().close();
     }
     // The page budget on the phased Roadmap (scripts/perf/budgets: usable within 3 s, no task over 200 ms).

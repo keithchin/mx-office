@@ -6,7 +6,7 @@ weight: 2.6
 
 A larger app does not have to be built in one go. With **phased delivery** Build (Stage 5) is cut into **phases**, each a business outcome your users can try: a **foundation** phase first (the design system, the data model and security), then one business area at a time. Each phase ends when the journeys that prove it pass on a running app, and you see its progress, spend and changes on **Project Management › Roadmap**.
 
-A project without phases is exactly as before: the Overview says *Stage 5 · Build*, and the Roadmap only explains that it is delivered in one go.
+A project without phases is exactly as before: the Overview says *Stage 5 · Build* and the navigation has no Roadmap (it is listed once the project has phases, proposed or approved). At the Build Plan gate an admin sees one quiet line on the Overview's Progress card offering to **Set up phases from the build plan**, which opens the Roadmap's setup.
 
 ## How it goes
 
@@ -42,10 +42,11 @@ Against the team's estimate each phase gets a badge: green **In range**, amber *
 
 ## The Roadmap
 
-**Project Management › Roadmap** (`/lite?tab=roadmap`):
+**Project Management › Roadmap** (`/lite?tab=roadmap`, listed for a project with phases):
 
 - **The summary line**: delivery, how many phases are done and active, and spent against the budget with its auto-pause.
 - **The timeline**: Discovery, a lane per phase and Cutover, on a date axis with the **today line**. A done phase is green, the active one filled to its share of rows done, one at its checkpoint purple, planned ones dashed; early work is hatched, and an overlap draws a dashed band across both lanes with its dates. A diamond marks a checkpoint (filled once passed). Each lane shows spend against the estimate with its badge, and whether it publishes at its end. Dates are actual for started phases; the rest follow the team's days, re-forecast from the pace of the active phase.
+- **Narrow pages**: the timeline is sized to the room it has, not the window (the coordinator panel docked on the right takes a third of a laptop screen). Phase names go onto two lines, the status badge under the name, and below about 980 px the Published column folds away; below its minimum it scrolls sideways inside its own box, never the page. The phase detail and the side cards stack.
 - **The selected phase**: its rows done, journeys, spend and dates; the soft budget note; the exit criteria; its journeys with their results; its rows; the merges on main that name its rows. Go and Stop show at a checkpoint.
 - **Sandbox and report**, and **Changes to phases**: the team's open proposals and the change history.
 

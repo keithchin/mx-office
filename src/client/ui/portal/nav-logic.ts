@@ -6,7 +6,7 @@
 // own tab joins its group from the tab registry (src/client/tabs/registry.ts) rather than this list.
 // Pure, so tests/portal-nav.test.ts runs it.
 
-import { registeredTabs, reserveTabIds, tabsVersion } from '../../tabs/registry';
+import { registeredTabs, reserveTabIds, tabShown, tabsVersion } from '../../tabs/registry';
 
 /** The 1D view's built-in tabs (lite.html's tab row and its views). */
 export type NavTab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | 'org' | 'standup' | 'approvals' | 'teams' | 'documents' | 'audit' | 'budget' | 'settings';
@@ -142,7 +142,7 @@ export const pageTitle = (t: string): string => navItem(t)?.label ?? 'Overview';
 
 /** The groups' items a viewer sees: the admin-only ones (Tests) only for an admin. */
 export function visibleItems(g: NavGroup, admin: boolean): NavItem[] {
-  return g.items.filter((i) => !i.admin || admin);
+  return g.items.filter((i) => (!i.admin || admin) && (i.kind !== 'tab' || tabShown(i.id)));
 }
 
 // ---- What's remembered: the open groups and the folded rail ----------------------------------------

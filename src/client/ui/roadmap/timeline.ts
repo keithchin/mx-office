@@ -106,5 +106,5 @@ export function timeline(v: PhasesView, selected: string | undefined, select: (i
     h('span', {}, h('i.rm-key-today'), 'Today'),
     h('span.rm-legend-un', {}, `Not tied to a phase (coordination, reviews): ${usd(v.unassigned)}`),
   );
-  return h('div.rm-tl', { role: 'group', 'aria-label': 'Phases on a timeline' }, head, lanesEl, legend);
+  return h('div.rm-tl', { role: 'group', 'aria-label': 'Phases on a timeline' }, h('div.rm-tl-scroll', { tabindex: 0, 'aria-label': 'Timeline (scrolls sideways when narrow)' }, h('div.rm-tl-inner', {}, head, lanesEl)), legend);
 }

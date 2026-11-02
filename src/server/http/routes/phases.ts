@@ -1,5 +1,5 @@
 // Phased delivery's routes (server/phases/): GET /api/phases?floor= is the Roadmap's view (everyone signed in
-// may look; `&lite=1` answers a project without phases with just that, no git, for the Overview's strip), and
+// may look; `&lite=1` answers a project without phases with just that, for the Overview's strip and the navigation: no git, except for an admin at the Build Plan gate, who is told how many phases the build plan's headings would give (`offer`)), and
 // POST /api/phases {floor, action, …} is the Project Manager's: approve the proposed phases at the Build Plan
 // gate (with edits), accept or decline a team proposal (accept with `ops`: Edit first), edit the phases with a
 // reason, Go or Stop at a checkpoint, set the phases up from the office's first cut of the build plan, and ask
@@ -7,6 +7,8 @@
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
 import { phasesOf, viewOf } from '../../phases/index.js';
+import { readRepo } from '../../phases/inputs.js';
+import { currentStage } from '../../budget/stage.js';
 import { isPhased } from '../../../shared/phases/plan.js';
 import { DEFAULT_PREFS, type Who } from '../../../shared/phases/types.js';
 import { readBody, send } from '../util.js';
@@ -25,7 +27,12 @@ export const phaseRoutes = {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such project' });
       const plan = phasesOf(ctx).plan(floor.id);
-      if (url.searchParams.get('lite') === '1' && !isPhased(plan)) return send(res, 200, { floor: floor.id, admin: ctx.meOf(session.account?.id).admin, now: Date.now(), plan: { state: plan.state, delivery: plan.delivery, prefs: plan.prefs ?? DEFAULT_PREFS }, phases: [], proposals: [], changes: [], lite: true });
+      if (url.searchParams.get('lite') === '1' && !isPhased(plan)) {
+        const admin = ctx.meOf(session.account?.id).admin;
+        // At the Build Plan gate an admin is offered to set phases up from the build plan (its "Phase N" headings).
+        const offer = admin && currentStage(floor.dir) === '4' ? (await readRepo(floor.dir, floor.github?.pulls.items ?? []).catch(() => undefined))?.planPhases.length ?? 0 : 0;
+        return send(res, 200, { floor: floor.id, admin, now: Date.now(), plan: { state: plan.state, delivery: plan.delivery, prefs: plan.prefs ?? DEFAULT_PREFS }, phases: [], proposals: [], changes: [], lite: true, ...(offer > 1 ? { offer } : {}) });
+      }
       try {
         return send(res, 200, await viewOf(ctx, floor, session.account?.id));
       } catch (err) {

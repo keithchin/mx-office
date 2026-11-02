@@ -26,6 +26,7 @@ import { tileLetters } from '../../home/portal-logic';
 import { h } from '../dom';
 import { icon, type PortalIcon } from './icons';
 import { portalSlot } from './slot';
+import { onTabVisibility } from '../../tabs/registry';
 import {
   foldedBadge,
   NEEDS_TAB,
@@ -412,6 +413,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
   }
 
   store.on('me', drawGroups);
+  onTabVisibility(drawGroups);
   readBadges();
   drawGroups();
   drawRail();

@@ -12,6 +12,7 @@ import { onRoster } from '../teams/world';
 import { usd, type PhasesView } from '../../../shared/phases/view';
 import type { PhaseProposal } from '../../../shared/phases/types';
 import { actOnPhases, getPhases, isFull, pick } from './api';
+import { phasesChanged } from './state';
 import { timeline } from './timeline';
 import { changesCard, phaseDetail, publishCard, type DetailActs } from './detail';
 import { gateEditor } from './gate';
@@ -47,6 +48,7 @@ export function roadmapPage(root: HTMLElement): TabHooks {
     const r = await actOnPhases({ floor: store.floor, ...body });
     if (r.ok) {
       if (done) toast(done);
+      phasesChanged();
       await load();
     }
     return r;
@@ -63,6 +65,7 @@ export function roadmapPage(root: HTMLElement): TabHooks {
     const r = await actOnPhases({ floor: store.floor, ...body }, true);
     if (r.ok) {
       toast(done);
+      phasesChanged();
       await load();
     }
     return r;

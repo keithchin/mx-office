@@ -3,20 +3,16 @@
 // (3 of 8)", "2 phases done · Social design started early"), and under the stages one box says the phase, its
 // share of rows done, its spend against the estimate with the soft badge, what overlaps it and when its
 // checkpoint is expected, over a chip per phase (click: that phase on the Roadmap). A project without phases
-// gets nothing: the card is exactly as before. Asked on arriving at a project and when the office says it
-// changed (the lite answer costs the office no git for a project without phases).
+// gets nothing (the card is exactly as before), except an admin at the Build Plan gate: one line offering to set
+// phases up from the build plan. It draws from ./state.ts's answer, which the navigation shares.
 
-import { store } from '../../state';
 import { openProjectTab } from '../../tabs/host';
 import { h } from '../dom';
-import { onRoster } from '../teams/world';
 import { dayWord } from '../../../shared/phases/timeline';
 import { buildHeadline, percentDone, rangeText, usd, type PhasesView } from '../../../shared/phases/view';
-import { getPhases, isFull, pick } from './api';
+import { isFull, pick } from './api';
+import { onPhases } from './state';
 import './strip.css';
-
-/** At most one look this often when the office keeps saying the project changed. */
-const MIN_GAP_MS = 4000;
 
 /** The two words under the Build stage: phases done and what started early. */
 export function buildDetail(v: Pick<PhasesView, 'phases'>): string {
@@ -30,24 +26,31 @@ const css = (s: string) => JSON.stringify(s);
 export function phaseStrip(card: HTMLElement): void {
   const box = h('div.ph-strip', { hidden: true, role: 'group', 'aria-label': 'Build phases' });
   card.append(box);
-  let last = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let drawn = '';
 
   const off = () => {
     card.classList.remove('ph-phased');
     box.hidden = true;
+    box.classList.remove('ph-offer');
     drawn = '';
   };
-  async function load() {
-    const floor = store.floor;
-    if (!floor) return off();
-    last = Date.now();
-    const lite = await getPhases(floor, true);
-    if (floor !== store.floor) return;
-    if (!isFull(lite)) return off();
-    draw(lite);
+  /** At the Build Plan gate, for an admin of a project without phases: one quiet line to set them up. */
+  function offer(n: number) {
+    const key = `offer|${n}`;
+    if (key === drawn) return;
+    drawn = key;
+    card.classList.remove('ph-phased');
+    box.classList.add('ph-offer');
+    box.replaceChildren(h('div.ph-line1', {}, h('span.ph-muted', {}, `Build Plan gate: Build can be delivered in ${n} phases from the build plan's own headings (a foundation first), each proven by its journeys.`), h('span.ph-grow'), h('button.pt-link.ph-open', { type: 'button', onclick: () => openProjectTab('roadmap') }, 'Set up phases from the build plan →')));
+    box.hidden = false;
   }
+  onPhases((v) => {
+    if (!v) return off();
+    if (isFull(v)) return draw(v);
+    if ('offer' in v && v.offer && v.admin) return offer(v.offer);
+    off();
+  });
+
   function draw(v: PhasesView) {
     if (v.plan.state === 'none' || !v.phases.length) return off();
     const key = JSON.stringify({ ...v, now: 0 });
@@ -99,17 +102,8 @@ export function phaseStrip(card: HTMLElement): void {
         return h('button.ph-chip', { type: 'button', class: cls, title: `${l.order} ${l.name}: ${l.status}`, onclick: () => ((pick.phase = l.id), openProjectTab('roadmap')) }, h('span.ph-t', {}, `${l.order} ${l.name}`), h('span.ph-s', {}, sub));
       }),
     );
+    box.classList.remove('ph-offer');
     box.replaceChildren(line1, chips);
     box.hidden = false;
   }
-  const soon = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => void load(), Math.max(400, MIN_GAP_MS - (Date.now() - last)));
-  };
-  store.on('floor', () => {
-    off();
-    void load();
-  });
-  onRoster(soon);
-  void load();
 }
