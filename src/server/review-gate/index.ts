@@ -2,7 +2,8 @@
 //   - every PR list (office/floors.ts pullsChanged): the tasks whose PR merged without a review that
 //     counts are marked integrated (unreviewed), so they never read as verified (markUnreviewed);
 //   - every surfaced-asks look (asks/main.ts): the info cards for Needs you, one per flagged PR, one per
-//     direct or force push to the default branch, and one for the week's baseline resets and waivers.
+//     direct or force push to the default branch, one for the week's baseline resets and waivers, and one when
+//     main's build log says the toolkit's lint gate couldn't run (./lint-gate.ts, release 83).
 // Deterministic, no LLM. This looks after the merge; before it, the office's own Merge button asks the merge
 // gate (server/merge-gate/), and only GitHub branch protection requiring its status can stop an agent's gh.
 
@@ -18,6 +19,7 @@ import { flaggedPulls, markTasks, pullItem, type JudgeLook } from './judge.js';
 import { checkPushes, pushItem, type PushLook } from './pushes.js';
 import { uncheckedItem } from './baseline.js';
 import { lookWaivers, waiverItem } from './waivers.js';
+import { lintGateItem, lookLintGate } from './lint-gate.js';
 import { countedReviewer, gateAsks } from '../merge-gate/index.js';
 import { protectionAsks } from '../merge-gate/protection-ask.js';
 import { externalCheck, externalItems } from '../data-impact/external.js';
@@ -65,11 +67,13 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
   if (!floor) return [];
   const pulls = floor.github.pulls.items;
   const prs = flaggedPulls(pulls, judgeLookOf(ctx, floor), now).map(({ pull, j }) => pullItem(pull, j, lead));
-  const [pushes, waivers] = await Promise.all([
+  const [pushes, waivers, lint] = await Promise.all([
     // A local-only project's merges made through the office's reviewed merge (local-merge/) came through review, not around it.
     main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, new Set([...mergesOf(pulls), ...localMergeCommits(ctx.cfg.dataDir, floor.id)]), now, externalCheck(ctx, floor)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
     lookWaivers(floor.dir, now).catch(() => []),
+    main ? lookLintGate(floor.dir, main.sha).catch(() => undefined) : Promise.resolve(undefined),
   ]);
+  const linted = lintGateItem(lint, lead);
   const waived = waiverItem(waivers, lead);
-  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...(pushes.unchecked && main ? [uncheckedItem(main.branch, pushes.unchecked)] : []), ...pushes.events.map((e) => pushItem(e, lead)), ...externalItems(ctx, floor.id, lead), ...(waived ? [waived] : [])];
+  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...(pushes.unchecked && main ? [uncheckedItem(main.branch, pushes.unchecked)] : []), ...pushes.events.map((e) => pushItem(e, lead)), ...externalItems(ctx, floor.id, lead), ...(waived ? [waived] : []), ...(linted ? [linted] : [])];
 }

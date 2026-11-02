@@ -19,7 +19,8 @@ import { testRunConstants } from '../app-instance/constants.js';
 import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
-import { pgEnvFor, prepareTestRun, serialTestRuntime, testPorts } from './test-db.js';
+import { pgEnvFor, prepareTestRun, serialTestRuntime, testPorts, testRuntimeNow } from './test-db.js';
+import { headroomNow } from './machine-load.js';
 import { testFlags, type TestFlags } from './test-flags.js';
 import type { TestRunDraft } from '../../shared/testing/record.js';
 import { pickMxbuild } from '../liveapp/mxbuild.js';
@@ -48,8 +49,10 @@ interface RunSlot {
   harness?: string;
   /** How far the run now has got (read off mxcli's output), and what it covers: its files, tests and time limit. */
   progress?: RunProgress;
-  plan?: { paths: string[]; tests: number; limitMs: number; auto: boolean };
+  plan?: { paths: string[]; tests: number; limitMs: number; auto: boolean; headroom?: string };
   subset?: RunSubset;
+  /** Waiting for the office's one test runtime (another project's run holds it): whose, and since when. Never counted against the limit. */
+  waiting?: { for: string; since: number };
 }
 interface FloorRuns {
   tests: RunSlot;
@@ -95,6 +98,10 @@ export interface MxDeps {
   constants?: (floorDir: string, sha: string) => Promise<TestRunOpts['constants']>;
   /** Stand-in for runner-settings.ts limitFor (tests): a run's time limit for its number of tests. */
   limit?: (tests: number) => { ms: number; auto: boolean };
+  /** Stand-in for machine-load.ts headroomNow (tests): extra room on the limit when the machine is loaded. */
+  headroom?: () => Promise<{ factor: number; why: string } | undefined>;
+  /** Stand-in for test-db.ts serialTestRuntime (tests). */
+  serial?: <T>(fn: () => Promise<T>, who?: { floorId?: string; label?: string }) => Promise<T>;
   /** Hears each finished run's record (the callers raise what only a person can clear: agent-app/raise.ts). */
   onDone?: (draft: TestRunDraft) => void;
 }
@@ -148,7 +155,7 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
     if ('why' in picked) return `Nothing to run for ${subsetWords(subset)} at ${sha.slice(0, 7)}: ${picked.why}`;
   }
   if (slot.running) return busy();
-  Object.assign(slot, { running: true, since: Date.now(), commit: sha, by: who.name, record: undefined, harness: undefined, progress: undefined, plan: undefined, subset });
+  Object.assign(slot, { running: true, since: Date.now(), commit: sha, by: who.name, record: undefined, harness: undefined, progress: undefined, plan: undefined, subset, waiting: undefined });
   audit.record({
     floor: floor.id,
     actor: who.agentId ? agent(who.name, who.agentId) : human(who.name, who.accountId),
@@ -165,8 +172,19 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
       // The project's instance constants and a generated seed password, for this run only.
       const constants = await (deps.constants ?? ((d: string, c: string) => testRunConstants(dataDir, d, c)))(floor.dir, sha).catch(() => undefined);
       const limit = deps.limit ?? (await limitFor(dataDir, floor.id));
-      const live = { subset, limit, onPlan: (p: NonNullable<RunSlot['plan']>) => void (slot.plan = p), onProgress: (p: RunProgress) => void (slot.progress = p) };
-      const { draft } = await runMicroflowTests({ ...live, ...(constants ? { constants } : {}), dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial: serialTestRuntime, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
+      // The office's one test runtime: while another project's run holds it, this run says it waits (not counted).
+      const serialOf = deps.serial ?? serialTestRuntime;
+      const serial = <T>(fn: () => Promise<T>): Promise<T> => {
+        const now = testRuntimeNow();
+        if (now.holder || now.waiting) slot.waiting = { for: now.holder ? (now.holder.floorId && now.holder.floorId !== floor.id ? `another project's test run (${now.holder.label})` : now.holder.label) : 'another test run', since: Date.now() };
+        return serialOf(() => {
+          slot.waiting = undefined;
+          return fn();
+        }, { floorId: floor.id, label: `${who.name}'s on ${sha.slice(0, 7)}` });
+      };
+      const headroom = deps.headroom ?? (deps.tool ? undefined : () => headroomNow());
+      const live = { subset, limit, ...(headroom ? { headroom } : {}), onPlan: (p: NonNullable<RunSlot['plan']>) => void (slot.plan = p), onProgress: (p: RunProgress) => void (slot.progress = p) };
+      const { draft } = await runMicroflowTests({ ...live, ...(constants ? { constants } : {}), dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, ...(onMain ? { branch: main.branch } : {}), actor: who.name, timeoutMs: TEST_TIMEOUT_MS, prepare, serial, mxbuildFor: (mpr) => pickMxbuild(mpr, floorToolkitEnv(floor.dir)).path, ...(flags ? { flags } : {}), ports: () => testPorts(dataDir), pgEnv: pgEnvFor(dataDir), ...(deps.now ? { now: deps.now } : {}) });
       try {
         deps.onDone?.(draft);
       } catch {
@@ -187,22 +205,28 @@ export async function startMicroflowTests(dataDir: string, floor: FloorLike, who
       slot.last = err instanceof NoTestsError ? err.message : `The run could not be recorded: ${(err as Error).message}`;
     } finally {
       slot.running = false;
+      slot.waiting = undefined;
     }
   })();
   return { commit: sha, done };
 }
 
 /** A running test run's progress in words and its time limit (the Testing page, office-app test). */
-function testProgress(s: RunSlot): { progress?: string; limitMinutes?: number; limitAuto?: boolean } {
+function testProgress(s: RunSlot): { progress?: string; limitMinutes?: number; limitAuto?: boolean; headroom?: string; waiting?: string } {
+  const mins = (ms: number) => Math.max(0, Math.round(ms / 60_000));
+  if (s.waiting) {
+    const words = `Waiting for ${s.waiting.for} to end (${mins(Date.now() - s.waiting.since)} min so far): this wait isn't counted against the time limit`;
+    return { progress: words, waiting: words, ...(s.plan ? { limitMinutes: Math.max(1, Math.ceil(s.plan.limitMs / 60_000)), limitAuto: s.plan.auto } : {}) };
+  }
   return {
     ...(s.progress ? { progress: progressWords(s.progress, Date.now()) } : { progress: 'Getting the work folder ready' }),
-    ...(s.plan ? { limitMinutes: Math.max(1, Math.ceil(s.plan.limitMs / 60_000)), limitAuto: s.plan.auto } : {}),
+    ...(s.plan ? { limitMinutes: Math.max(1, Math.ceil(s.plan.limitMs / 60_000)), limitAuto: s.plan.auto, ...(s.plan.headroom ? { headroom: s.plan.headroom } : {}) } : {}),
   };
 }
 
 /** The project's microflow test run now, or its last one (what an agent's office-app test waits on): its progress in words, not the raw object. */
-export function testRunOf(floorId: string): Readonly<Omit<RunSlot, 'progress' | 'plan'> & { progress?: string; limitMinutes?: number; limitAuto?: boolean }> {
-  const { progress: _p, plan: _l, ...s } = runsOf(floorId).tests;
+export function testRunOf(floorId: string): Readonly<Omit<RunSlot, 'progress' | 'plan' | 'waiting'> & { progress?: string; limitMinutes?: number; limitAuto?: boolean; headroom?: string; waiting?: string }> {
+  const { progress: _p, plan: _l, waiting: _w, ...s } = runsOf(floorId).tests;
   return { ...s, ...(s.running ? testProgress(runsOf(floorId).tests) : {}) };
 }
 

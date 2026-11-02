@@ -2,12 +2,15 @@
 // the time limit of a run, in whole minutes (5 to 180). Without one, a run's limit is sized to the suite
 // (shared/testing/test-files.ts autoLimitMinutes: 10 min plus 15 s a test, 15 to 45 min). Admins set it from
 // the Testing page (POST /api/testing/runner), audited; the file is written whole, durably, one write at a time.
+// Anyone signed in reads it (GET /api/testing/runner, release 83: runnerView), with how the automatic limit is sized
+// and the office's test runtime now (the run holding it, how many wait).
 
 import path from 'node:path';
 import { readJsonStore } from '../durable/read.js';
 import { writeTextDurable } from '../durable/write.js';
 import { audit, human } from '../audit/index.js';
-import { autoLimitMinutes, cleanLimit } from '../../shared/testing/test-files.js';
+import { AUTO_MAX, AUTO_MIN, autoLimitMinutes, cleanLimit } from '../../shared/testing/test-files.js';
+import { testRuntimeNow } from './test-db.js';
 
 const FLOOR = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -54,4 +57,29 @@ export function setTestLimit(dataDir: string, floorId: string, value: unknown, w
   const p = (chains.get(file) ?? Promise.resolve()).then(run, run);
   chains.set(file, p.catch(() => undefined));
   return p;
+}
+
+/** What GET /api/testing/runner answers: the project's own limit (null: sized), who set it, how the automatic one is sized, the runtime now. */
+export interface RunnerView {
+  floor: string;
+  limitMinutes: number | null;
+  by?: string;
+  at?: number;
+  auto: { rule: string; minMinutes: number; maxMinutes: number; headroom: string };
+  runtime: { busy: boolean; holder?: string; holderProject?: string; waiting: number };
+}
+
+export async function runnerView(dataDir: string, floorId: string): Promise<RunnerView> {
+  const r = await readJsonStore(fileOf(dataDir, floorId)).catch(() => undefined);
+  const f = r && r.state === 'ok' ? (r.value as RunnerFile) : undefined;
+  const own = cleanLimit(f?.limitMinutes);
+  const rt = testRuntimeNow();
+  return {
+    floor: floorId,
+    limitMinutes: typeof own === 'number' ? own : null,
+    ...(typeof own === 'number' && f?.by ? { by: f.by } : {}),
+    ...(typeof own === 'number' && f?.at ? { at: f.at } : {}),
+    auto: { rule: 'sized to the tests a run selects: 10 min plus 15 s a test', minMinutes: AUTO_MIN, maxMinutes: AUTO_MAX, headroom: 'x1.5 to x2 while other app runtimes or mxcli test runs load the machine; a wait for another project’s run is shown, never counted' },
+    runtime: { busy: !!rt.holder, ...(rt.holder ? { holder: rt.holder.label, ...(rt.holder.floorId ? { holderProject: rt.holder.floorId } : {}) } : {}), waiting: rt.waiting },
+  };
 }

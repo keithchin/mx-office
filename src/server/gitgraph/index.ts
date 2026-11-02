@@ -5,6 +5,7 @@
 // git about branches that moved.
 
 import { execFileOff } from '../offloop/exec.js';
+import { singleFlight } from './single-flight.js';
 import { originNews } from '../floor-sync/bus.js';
 import type { GitBranch, GitGraph } from '../../shared/gitgraph.js';
 import type { GhPull, WorkerInfo } from '../../shared/protocol.js';
@@ -34,9 +35,13 @@ export interface GraphFloor {
 
 export type Git = (args: string[], cwd: string, timeout?: number) => Promise<string>;
 
-/** Runs git with `args` (no shell) in `cwd`; a non-zero exit throws with git's message. */
-export const runGit: Git = (args, cwd, timeout = GIT_TIMEOUT_MS) =>
-  new Promise((resolve, reject) => {
+const shared = singleFlight<string>();
+
+/** Runs git with `args` (no shell) in `cwd`; the same read-only command already running here shares its answer (./single-flight.ts). A non-zero exit throws with git's message. */
+export const runGit: Git = (args, cwd, timeout = GIT_TIMEOUT_MS) => shared(args, cwd, () => startGit(args, cwd, timeout));
+
+const startGit = (args: string[], cwd: string, timeout: number) =>
+  new Promise<string>((resolve, reject) => {
     // Started off the event loop (offloop/exec.ts): the Git and Model tabs ask for the graph on every
     // look, and each git start on the main thread held it 10 to 350 ms on Windows.
     execFileOff('git', args, { cwd, maxBuffer: 16 * 1024 * 1024, timeout, windowsHide: true, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' } }, (err, stdout, stderr) => {
@@ -57,6 +62,11 @@ export class GitGraphs {
   private recent = new Map<string, { at: number; graph: Promise<GitGraph> }>();
 
   constructor(private git: Git = runGit) {}
+
+  /** The project's main moved here (a local merge): the next look reads git again, not the answer of a few seconds ago. */
+  forget(floorId: string) {
+    this.recent.delete(floorId);
+  }
 
   graph(floor: GraphFloor): Promise<GitGraph> {
     const r = this.recent.get(floor.id);

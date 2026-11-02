@@ -38,6 +38,7 @@ import { profileHooksOf } from '../profiles/index.js';
 import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
 import { buildPlanOf } from './build-plan-source.js';
+import { backgroundWorkOf } from '../agent-app/background.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 /** The key a terminal's Enter sends. */
@@ -173,6 +174,8 @@ export function rosterOf(ctx: Ctx): Roster {
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
       pipelineStage,
       studioOpen: (id) => !!studioStateOf(id)?.open,
+      // Its tests, journeys or instance running in the office's background: no nudge meanwhile (release 83).
+      background: (id, workerId, name) => backgroundWorkOf(ctx, id, workerId, name),
       // The portfolio's brain line, and a local-only project's rule (local-only.ts), in the hire's first message.
       hireContext: (id) => withLocalOnlyLine(portfoliosOf(ctx).hireContext(id), ctx.floors.get(id)?.dir),
       // Agent profiles: office-wide identities for the seats, and the moves between projects (profiles/).

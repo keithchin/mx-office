@@ -13,7 +13,8 @@
 // before writing its dashboard can't pass the committed one off as fresh. Runs start when origin/<default>
 // moves (the fetches' originNews) or when someone reads the gates; at most one per floor at a time, at
 // most once every few minutes per floor (longer after a failure), a few at once across the office,
-// time-limited, off the event loop. The floor's own folder is never written to, nothing is committed.
+// time-limited, off the event loop (never a second over one still ending; none of their own accord while the
+// office's microflow test runtime is busy, release 83). The floor's own folder is never written to, nothing is committed.
 // With no remote, the panel reads the folder as before (setup.ts).
 
 import { execFileOff } from '../offloop/exec.js';
@@ -96,6 +97,13 @@ export interface GateSourceOptions {
   concurrency: number;
   /** Where each floor's latest good run is kept between office starts (none: memory only). */
   keepFile?: string;
+  /**
+   * How long past `timeoutMs` the runner gets to end by itself (its own timer kills the tree), and then how long
+   * a run given up on is still waited for before its slot and worktree go (default: timeoutMs, at most a minute).
+   */
+  graceMs?: number;
+  /** Why automatic gate-checks wait now (the office's microflow test runtime is busy), or undefined; a forced Re-check still runs. */
+  deferWhile?: () => string | undefined;
 }
 
 const DEFAULTS: GateSourceOptions = { throttleMs: 3 * 60_000, failMs: 10 * 60_000, fetchMs: 90_000, timeoutMs: 5 * 60_000, fetch: true, concurrency: 2 };
@@ -185,6 +193,10 @@ export class GateSource {
   private running = new Map<string, Promise<void>>();
   private lastRun = new Map<string, number>();
   private looking = new Set<string>();
+  /** A run given up on whose runner hasn't ended yet (its killed tree may still hold git): no automatic run meanwhile. */
+  private lingering = new Map<string, Promise<unknown>>();
+  /** Why the last automatic run was put off, per floor (until the next one starts). */
+  private deferred = new Map<string, string>();
   private slots: Slots;
   /** The kept runs read back from `keepFile` (once per office). */
   private restored?: Promise<void>;
@@ -258,6 +270,11 @@ export class GateSource {
     return g ? { html: g.html ?? dashboardOf(g.verdicts), at: g.at } : undefined;
   }
 
+  /** Why the floor's automatic gate-check is put off now (the office's test runtime is busy), if it is. */
+  deferredWhy(dir: string): string | undefined {
+    return this.deferred.get(dir);
+  }
+
   /** Whether a gate-check is running (or queued) for the floor at `dir`. */
   busy(dir: string): boolean {
     return this.running.has(dir);
@@ -274,6 +291,15 @@ export class GateSource {
     const failedHere = this.runs.get(dir)?.failed?.sha === info.sha;
     const wait = failedHere ? Math.max(this.opts.failMs, this.opts.throttleMs) : this.opts.throttleMs;
     if (!force && this.now() - (this.lastRun.get(dir) ?? -Infinity) < wait) return undefined;
+    // Release 83: never a second gate-check over one still dying (the pile of `git log --all` and `git fetch` a
+    // real build saw), and none of its own accord while a microflow test run loads the machine: the next read tries again.
+    if (!force && this.lingering.has(dir)) return undefined;
+    const why = force ? undefined : this.opts.deferWhile?.();
+    if (why) {
+      this.deferred.set(dir, why);
+      return undefined;
+    }
+    this.deferred.delete(dir);
     this.lastRun.set(dir, this.now());
     const p = this.slots
       .run(() => this.inWorktree(dir, info.sha, (tmp) => this.checkIn(tmp, dir, info.sha)))
@@ -299,10 +325,24 @@ export class GateSource {
     // The checkout brought the committed dashboard: gone first, so only one gate-check writes now is read.
     await rm(path.join(tmp, 'index.html'), { force: true });
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const late = new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error(`gate-check took longer than ${Math.round(this.opts.timeoutMs / 1000)} s`)), this.opts.timeoutMs)));
+    // The runner's own timer kills its tree at timeoutMs; this one is the backstop, a grace later, so the slot and
+    // the worktree aren't let go while that tree is still ending.
+    const grace = this.opts.graceMs ?? Math.min(60_000, this.opts.timeoutMs);
+    const ran = this.run(tmp, dir);
+    const late = new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error(`gate-check took longer than ${Math.round(this.opts.timeoutMs / 1000)} s`)), this.opts.timeoutMs + grace)));
     let said: string | void;
     try {
-      said = await Promise.race([this.run(tmp, dir), late]);
+      said = await Promise.race([ran, late]);
+    } catch (err) {
+      // Given up on: wait a little more for it to really end; if it still hasn't, no automatic run here until it has.
+      let wait: ReturnType<typeof setTimeout> | undefined;
+      const ended = await Promise.race([ran.then(() => true, () => true), new Promise<boolean>((r) => (wait = setTimeout(() => r(false), grace)))]);
+      clearTimeout(wait);
+      if (!ended) {
+        const settle = ran.then(() => undefined, () => undefined).finally(() => this.lingering.delete(dir));
+        this.lingering.set(dir, settle);
+      }
+      throw err;
     } finally {
       clearTimeout(timer);
     }

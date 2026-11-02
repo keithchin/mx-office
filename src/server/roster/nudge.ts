@@ -52,10 +52,12 @@ export interface NudgeLook {
   exhausted?: boolean;
   /** Nudges in a row without a review verdict from the Lead. */
   streak?: number;
+  /** What it has running in the office's background (its tests, journeys, instance): no nudge meanwhile (release 83). */
+  background?: string;
   now: number;
 }
 
-export type NudgeVerdict = 'nudge' | 'off' | 'no-team' | 'not-active' | 'needs-you' | 'busy' | 'asleep' | 'nothing-new' | 'already-nudged' | 'grace' | 'too-soon' | 'standup' | 'exhausted' | 'unheeded';
+export type NudgeVerdict = 'nudge' | 'off' | 'no-team' | 'not-active' | 'needs-you' | 'busy' | 'asleep' | 'nothing-new' | 'already-nudged' | 'grace' | 'too-soon' | 'standup' | 'exhausted' | 'unheeded' | 'background';
 
 /** Whether to nudge a Lead now, or why not. */
 export function nudgeDue(l: NudgeLook): NudgeVerdict {
@@ -66,6 +68,7 @@ export function nudgeDue(l: NudgeLook): NudgeVerdict {
   if (isAsleepStatus(l.status)) return 'asleep';
   if (isBusyStatus(l.status) || (l.status !== 'idle' && l.status !== 'done') || l.idleAt === undefined) return 'busy';
   if (l.inStandup) return 'standup';
+  if (l.background) return 'background';
   // A result that came back before its last nudge was already reviewed (or ignored) in that turn.
   if (l.subagentAt === undefined || (l.turnAt !== undefined && l.subagentAt < l.turnAt) || (l.nudgedAt !== undefined && l.subagentAt <= l.nudgedAt)) return 'nothing-new';
   if (l.exhausted) return 'exhausted';
@@ -148,6 +151,10 @@ export class Nudges {
       inStandup: this.roster.standups.isAsked(floor, role),
       exhausted: sub?.exhaustedAt !== undefined,
       streak: t.streak,
+      ...(() => {
+        const why = this.roster.deps.background?.(floor.id, w.id, w.name);
+        return why ? { background: why } : {};
+      })(),
       now,
     });
   }

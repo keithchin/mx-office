@@ -10,7 +10,7 @@ import { appendFileSync } from 'node:fs';
 import { stateWords, unknownLine, type DispatchRecord } from '../src/shared/dispatch.js';
 import { sentWords } from '../src/shared/followthrough.js';
 import { typedWatchOf } from '../src/server/roster/dispatch-hooks.js';
-import { GRACE_MS, QUEUED_MAX_MS } from '../src/server/dispatch/typed-watch.js';
+import { GRACE_MS, LATE_MAX_MS, LATE_SLOW_POLL_MS, QUEUED_MAX_MS } from '../src/server/dispatch/typed-watch.js';
 import { inputBoxHolds, inputBoxText } from '../src/server/dispatch/input-box.js';
 import { isTypedEnqueue, isTypedEvidence } from '../src/server/dispatch/evidence.js';
 import { FakeFloor, ask, clock, crashAndRestart, office, records, settle, userEntry } from './dispatch-helpers.js';
@@ -356,4 +356,34 @@ test('only the queued_command attachment in the session counts: not a sidechain,
   assert.equal(isTypedEvidence(att({ sessionId: 's2' }), r), false);
   assert.equal(isTypedEvidence(att({}, { type: 'todo_reminder' }), r), false);
   assert.equal(isTypedEvidence(att({}, { prompt: 'Go ahead.' }), r), false, 'without its marker');
+});
+
+test('release 83: a "typed but not received" card closes when the message turns up days later, after a restart too', async () => {
+  const floor = new ScreenFloor();
+  const { o, tick, done } = rig(floor);
+  try {
+    const { ada, rec } = await raisedAndAnswered(floor, o);
+    await tick(GRACE_MS + 5_000);
+    assert.equal(rec().state, 'outcome-unknown');
+    // Past the first half hour it is still looked for, slowly: two days on, the message lands.
+    await tick(2 * 24 * 60 * 60_000);
+    assert.equal(rec().state, 'outcome-unknown');
+    floor.land(ada, floor.prompts[0].text);
+    await tick(LATE_SLOW_POLL_MS + 1_000);
+    assert.deepEqual([rec().state, rec().confirmedBy], ['submitted', 'system']);
+    assert.deepEqual(o.roster.dispatch.unsettled(floor.id), [], 'off the Needs you card');
+    assert.equal(floor.prompts.length, 1, 'never typed again');
+  } finally {
+    done();
+  }
+});
+
+test('release 83: after a restart an outcome-unknown typed record is watched again (reconcile), for a week at most', async () => {
+  const { reconcileFloor } = await import('../src/server/dispatch/reconcile.js');
+  const watched: string[] = [];
+  const now = Date.now();
+  const rec = (id: string, typedAt: number, state = 'outcome-unknown') => ({ id, state, channel: 'type', typedAt }) as unknown as DispatchRecord;
+  const d = { ready: async () => undefined, unsettled: () => [rec('fresh', now - 2 * 24 * 60 * 60_000), rec('old', now - LATE_MAX_MS - 1), rec('held', now, 'held')], mine: new Set<string>(), watch: (_f: string, r: DispatchRecord) => void watched.push(r.id) };
+  await reconcileFloor(d as never, 'p1', { stillHeld: () => true } as never);
+  assert.deepEqual(watched, ['fresh']);
 });

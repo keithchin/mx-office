@@ -4,11 +4,20 @@
 // when the project has a remote (as the setup panel and Deliverables read it), else the folder's HEAD.
 
 import { execFileOff } from '../offloop/exec.js';
+import { singleFlight } from '../gitgraph/single-flight.js';
 import { branchInfo } from '../wizard/gate-source.js';
 
 const ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
 
+const shared = singleFlight<string | undefined>();
+
 export function git(args: string[], cwd: string, input?: string, timeout = 30_000): Promise<string | undefined> {
+  // The same read-only question already running in this folder shares its answer (gitgraph/single-flight.ts); never with stdin.
+  if (input === undefined) return shared(args, cwd, () => startGit(args, cwd, undefined, timeout));
+  return startGit(args, cwd, input, timeout);
+}
+
+function startGit(args: string[], cwd: string, input: string | undefined, timeout: number): Promise<string | undefined> {
   return new Promise((resolve) => {
     execFileOff('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout, env: ENV, windowsHide: true, ...(input !== undefined ? { input } : {}) }, (err, out) => resolve(err ? undefined : out));
   });

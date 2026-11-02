@@ -97,14 +97,14 @@ export function qualityPanel(p: QualityPart, ask: RunAsk, setLimit?: LimitAsk): 
     };
     return b;
   };
-  const line = (title: string, s: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; subset?: string }) =>
+  const line = (title: string, s: { running: boolean; since?: number; commit?: string; last?: string; deferred?: string; progress?: string; limitMinutes?: number; limitAuto?: boolean; headroom?: string; waiting?: string; subset?: string }) =>
     h(
       'li',
       {},
       h('span.tst-k', {}, `${title}: `),
       s.running ? pill(`Running on ${rev(s.commit)}`, 'info') : s.deferred ? pill('Waiting', 'muted', s.deferred) : null,
       s.running && s.progress ? h('span.tst-progress', {}, ` ${s.progress}`) : null,
-      s.running && s.limitMinutes ? h('small.tst-from', {}, ` · stops after ${s.limitMinutes} min${s.limitAuto ? ' (sized to the suite)' : ''}`) : null,
+      s.running && s.limitMinutes && !s.waiting ? h('small.tst-from', {}, ` · stops after ${s.limitMinutes} min${s.limitAuto ? ' (sized to the tests it runs)' : ''}${s.headroom ? `, with headroom ${s.headroom}` : ''}`) : null,
       s.running && s.subset ? h('small.tst-from', {}, ` · ${s.subset}`) : null,
       !s.running && s.last ? h('span', {}, ` ${s.last}`) : !s.running ? h('span.tst-muted', {}, ' not run since the office started') : null,
     );

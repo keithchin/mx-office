@@ -80,12 +80,18 @@ export interface TestRunOpts {
   actor: string;
   /** The whole run's time limit when `limit` doesn't say (mxcli's own --timeout is the same, in minutes). */
   timeoutMs: number;
-  /** The whole run's time limit for a run of `tests` tests: the project's own, or sized to the suite (release 82). */
+  /** The whole run's time limit for a run of `tests` tests (the ones selected): the project's own, or sized to them (release 82). */
   limit?: (tests: number) => { ms: number; auto: boolean };
   /** Only some of the test files: named ones, and/or the ones with a tag (shared/testing/test-files.ts). */
   subset?: RunSubset;
   /** What the run will cover, once the work folder is ready: the files, the tests counted in them, the limit. */
-  onPlan?: (plan: { paths: string[]; tests: number; limitMs: number; auto: boolean }) => void;
+  onPlan?: (plan: { paths: string[]; tests: number; limitMs: number; auto: boolean; headroom?: string }) => void;
+  /**
+   * Extra room on the limit when the machine is loaded (release 83: three single-file runs were stopped at their
+   * 15-min limit while another project's runtimes loaded the machine): asked once the run holds the test runtime
+   * (after any wait, which never counts), a factor over the limit and why. None or a factor of 1: the limit as sized.
+   */
+  headroom?: () => Promise<{ factor: number; why: string } | undefined>;
   /** How far it has got (read off mxcli's output, shared/testing/run-progress.ts), on each change; the same object each time. */
   onProgress?: (p: RunProgress) => void;
   /** How long mxcli may take to end once it has written its results (run-guard.ts; default 30 s), and its output to close once it ended (default 5 s). */
@@ -129,9 +135,11 @@ export class NoTestsError extends Error {}
 const LOG_MAX = 4 * 1024 * 1024;
 
 /** A run stopped at its time limit, in words: where it was, what it had, what to do. ASCII punctuation only. */
-export function stoppedWords(p: RunProgress, limit: { minutes: number; auto: boolean }, now: number, last: string): string {
+export function stoppedWords(p: RunProgress, limit: { minutes: number; auto: boolean; tests?: number; headroom?: string }, now: number, last: string): string {
   const notRun = p.total !== undefined ? Math.max(0, p.total - p.results.length) : undefined;
-  const which = limit.auto ? 'sized to the suite' : "the project's own";
+  // Sized to the tests this run selected (all files, or the subset), never to the whole suite of a subset run.
+  const sized = limit.tests !== undefined ? `sized to the ${limit.tests} test${limit.tests === 1 ? '' : 's'} it ran` : 'sized to the tests it ran';
+  const which = `${limit.auto ? sized : "the project's own"}${limit.headroom ? `, with headroom: ${limit.headroom}` : ''}`;
   return `Stopped at the time limit (${limit.minutes} min, ${which}) ${stoppedWhile(p, now)}${notRun !== undefined ? `; ${notRun} of ${p.total} never ran` : ''}. Raise the project's time limit (Testing > Quality) or run a subset (office-app test --files / --tag). (last: ${last || 'nothing'})`;
 }
 
@@ -184,9 +192,9 @@ async function microflowRun(o: TestRunOpts): Promise<{ draft: TestRunDraft; juni
     const files = picked.files;
     const paths = files.map((f) => f.file);
     const tests = files.reduce((n, f) => n + f.tests.length, 0);
-    const lim = o.limit?.(tests) ?? { ms: o.timeoutMs, auto: false };
-    const minutes = Math.max(1, Math.ceil(lim.ms / 60_000));
-    const limit = { minutes, auto: lim.auto };
+    const lim = { ...(o.limit?.(tests) ?? { ms: o.timeoutMs, auto: false }) };
+    let minutes = Math.max(1, Math.ceil(lim.ms / 60_000));
+    const limit: { minutes: number; auto: boolean; headroom?: string } = { minutes, auto: lim.auto };
     o.onPlan?.({ paths, tests, limitMs: lim.ms, auto: lim.auto });
     await mkdir(evDir, { recursive: true, mode: 0o700 });
     // Only the file this run writes is ever read: one left from before is removed first.
@@ -224,8 +232,17 @@ async function microflowRun(o: TestRunOpts): Promise<{ draft: TestRunDraft; juni
       const ready = hsql ? { db: '', notes: [`ran on ${routeWords(true)}`] } : o.prepare ? await o.prepare(base) : undefined;
       if (ready && 'why' in ready) return { ready };
       const held = hsql && flags.ports && o.ports ? await o.ports() : undefined;
-      const a = held ? [...args, '--app-port', String(held.ports[0]), '--admin-port', String(held.ports[1]), '--serve-port', String(held.ports[2])] : args;
+      const a = held ? [...args, '--app-port', String(held.ports[0]), '--admin-port', String(held.ports[1]), '--serve-port', String(held.ports[2])] : [...args];
       const mxbuild = o.mxbuildFor?.(path.join(wf.dir, wf.mpr));
+      // Sized now, once the runtime is ours: a loaded machine (other runtimes, another office's test run) gets headroom.
+      const room = o.headroom ? await o.headroom().catch(() => undefined) : undefined;
+      if (room && room.factor > 1) {
+        lim.ms = Math.round(lim.ms * Math.min(3, room.factor));
+        minutes = Math.max(1, Math.ceil(lim.ms / 60_000));
+        Object.assign(limit, { minutes, headroom: room.why });
+        a[a.indexOf('--timeout') + 1] = `${minutes}m`;
+        o.onPlan?.({ paths, tests, limitMs: lim.ms, auto: lim.auto, headroom: room.why });
+      }
       try {
         // Started as the office's own (run-guard.ts): at the limit its whole tree stops, root first; it answers once
         // mxcli ends (not when the last process holding its output does), and soon after its results are in.
@@ -250,7 +267,7 @@ async function microflowRun(o: TestRunOpts): Promise<{ draft: TestRunDraft; juni
     // No results: why, in mxcli's words and what they mean (shared/testing/test-reason.ts), never "no JUnit file" alone.
     // The app's startup seed refused an empty password: name the constant the run left empty.
     const emptySeed = EMPTY_PASSWORD.test(`${junit ?? ''}\n${out.stdout}\n${out.stderr}`) ? emptySeedPasswordWhy((await consts?.passwordConstants().catch(() => [])) ?? [], consts?.seedPassword) : undefined;
-    const stopped = out.killed ? stoppedWords(progress, limit, now(), lastWords(out)) : undefined;
+    const stopped = out.killed ? stoppedWords(progress, { ...limit, tests }, now(), lastWords(out)) : undefined;
     const failure = junit === undefined ? (emptySeed ?? stopped ?? testRunWhy({ ...out, minutes }, db, { mxcliVersion: o.mxcliVersion, hsql })) : emptySeed;
     // No JUnit file, but the run got to its tests (or was stopped): what mxcli said live for each, and the rest as never run.
     const partialWhy = out.killed ? `the run was stopped at its ${minutes}-min time limit ${stoppedWhile(progress, now())}` : 'the run ended before it got to it';

@@ -1,6 +1,6 @@
 // The local git the task links read (Slice 1B-4): the commits since an answer on every local ref, the
 // commits on one branch, and whether a revision contains a commit. All off the event loop (asks/sources.ts
-// git) and cached briefly (a minute) or, for ancestry, for good (followthrough/locate.ts isAncestor). Only
+// git) and cached briefly (a minute; one `log --all` per folder, release 83) or, for ancestry, for good (followthrough/locate.ts isAncestor). Only
 // asked when someone opens a decision's links or the follow-through look runs: no polling, no fetch.
 
 import { git } from '../asks/sources.js';
@@ -16,7 +16,6 @@ interface Cached<T> {
   p: Promise<T>;
 }
 
-const logs = new Map<string, Cached<Commit[]>>();
 const branches = new Map<string, Cached<ReadonlySet<string> | undefined>>();
 
 function cached<T>(m: Map<string, Cached<T>>, key: string, now: number, make: () => Promise<T>): Promise<T> {
@@ -31,23 +30,52 @@ function cached<T>(m: Map<string, Cached<T>>, key: string, now: number, make: ()
 const SEP = '\u001e';
 const FS = '\u001f';
 
-/** The commits on every local ref (branches, worktrees' branches, origin's) since `sinceMs`, newest first. */
+/** One folder's `git log --all`: the window it covers (seconds), when it was asked, and its commits (newest first). */
+interface DirLog {
+  at: number;
+  since: number;
+  p: Promise<Commit[]>;
+}
+const dirLogs = new Map<string, DirLog>();
+
+/** Stand-in for the log itself (tests). */
+let logRunner: (dir: string, since: number) => Promise<string | undefined> = (dir, since) => git(['log', '--all', `--since=${since}`, `-n${MAX_COMMITS}`, `--format=%H${FS}%ct${FS}%B${SEP}`], dir);
+export const useLogRunner = (fn?: typeof logRunner) => {
+  logRunner = fn ?? ((dir, since) => git(['log', '--all', `--since=${since}`, `-n${MAX_COMMITS}`, `--format=%H${FS}%ct${FS}%B${SEP}`], dir));
+  dirLogs.clear();
+};
+
+function parseCommits(out: string | undefined): Commit[] {
+  if (!out) return [];
+  return out
+    .split(SEP)
+    .map((rec) => rec.replace(/^\s+/, ''))
+    .filter(Boolean)
+    .map((rec) => {
+      const [sha, ct, ...msg] = rec.split(FS);
+      return { sha: sha.trim(), at: Number(ct) * 1000, message: msg.join(FS).trim() };
+    })
+    .filter((c) => /^[0-9a-f]{40}$/.test(c.sha));
+}
+
+/**
+ * The commits on every local ref (branches, worktrees' branches, origin's) since `sinceMs`, newest first.
+ * One `git log --all` per folder at a time and per minute (release 83: each answer's own `since` started its own
+ * log, and dozens piled up while tests loaded the machine): it covers the widest window asked, and each caller
+ * gets its part of it. A wider ask than the one kept (or running) starts one log for the wider window.
+ */
 export function commitsSince(dir: string, sinceMs: number, now = Date.now()): Promise<Commit[]> {
   // Bucketed by the minute so asks about answers a few seconds apart share one log.
   const since = Math.floor(sinceMs / 60_000) * 60;
-  return cached(logs, `${dir}\0${since}`, now, async () => {
-    const out = await git(['log', '--all', `--since=${since}`, `-n${MAX_COMMITS}`, `--format=%H${FS}%ct${FS}%B${SEP}`], dir);
-    if (!out) return [];
-    return out
-      .split(SEP)
-      .map((rec) => rec.replace(/^\s+/, ''))
-      .filter(Boolean)
-      .map((rec) => {
-        const [sha, ct, ...msg] = rec.split(FS);
-        return { sha: sha.trim(), at: Number(ct) * 1000, message: msg.join(FS).trim() };
-      })
-      .filter((c) => /^[0-9a-f]{40}$/.test(c.sha));
-  });
+  const mine = (cs: Commit[]) => cs.filter((c) => c.at >= since * 1000);
+  const had = dirLogs.get(dir);
+  const fresh = had && now - had.at < TTL_MS;
+  if (fresh && had.since <= since) return had.p.then(mine);
+  const from = fresh ? Math.min(had.since, since) : since;
+  const p = logRunner(dir, from).then(parseCommits, () => [] as Commit[]);
+  dirLogs.set(dir, { at: now, since: from, p });
+  while (dirLogs.size > KEPT) dirLogs.delete(dirLogs.keys().next().value!);
+  return p.then(mine);
 }
 
 /** The commits on a local branch since `sinceMs`, or undefined when there's no such branch. */

@@ -87,8 +87,8 @@ export interface TestRunRecord {
   importer: string;
   /** An office microflow test run of some test files only (release 82): what was asked and the files it picked. */
   subset?: RunSubsetKept;
-  /** An office microflow test run's time limit, and whether it was sized to the suite. */
-  limit?: { minutes: number; auto: boolean };
+  /** An office microflow test run's time limit, whether it was sized to the tests it ran, and the headroom a loaded machine gave it (release 83). */
+  limit?: { minutes: number; auto: boolean; headroom?: string };
   /** Where the office keeps the run's whole output ("office:testing/evidence/<project>/<run>.log"). */
   log?: string;
   /** When the office ingested it (ms). */

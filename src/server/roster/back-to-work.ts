@@ -11,13 +11,17 @@
 // for its standup, nobody at its terminal, no prompts held or notes owed to it (they go in first and carry
 // the resume line), never while the floor is paused (⏸ Pause project, a safe restart, the budget, the spend
 // cap) or Studio Pro holds its writes, once per stop, and at most BACK_PER_WINDOW times per task an hour.
+// Release 83 (a Lead got its original task re-pasted about ten times while its test chain ran): never while its
+// tests, journeys or app instance run in the office's background (RosterDeps.background), and never the old task's
+// words once it was told more since (a newer prompt from a person or an agent than its task): then the nudge says
+// carry on with the latest instruction, naming the task only by its id.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import type { AutonomyLevel } from '../../shared/roster/autonomy.js';
 import type { RoleId } from '../../shared/roster/roles.js';
 import { isAsleepStatus, isBusyStatus } from './bench.js';
 import type { Roster } from './index.js';
-import { backToWorkPrompt } from './prompts.js';
+import { backToWorkLatestPrompt, backToWorkPrompt } from './prompts.js';
 import type { Phase } from './store.js';
 import type { TeamFloor } from './types.js';
 import { backToWorkNudged } from '../chatter/hooks.js';
@@ -50,6 +54,8 @@ export interface BackLook {
   studio: boolean;
   /** Prompts held for it, and notes owed to it: they go in first. */
   queued: number;
+  /** What it has running in the office's background (its tests, journeys, instance): it waits for the office. */
+  background?: string;
   /** When its turn ended; undefined while it's busy. */
   idleAt?: number;
   /** The stop it was last nudged for. */
@@ -59,7 +65,7 @@ export interface BackLook {
   now: number;
 }
 
-export type BackVerdict = 'nudge' | 'off' | 'level-1' | 'not-active' | 'paused' | 'needs-you' | 'asleep' | 'busy' | 'no-task' | 'finished' | 'escalated' | 'standup' | 'studio' | 'viewer' | 'queued' | 'already-nudged' | 'grace' | 'rate-limited';
+export type BackVerdict = 'nudge' | 'off' | 'level-1' | 'not-active' | 'paused' | 'needs-you' | 'asleep' | 'busy' | 'no-task' | 'finished' | 'escalated' | 'standup' | 'studio' | 'viewer' | 'queued' | 'background' | 'already-nudged' | 'grace' | 'rate-limited';
 
 /** Whether to send the back-to-work nudge now, or why not. */
 export function backToWorkDue(l: BackLook): BackVerdict {
@@ -77,10 +83,22 @@ export function backToWorkDue(l: BackLook): BackVerdict {
   if (l.studio) return 'studio';
   if (l.viewers > 0) return 'viewer';
   if (l.queued > 0) return 'queued';
+  if (l.background) return 'background';
   if (l.nudgedIdleAt !== undefined && l.nudgedIdleAt === l.idleAt) return 'already-nudged';
   if (l.now - l.idleAt < BACK_GRACE_MS) return 'grace';
   if (l.nudges.filter((t) => l.now - t < BACK_WINDOW_MS).length >= BACK_PER_WINDOW) return 'rate-limited';
   return 'nudge';
+}
+
+const bg = (why: string | undefined) => (why ? { background: why } : {});
+
+/**
+ * Whether the member's recorded task is outdated: it was told something newer since (a person's or another agent's
+ * prompt after the task was given, never the office's own nudges). The newer prompt's who and when, or undefined.
+ */
+export function staleSince(taskAt: number | undefined, last: { by: string; at: number } | undefined): { by: string; at: number } | undefined {
+  if (taskAt === undefined || !last || last.by === 'Agent Office') return undefined;
+  return last.at > taskAt + 1000 ? last : undefined;
 }
 
 interface Track {
@@ -147,6 +165,7 @@ export class BackToWork {
       paused: this.roster.delivery.paused(floor),
       studio: !!this.roster.deps.studioOpen?.(floor.id),
       queued: this.roster.delivery.heldFor(w.id, floor.id) + this.roster.relays.owed(floor.id, role).length,
+      ...bg(this.roster.deps.background?.(floor.id, w.id, w.name)),
       idleAt: t.idleAt,
       nudgedIdleAt: t.nudgedIdleAt,
       nudges: t.task === task ? t.nudges : [],
@@ -170,8 +189,12 @@ export class BackToWork {
     const m = this.roster.data(floor.id).members[role];
     const w = this.roster.workerOf(floor, m)!;
     const task = this.roster.tasks.current(floor, w)!;
-    // The office's words, typed now (it's between turns); the prompt names the task, so no resume line.
-    const r = this.roster.delivery.send(floor, w, backToWorkPrompt(task, undefined, this.roster.tasks.ongoing(floor, w)?.text), { origin: 'office', resume: false });
+    // The office's words, typed now (it's between turns); the prompt names the task, so no resume line. A task it was
+    // told more about since is never re-pasted: the latest instruction is what it carries on with.
+    const rec = m.task;
+    const newer = staleSince(rec?.at, w.lastInput);
+    const text = newer ? backToWorkLatestPrompt(newer, rec?.taskId) : backToWorkPrompt(task, undefined, this.roster.tasks.ongoing(floor, w)?.text);
+    const r = this.roster.delivery.send(floor, w, text, { origin: 'office', resume: false });
     if (r.status === 'refused') return false;
     this.noted(floor, role, task, now);
     backToWorkNudged(floor.id, w, task);

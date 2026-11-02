@@ -27,7 +27,7 @@ import { audit, human } from '../../audit/index.js';
 import { fixPrereq, testPrereqs } from '../../testing/prereqs.js';
 import { raiseForPm } from '../../agent-app/raise.js';
 import { testBlocker } from '../../../shared/testing/test-reason.js';
-import { setTestLimit } from '../../testing/runner-settings.js';
+import { runnerView, setTestLimit } from '../../testing/runner-settings.js';
 import { cleanSubset } from '../../../shared/testing/test-files.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
@@ -153,6 +153,17 @@ export const testingRoutes = {
       const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, { ...who, subset }, { onDone: (d) => { const ask = testBlocker(d.harnessError); if (ask) raiseForPm(ctx, floor, undefined, ask); } }) : await startQuality(ctx.cfg.dataDir, floor, who);
       if (typeof r === 'string') return send(res, 409, { error: r });
       return send(res, 202, { ok: true, commit: r.commit });
+    },
+  },
+  /** GET /api/testing/runner?floor=: the project's time limit for its microflow test runs (null: sized to the tests a run selects), how that is sized, and the office's test runtime now (release 83). */
+  runnerGet: {
+    method: 'GET',
+    path: '/api/testing/runner',
+    auth: 'session',
+    async handle(ctx, { res, url }) {
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      return send(res, 200, await runnerView(ctx.cfg.dataDir, floor.id));
     },
   },
   /** POST /api/testing/runner {floor, limitMinutes: number | null}: the project's time limit for its microflow test runs (5-180 min; null: sized to the suite). Admins only, audited. */
