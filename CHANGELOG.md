@@ -8,6 +8,15 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 Nothing waiting yet.
 
+## 2026-11-02 · release 83 (`4a7645d`)
+
+- **Decision cards are never closed for you.** The Needs-you sweep closes only a plain merge ask or review whose own subject commit is on main; a card that asks you a question or for a decision stays open whatever commits it mentions (release 82 could close an unanswered decision because it named a merged commit).
+- **Journeys run through the office and count.** `office-app journey --ids J-01,J-02`, `--all`, `--no-wait` and `--status` run journeys in the office's background and record each at the commit by its id, so the merge check sees them (one journey per call that held its answer used to outlive the agent's 2-minute command limit, and agents ran them by hand).
+- **Microflow test limits that fit.** The limit is sized to the tests a run selects, gets headroom when another app runtime or test run is busy on the machine, and time spent waiting for another project's test run isn't counted; `GET /api/testing/runner` reads a project's limit.
+- **The merge panel and phone status stay quick while tests run.** Identical git reads in one folder share a run, the stacked `git log --all` calls are gone, the local merge view is cached per project, the phone status answers from a fresh cache, and automatic gate checks wait while the test runtime is busy.
+- **Fewer pointless nudges.** A Lead whose tests, journeys or app instance are running isn't nudged, and a nudge never re-pastes an outdated task.
+- **Fixes.** The Overview's last commit updates after a local merge; a *typed but not received* card closes when the message turns up later (even after a restart); a Needs-you card explains *lint could not run (lint-gate exit 2)* and the one step to take.
+
 ## 2026-10-30 · release 82 (`cca1437`)
 
 - **Microflow test runs that finish, say how far they are, and keep what they got.** A run on a big suite always ended *Timed out after 16 min with no results*: the office cut every run off at 16 minutes although mxcli's own timeout only starts once the runtime is up, so a suite still being added to the app was stopped, and the office stopped mxcli's children before mxcli itself, which then printed *Cleaning up...* and looked hung there. Now a run's time limit covers the whole run and is sized to the suite (10 min plus 15 s a test, 15 to 45 min) unless an admin sets the project's own (5 to 180 min, Testing › Quality); the Quality card and `office-app test` show progress (*Running the tests: 41 of 123 started, 40 finished*); a run stopped at its limit keeps what passed or failed, lists the tests that never ran and says which phase it was in; mxcli's whole output is kept with the run. A run also ends as soon as mxcli does, even when a runtime it left behind holds its output, and shortly after mxcli writes its results even if mxcli never exits.
