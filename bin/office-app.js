@@ -22,12 +22,18 @@ export const APP_USAGE = `  office-app start [--commit <sha|main|HEAD>] [--const
                                                 (over .agent-office/instance-constants.json; never the
                                                 model): no secrets, the seed password is generated
   office-app status                             your instance now (and its generated test password)
-  office-app journey <J-id|path> [--commit <sha>]
-                                                play a journey on it (the project's at that commit by id
-                                                or path, or a file of yours): a toolkit .journey.json, or
-                                                a .journey.js script run with node against the instance
-                                                (APP_URL, TEST_USER/TEST_PASS set); runtime errors in the
-                                                app's log fail it; recorded at the commit
+  office-app journey <J-id|path> | --ids J-01,J-02 | --all [--commit <sha>] [--no-wait]
+                                                play journeys on it (the project's at that commit by id
+                                                or path): a toolkit .journey.json, or a .journey.js script
+                                                run with node against the instance (APP_URL, TEST_USER/
+                                                TEST_PASS set); runtime errors in the app's log fail it.
+                                                Each is recorded at the commit by its journey id, which is
+                                                what the merge gate reads: run regression and sequence
+                                                runs this way, never with node yourself. They run in the
+                                                office's background (answers at once), this command prints
+                                                each result as it lands; --no-wait, then --status later
+  office-app journey --status                   your last batch of journeys: each result so far
+  office-app journey --file <path>              a journey file of yours (maybe uncommitted), played now
   office-app smoke [--page /p/addr]... [--as <user>]
                                                 open pages (default the home page) as one of the
                                                 project's test users (its config, its journeys' personas,
@@ -80,6 +86,9 @@ export function parseApp(argv) {
     else if (flag === '--page' || flag === '--path') out.pages.push(val());
     else if (flag === '--as') out.as = val();
     else if (flag === '--file') out.file = val();
+    else if (flag === '--all') out.all = true;
+    else if (flag === '--status') out.status = true;
+    else if (flag === '--ids') (out.ids ??= []).push(...val().split(',').map((x) => x.trim()).filter(Boolean));
     else if (flag === '--name') out.name = val();
     else if (flag === '--result') out.result = val();
     else if (flag === '--detail') out.detail = val();
@@ -99,8 +108,10 @@ export function parseApp(argv) {
   if (out.constants && cmd !== 'start') throw new AppUsageError('--const is for office-app start');
   if ((out.files || out.tags) && cmd !== 'test') throw new AppUsageError('--files and --tag are for office-app test');
   if (cmd === 'check' && (!out.name || !['passed', 'failed'].includes(out.result))) throw new AppUsageError('check needs --name "<what you checked>" and --result passed|failed');
+  if ((out.all || out.ids || out.status) && cmd !== 'journey') throw new AppUsageError('--all, --ids and --status are for office-app journey');
   if (cmd === 'journey') {
-    if (!out.file && words.length !== 1) throw new AppUsageError('journey takes one journey: its id (J-12), its path in the repository, or a file of yours');
+    const asks = [out.file, out.all, out.ids, out.status, words.length].filter(Boolean).length;
+    if (asks !== 1 || words.length > 1) throw new AppUsageError('journey takes one journey: its id (J-12) or its path, or --ids J-01,J-02, --all, --status, or --file <your file>');
     if (words[0]) out.journey = words[0];
   } else if (words.length) throw new AppUsageError(`Unexpected argument: ${words[0]}`);
   return out;
@@ -198,6 +209,40 @@ async function runTests(commit, wait, io, say = () => {}, subset = {}) {
   }
 }
 
+/** How long office-app journey waits for a batch: about 12 min a journey (a .journey.js may take 10). */
+const JOURNEY_WAIT_EACH_MS = 12 * 60_000;
+
+/**
+ * Starts a batch of journeys (ids, or all at the commit) in the office's background and, with `wait`, polls it,
+ * saying each result as it lands. An older office without batches plays a single journey the old way.
+ */
+async function runJourneys(ask, io, say = () => {}) {
+  let s;
+  try {
+    s = await appCall('/journeys', { ...(ask.all ? { all: true } : { ids: ask.ids }), ...(ask.commit ? { commit: ask.commit } : {}) }, io);
+  } catch (e) {
+    if (/No \/office\/app\/journeys|older Agent Office/.test(e.message) && ask.ids?.length === 1) {
+      const r = await appCall('/journey', { journey: ask.ids[0], ...(ask.commit ? { commit: ask.commit } : {}) }, io, 20 * 60_000);
+      return { words: r.words, ok: r.outcome?.status === 'passed', state: r.outcome };
+    }
+    throw e;
+  }
+  say(s.line);
+  if (!ask.wait) return { words: s.line, ok: true, state: s };
+  const t0 = Date.now();
+  const until = t0 + Math.max(1, s.ids?.length ?? 1) * JOURNEY_WAIT_EACH_MS;
+  let told = 0;
+  for (;;) {
+    await sleep(io.pollMs ?? POLL_MS);
+    const t = await appCall('/journeys', undefined, io);
+    const b = t.batch;
+    for (const r of (b?.results ?? []).slice(told)) say(r.words);
+    told = b?.results?.length ?? told;
+    if (b && !b.running) return { words: t.line, ok: !b.stopped && b.results.length === b.ids.length && b.results.every((r) => r.status === 'passed'), state: t };
+    if (Date.now() > until) return { words: `Still running after ${Math.round((Date.now() - t0) / 60_000)} min: office-app journey --status says how far`, ok: false };
+  }
+}
+
 /** A check's body: screenshots by full path (the office copies them into its evidence). */
 /** The generated test password of the instance (status only): for the agent's own scripts, never a file. */
 export function passwordLine(app) {
@@ -245,7 +290,7 @@ export const APP_TOOLS = [
     name: 'journey_run',
     title: 'Run a journey on your app instance',
     description: `Plays a journey on your running app instance: a toolkit tests/**/*.journey.json, or a project's own tests/**/*.journey.js script (run with node against the instance, APP_URL and TEST_USER/TEST_PASS set): the project's own at the instance's commit by id (J-12) or path, or a file of yours (file, a path from your working folder). ${RUNTIME_NOTE}`,
-    inputSchema: { type: 'object', properties: { journey: { type: 'string', description: 'The journey id or its path in the repository.' }, file: { type: 'string', description: 'A journey file of yours, instead.' }, commit: { type: 'string', description: 'The commit you expect the instance to run (checked).' } }, additionalProperties: false },
+    inputSchema: { type: 'object', properties: { journey: { type: 'string', description: 'The journey id or its path in the repository.' }, ids: { type: 'array', items: { type: 'string' }, description: 'Several journey ids (a regression or sequence run), each recorded on its own.' }, all: { type: 'boolean', description: "Every journey at the instance's commit." }, file: { type: 'string', description: 'A journey file of yours, instead.' }, commit: { type: 'string', description: 'The commit you expect the instance to run (checked).' } }, additionalProperties: false },
     annotations: { destructiveHint: false, openWorldHint: false },
   },
   {
@@ -297,6 +342,10 @@ export async function runAppTool(name, args, io) {
     return { text: `${withPassword(r.line, r.app)}\n${JSON.stringify(r.app ?? {}, null, 1)}`, isError: r.app?.state === 'failed' };
   }
   if (name === 'journey_run') {
+    if (!a.file && (a.all === true || Array.isArray(a.ids) || (a.journey && !journeyBody({ journey: a.journey }, cwd).text))) {
+      const r = await runJourneys({ all: a.all === true, ids: Array.isArray(a.ids) ? a.ids : a.journey ? [a.journey] : [], commit: a.commit, wait: true }, io);
+      return { text: r.words, isError: !r.ok };
+    }
     const r = await appCall('/journey', journeyBody({ journey: a.journey, file: a.file, commit: a.commit }, cwd), io, 20 * 60_000);
     return { text: r.words, isError: r.outcome?.status !== 'passed' };
   }
@@ -351,6 +400,17 @@ export async function appMain(argv, io = {}) {
       const r = await appCall('/check', checkBody(cmd, ctx.cwd), ctx);
       out(cmd.json ? JSON.stringify(r, null, 2) : r.line);
       return 0;
+    }
+    if (cmd.cmd === 'journey' && cmd.status) {
+      const r = await appCall('/journeys', undefined, ctx);
+      out(cmd.json ? JSON.stringify(r, null, 2) : r.line);
+      return r.batch && !r.batch.running && r.batch.results.length === r.batch.ids.length && r.batch.results.every((x) => x.status === 'passed') ? 0 : 1;
+    }
+    // Committed journeys (by id, --ids, --all) run as a batch in the office's background, so no command time limit cuts them off.
+    if (cmd.cmd === 'journey' && (cmd.all || cmd.ids || (cmd.journey && !journeyBody(cmd, ctx.cwd).text))) {
+      const r = await runJourneys({ all: !!cmd.all, ids: cmd.ids ?? [cmd.journey], commit: cmd.commit, wait: cmd.wait }, ctx, cmd.json ? undefined : err);
+      out(cmd.json ? JSON.stringify(r.state ?? r, null, 2) : r.words);
+      return r.ok ? 0 : 1;
     }
     const r = cmd.cmd === 'journey' ? await appCall('/journey', journeyBody(cmd, ctx.cwd), ctx, 20 * 60_000) : await appCall('/smoke', { paths: cmd.pages, ...(cmd.as ? { as: cmd.as } : {}) }, ctx, 10 * 60_000);
     out(cmd.json ? JSON.stringify(r.outcome, null, 2) : r.words);

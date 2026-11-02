@@ -11,6 +11,9 @@
 //                                       there; files / tags: only those test files, or the ones with that @tag (release 82)
 //   GET  /office/app/test               that run's state (its progress while it runs), and its record once it's in
 //   POST /office/app/check {name, result, detail, shots, commit}   a check it ran itself, recorded at the commit as reported by it (./checks.ts)
+//   POST /office/app/journeys {all | ids, commit}   several journeys (or one) in the background, each recorded at the
+//                                       instance's commit by its id (./journey-batch.ts, release 83); answers at once
+//   GET  /office/app/journeys           that batch's state: each journey's result as it lands
 
 import type http from 'node:http';
 import type { Ctx } from '../office/context.js';
@@ -22,12 +25,13 @@ import { testingStore } from '../testing/index.js';
 import { outcomeWords, viewLine } from '../../shared/agent-app.js';
 import { agentAppsOf, journeyDeps } from './office.js';
 import { runJourney, runSmoke } from './journey.js';
+import { batchOf, batchWords, startBatch } from './journey-batch.js';
 import { raiseForPm } from './raise.js';
 import { recordAgentCheck } from './checks.js';
 import { testBlocker } from '../../shared/testing/test-reason.js';
 import { cleanSubset, isSubset, subsetWords } from '../../shared/testing/test-files.js';
 
-const ACTIONS = ['', '/start', '/stop', '/journey', '/smoke', '/test', '/check'];
+const ACTIONS = ['', '/start', '/stop', '/journey', '/journeys', '/smoke', '/test', '/check'];
 
 const strs = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map((x) => x.slice(0, 300)).slice(0, max) : []);
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined);
@@ -47,6 +51,10 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
     return send(res, 200, { app: app ?? null, line: viewLine(app), test: testRunOf(floor.id) });
   }
   if (req.method === 'GET' && action === '/test') return send(res, 200, await testState(ctx, floor.id));
+  if (req.method === 'GET' && action === '/journeys') {
+    const b = batchOf(floor.id, me.id);
+    return send(res, 200, b ? { batch: { commit: b.commit, ids: b.ids, results: b.results, running: b.running, ...(b.current ? { current: b.current } : {}), ...(b.stopped ? { stopped: b.stopped } : {}) }, line: batchWords(b) } : { batch: null, line: 'No journeys run through office-app journey yet' });
+  }
   if (req.method !== 'POST') return send(res, 405, { error: 'GET /office/app or /office/app/test, or POST to /office/app/start, /stop, /journey, /smoke, /test or /check' });
   let body: Record<string, unknown>;
   try {
@@ -74,6 +82,23 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
   if (action === '/stop') {
     const v = await apps.stop(floor.id, me.id);
     return send(res, 200, { app: v ?? null, line: v ? viewLine(v) : 'You had no app instance' });
+  }
+  if (action === '/journeys') {
+    const commit = body.commit ? await resolve(str(body.commit, 200)) : undefined;
+    const e = apps.ready(floor.id, me.id, commit);
+    if (typeof e === 'string') return send(res, 409, { error: e });
+    const d = await journeyDeps(ctx, floor.id);
+    if (!d) return send(res, 410, { error: 'This project closed' });
+    d.onSignInFailed = (_e, words) => raiseForPm(ctx, floor, me.id, { title: `${me.name}'s checks on its app instance can't sign in`, details: words, recommendation: 'Tell the agent which test account and password the app is seeded with (or name them in tests/e2e/project.config.js), then it runs the check again.' });
+    const b = await startBatch(e, { all: body.all === true, ids: strs(body.ids, 80) }, d, {
+      touch: () => void (e.lastUsed = Date.now()),
+      onEnd: (x) => {
+        const bad = x.results.filter((r) => r.status !== 'passed').length;
+        audit.record({ floor: floor.id, actor: who, action: 'agent-app.run', target: { kind: 'commit', id: x.commit, label: `@${x.commit.slice(0, 7)}` }, summary: `journeys ${x.ids.join(', ')} on its app instance @${x.commit.slice(0, 7)}: ${x.results.length - bad} passed, ${bad} not passed${x.stopped ? ` (${x.stopped})` : ''}`, details: { records: x.results.map((r) => r.record).filter(Boolean) }, severity: bad || x.stopped ? 'warning' : 'info' });
+      },
+    });
+    if (typeof b === 'string') return send(res, /already running/.test(b) ? 409 : 400, { error: b });
+    return send(res, 200, { started: b.commit, ids: b.ids, line: `Journeys started at ${b.commit.slice(0, 7)} in the background: ${b.ids.join(', ')}. Each is recorded at that commit by its id; office-app journey --status says how far they are` });
   }
   if (action === '/journey' || action === '/smoke') {
     const commit = body.commit ? await resolve(str(body.commit, 200)) : undefined;
@@ -105,7 +130,10 @@ export async function officeApp(ctx: Ctx, req: http.IncomingMessage, res: http.S
     if (!commit) return send(res, 400, { error: 'Say at which commit (--commit <sha>): you have no app instance to take it from' });
     const r = await recordAgentCheck(ctx.cfg.dataDir, { floorId: floor.id, commit, worker: me.name, suite: `check: ${name} (reported by ${me.name})`, status: result, ...(str(body.detail, 600) ? { detail: str(body.detail, 600) } : {}), shots: strs(body.shots, 5), reported: true });
     audit.record({ floor: floor.id, actor: who, action: 'agent-app.check', target: { kind: 'commit', id: commit, label: `@${commit.slice(0, 7)}` }, summary: `Reported a check at ${commit.slice(0, 7)}: ${name}: ${result}`, details: { record: r.record, shots: r.kept.length }, severity: result === 'passed' ? 'info' : 'warning' });
-    return send(res, 200, { record: r.record, line: `Recorded at ${commit.slice(0, 7)} as reported by you: ${name}: ${result.toUpperCase()}${r.kept.length ? ` (${r.kept.length} screenshot${r.kept.length === 1 ? '' : 's'} kept)` : ''}${r.skipped.length ? `; not kept (only .png/.jpg/.webp up to 5 MB, by full path): ${r.skipped.join(', ')}` : ''}. It shows in the change's Checks and the merge dialog.` });
+    // A journey reported as a check counts only as the agent's summary: say how to have it recorded per journey (release 83).
+    const ids = [...new Set(name.match(/\b[A-Z]{1,6}-\d{1,3}\b/g) ?? [])].filter((x) => /^J/i.test(x) || /journey/i.test(name));
+    const hint = ids.length ? ` That reads like journey${ids.length === 1 ? '' : 's'} ${ids.join(', ')}: a reported check counts only as your own summary. Run ${ids.length === 1 ? 'it' : 'them'} through the office instead (office-app journey ${ids.length === 1 ? ids[0] : `--ids ${ids.join(',')}`}, or --all) so each is recorded at the commit by its journey id, which the merge gate reads.` : '';
+    return send(res, 200, { record: r.record, line: `Recorded at ${commit.slice(0, 7)} as reported by you: ${name}: ${result.toUpperCase()}${r.kept.length ? ` (${r.kept.length} screenshot${r.kept.length === 1 ? '' : 's'} kept)` : ''}${r.skipped.length ? `; not kept (only .png/.jpg/.webp up to 5 MB, by full path): ${r.skipped.join(', ')}` : ''}. It shows in the change's Checks and the merge dialog.${hint}`, ...(ids.length ? { journeys: ids } : {}) });
   }
   // /test: the microflow tests at a commit, through the office's own runner.
   const commit = await resolve(str(body.commit, 200));
