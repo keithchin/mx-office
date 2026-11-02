@@ -19,7 +19,7 @@ export interface DetailActs {
   editPhases(): void;
 }
 
-const stat = (label: string, value: string, extra?: HTMLElement | string | null, meter?: number) => h('div.rm-stat', {}, h('small', {}, label), h('b', {}, value), extra ? h('span.rm-muted.rm-stat-x', {}, extra) : null, meter !== undefined ? h('div.rm-bar2', {}, h('i', { style: `width:${meter}%` })) : null);
+const stat = (label: string, value: string, extra?: HTMLElement | string | null, meter?: number, cls = '') => h('div.rm-stat', { class: cls }, h('small', {}, label), h('b', {}, value), extra ? h('span.rm-muted.rm-stat-x', {}, extra) : null, meter !== undefined ? h('div.rm-bar2', {}, h('i', { style: `width:${meter}%` })) : null);
 
 const chip = (ok: boolean | undefined, text: string, title?: string) => h(`span.rm-crit${ok === true ? '.pass' : ok === false ? '.fail' : ''}`, title ? { title } : {}, `${ok === true ? '✓' : ok === false ? '✕' : '○'} ${text}`);
 
@@ -64,7 +64,7 @@ export function phaseDetail(v: PhasesView, l: PhaseLine, acts: DetailActs): HTML
       stat('Rows done', `${l.rowsDone}/${l.rows.length}`, null, percentDone(l)),
       stat('Journeys', `${passed}/${js.length}`, failing ? `${failing} failing` : js.length && !passed ? 'not run yet' : null),
       stat('Spend', usd(l.spend), `of ${rangeText(l.estimate)}`),
-      stat(l.span.actual ? 'Dates' : 'Dates (forecast)', `${dayWord(l.span.start)} – ${dayWord(l.span.end)}`),
+      stat(l.span.actual ? 'Dates' : 'Dates (forecast)', `${dayWord(l.span.start)} – ${dayWord(l.span.end)}`, null, undefined, 'date'),
     ),
     budgetNote ? h('p.rm-note', {}, h(`span.rm-badge.sm.b-${l.badge.kind === 'over' ? 'bad' : 'warn'}`, {}, l.badge.text), ` ${budgetNote}`) : null,
     h('h3.rm-sec', {}, 'Exit criteria ', h('span.rm-plain', {}, 'recorded by the office')),

@@ -86,7 +86,7 @@ export function timeline(v: PhasesView, selected: string | undefined, select: (i
   for (const b of bands(v.phases)) {
     const top = `${(100 * b.a) / n}%`;
     const height = `${(100 * (b.b - b.a + 1)) / n}%`;
-    over.append(h('i.rm-band', { style: `left:${at(b.from)};width:${width(b.from, b.to)};top:${top};height:${height}` }), h('span.rm-band-tag', { style: `left:calc(${at(b.to)} + 6px);top:calc(${(100 * (b.a + 0.5)) / n}% - 9px)` }, b.label));
+    over.append(h('i.rm-band', { style: `left:${at(b.from)};width:${width(b.from, b.to)};top:${top};height:${height}` }), h('span.rm-band-tag', { style: `${pct(r, b.to) > 55 ? `left:calc(${at(b.from)} - 6px);transform:translateX(-100%)` : `left:calc(${at(b.to)} + 6px)`};top:calc(${(100 * (b.a + 0.5)) / n}% - 9px)`, title: b.label }, `Overlap ${b.a} ↔ ${b.b}`));
   }
   lanesEl.append(over);
 

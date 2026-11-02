@@ -29,14 +29,14 @@ export function rangeOf(v: Pick<PhasesView, 'phases' | 'discovery' | 'cutover' |
 /** Where `t` falls, 0–100. */
 export const pct = (r: Range, t: number) => Math.max(0, Math.min(100, ((t - r.from) / Math.max(DAY, r.to - r.from)) * 100));
 
-/** The axis's ticks: every Monday in the range (every other one past 10 weeks), with their words. */
+/** The axis's ticks: Mondays in the range (every other one past 5 weeks, every third past 12), with their words. */
 export function ticks(r: Range): { at: number; label: string }[] {
   const out: { at: number; label: string }[] = [];
   const d = new Date(r.from);
   d.setHours(0, 0, 0, 0);
   while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
   const weeks = (r.to - d.getTime()) / (7 * DAY);
-  const step = weeks > 10 ? 14 : 7;
+  const step = weeks > 12 ? 21 : weeks > 5 ? 14 : 7;
   for (let t = d.getTime(); t <= r.to; ) {
     out.push({ at: t, label: dayWord(t) });
     const n = new Date(t);

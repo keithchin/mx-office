@@ -73,6 +73,7 @@ export function gateEditor(v: PhasesView, acts: GateActs): HTMLElement {
           sel.onchange = () => {
             const from = base.find((x) => x.rows.includes(r));
             moved.set(r, from ? `${base.indexOf(from) + 1}` : '?');
+            open.add(sel.value);
             push({ op: 'move-rows', rows: [r], to: sel.value });
           };
           const was = moved.get(r);
