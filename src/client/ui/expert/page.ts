@@ -165,6 +165,13 @@ export function sessionPage(container: HTMLElement): TabHooks {
   }
 
   store.on('workers', onWorkers);
+  // The background proof says it changed with the project's roster.changed message (a commit, a push, the budget).
+  let proofTimer: ReturnType<typeof setTimeout> | undefined;
+  net?.onMessage((msg) => {
+    if (!showing || msg.t !== 'roster.changed' || msg.floor !== store.floor) return;
+    clearTimeout(proofTimer);
+    proofTimer = setTimeout(() => proof.refresh(store.floor), 300);
+  });
   store.on('liveApp', () => {
     if (!showing) return;
     preview.draw(store.liveApp);
