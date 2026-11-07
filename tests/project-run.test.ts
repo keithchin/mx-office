@@ -503,3 +503,39 @@ test('real-build fix: Pause settles within its bound: a turn that never ends is 
   // Nothing runs after it settles: its process is gone, so no turn adds spend.
   assert.equal(w.floor.worker(ids.pm)?.status, 'exited');
 });
+
+test('an Expert session (noPrompts): the pause types no handoff and never stops a turn; the session sleeps once its turn is over', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  w.run.noPrompts = true;
+  const ids = await team(w, ['pm']);
+  w.floor.set(ids.pm, 'working');
+  const start = w.clock.now;
+  assert.ok(typeof w.runs.pause(w.floor.id, 'Keith') !== 'string');
+  await until(() => w.runs.view(w.floor.id, true).run?.agents[0]?.status === 'finishing', 'it is finishing its turn');
+  // Well past the bound a team agent is stopped at: still finishing, nothing typed, nothing stopped.
+  await until(() => w.clock.now - start > PAUSE_SETTLE_MS + 60 * SEC, 'time passes', 50_000);
+  assert.equal(w.runs.view(w.floor.id, true).run?.agents[0]?.status, 'finishing');
+  assert.deepEqual(w.floor.slept, []);
+  w.floor.set(ids.pm, 'done');
+  await until(() => w.runs.latest(w.floor.id)?.status === 'done', 'the pause finishes', 20_000);
+  assert.deepEqual(w.floor.slept, [ids.pm]);
+  assert.equal(w.floor.prompts.length, 0, 'nothing was typed into the session');
+  assert.ok(projectPause(w.floor.id));
+});
+
+test('an Expert project’s resume (noPrompts) types nothing: the pause lifts, sleeping sessions start with no message, one cut off mid-turn stays asleep', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  w.run.noPrompts = true;
+  const ids = await team(w, ['pm', 'lead-developer']);
+  setProjectPause(w.floor.id, { by: 'Budget', at: w.clock.now, why: 'budget', waiting: [] });
+  w.cut.add(ids['lead-developer']);
+  const r = await w.runs.resume(w.floor.id, { mode: 'work' }, 'Keith');
+  assert.ok(typeof r !== 'string', String(r));
+  assert.equal(r.status, 'done');
+  assert.equal(projectPause(w.floor.id), undefined, 'the pause is lifted');
+  assert.deepEqual(w.floor.wakes.map((x) => [x.id, x.text]), [[ids.pm, undefined]], 'woken with no message');
+  assert.equal(w.floor.prompts.length, 0);
+  assert.equal(r.agents.find((a) => a.workerId === ids['lead-developer'])?.status, 'skipped');
+});

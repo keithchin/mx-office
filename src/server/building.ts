@@ -9,6 +9,8 @@ import { FLOOR_PALETTES, MAX_FLOORS, normalizeRepo, sameRepo } from '../shared/f
 import type { CloneProgress, ProjectsDirState, RepoChoice } from '../shared/protocol.js';
 import { CloneRun, dropLog, whyCloneFailed, type CloneEnd, type CloneRunOptions } from './clone.js';
 import { gh } from './github.js';
+import { listRepos } from './building-repos.js';
+import { projectMode, type ProjectMode } from '../shared/expert.js';
 import { headSha, originUrlOf } from './gitfiles.js';
 import { isProjectId } from '../shared/evidence/ids.js';
 
@@ -24,6 +26,8 @@ export interface FloorDef {
   palette: number;
   addedBy: string;
   addedAt: number;
+  /** How it's run (shared/expert.ts): absent is Team mode. */
+  mode?: ProjectMode;
 }
 
 /** A projects folder picked in ⚙️ Settings (or with --projects), as projects-folder.json keeps it; also the started-in checkout once taken off (local-floor.json). */
@@ -65,7 +69,6 @@ export interface BuildingOptions {
 
 /** How long the list of repositories `gh` can see is reused before it's asked again. */
 const REPOS_TTL_MS = 5 * 60_000;
-const MAX_REPOS = 1000;
 
 /**
  * The floors of the building, saved in <office>/.agent-office/floors.json: which projects there are,
@@ -334,6 +337,18 @@ export class Building {
     return def;
   }
 
+  /** A folder already on this machine as a new project in `mode` (Expert mode's "Open existing toolkit project"): no clone, no GitHub. */
+  openFolder(dir: string, by: string, mode: ProjectMode): FloorDef | string {
+    if (this.refused()) return this.refused()!;
+    const abs = path.resolve(dir);
+    if (this.defs.some((d) => path.resolve(d.dir) === abs)) return `${abs} is already a project`;
+    if (this.defs.length + this.cloning.size >= MAX_FLOORS) return `The building is full (${MAX_FLOORS} projects)`;
+    const def: FloorDef = { ...this.newDef(path.basename(abs), originRepo(abs), abs, by), mode };
+    this.defs.push(def);
+    this.save();
+    return def;
+  }
+
   /** Makes a checkout of `repo` at `dir` a floor without asking GitHub (offline test mode; `local`: a local-only project, origin a bare repo here). */
   adopt(input: string, dir: string, by: string, local = false): FloorDef | string {
     const repo = normalizeRepo(input);
@@ -434,6 +449,7 @@ export class Building {
           palette: Number.isInteger(s.palette) && (s.palette as number) >= 0 ? (s.palette as number) : 0,
           addedBy: typeof s.addedBy === 'string' ? s.addedBy : '?',
           addedAt: typeof s.addedAt === 'number' ? s.addedAt : Date.now(),
+          ...(projectMode(s.mode) ? { mode: projectMode(s.mode) } : {}),
         });
       }
     } catch {
@@ -561,39 +577,4 @@ function cloneHere(repo: string, dest: string): Promise<string | undefined> {
     child.once('error', (err: NodeJS.ErrnoException) => resolve(err.code === 'ENOENT' ? "The GitHub CLI (gh) isn't installed on this machine" : `Couldn't run gh: ${err.message}`));
     child.once('exit', (code, signal) => resolve(code === 0 ? undefined : `Couldn't clone ${repo}: gh ${signal ? `stopped (${signal})` : `failed (exit ${code})`}`));
   });
-}
-
-async function listRepos(cwd: string): Promise<RepoChoice[]> {
-  const out = await gh(
-    [
-      'api',
-      '--paginate',
-      'user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member',
-      '--jq',
-      '.[] | {name: .full_name, description: (.description // ""), private: .private, pushedAt: .pushed_at}',
-    ],
-    cwd,
-    90_000,
-  );
-  const repos: RepoChoice[] = [];
-  const seen = new Set<string>();
-  for (const line of out.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const r = JSON.parse(line) as { name?: unknown; description?: unknown; private?: unknown; pushedAt?: unknown };
-      const name = normalizeRepo(r.name);
-      if (!name || seen.has(name.toLowerCase())) continue;
-      seen.add(name.toLowerCase());
-      repos.push({
-        name,
-        description: typeof r.description === 'string' && r.description ? r.description.slice(0, 200) : undefined,
-        private: r.private === true,
-        pushedAt: typeof r.pushedAt === 'string' ? r.pushedAt : undefined,
-      });
-    } catch {
-      // not a line of ours
-    }
-    if (repos.length >= MAX_REPOS) break;
-  }
-  return repos.sort((a, b) => (b.pushedAt ?? '').localeCompare(a.pushedAt ?? ''));
 }

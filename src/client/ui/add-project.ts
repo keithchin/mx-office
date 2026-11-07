@@ -5,6 +5,7 @@ import type { Net } from '../net';
 import { store } from '../state';
 import { h, openModal, timeAgo, toast, type Modal } from './dom';
 import { openWizard } from './wizard/open';
+import { openExistingProject } from './expert/open';
 
 // ➕ Add project (Home's Projects tab): clones one of the repositories the office's gh login can see,
 // or any owner/name, and it becomes a new project (a floor of the building). Admins can change the
@@ -247,7 +248,7 @@ export function openAddProject(opts: AddProjectOptions): void {
     { role: 'dialog', 'aria-label': 'Add a project' },
     h('header', {}, h('h2', {}, '➕ Add a project'), close),
     h('div.body', {}, addEl),
-    h('footer', {}, h('span.grow', {}, 'A new project from one of your repositories · Esc to close'), h('button.btn', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit', onclick: () => (modal.close(), void openWizard({ net: opts.net, go: opts.go })) }, '✨ New project'), addBtn),
+    h('footer', {}, h('span.grow', {}, 'A new project from one of your repositories · Esc to close'), h('button.btn', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit', onclick: () => (modal.close(), void openWizard({ net: opts.net, go: opts.go })) }, '✨ New project'), store.me.admin ? h('button.btn', { type: 'button', title: 'A Mendix app folder on this machine with the toolkit in it: your own session, no team (Expert mode)', onclick: () => (modal.close(), openExistingProject({ go: opts.go })) }, 'Open existing toolkit project') : null, addBtn),
   );
   const unsubs = [store.on('floors', () => (checkAdding(), renderAdd())), store.on('repos', renderAdd), store.on('projectsDir', () => (editDir(false), renderAdd())), store.on('me', renderAdd)];
   const modal = openModal(el, {

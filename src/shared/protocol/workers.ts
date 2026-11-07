@@ -106,6 +106,8 @@ export interface WorkerInfo {
   lastStop?: { kind: StopKind; at: number };
   /** Sent out by a map's herald (the castle's Hand of the King), so every browser has it run to its seat from beside them. */
   via?: 'herald';
+  /** The person's own session of an Expert-mode project (server/expert/): the office never types into it, not even to carry on after a restart. */
+  session?: true;
 }
 
 /** How a turn ended (WorkerInfo.lastStop). */

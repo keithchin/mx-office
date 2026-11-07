@@ -3,7 +3,7 @@
 // several built at once on Windows. Lines are queued and appended in order, a batch at a time; a failed write
 // is dropped (the log is a convenience, the page keeps its own tail).
 
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, statSync, truncateSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
 
 export interface LogAppender {
@@ -51,4 +51,23 @@ export function logAppender(file: string): LogAppender {
   appenders.set(file, (a = fn));
   if (appenders.size > 200) appenders.delete(appenders.keys().next().value!);
   return a;
+}
+
+/** The log file starts over past this size. */
+const LOG_MAX_BYTES = 5 * 1024 * 1024;
+
+/** A start's header line in the log (`what`: its status and who), the log started over first when it's grown past LOG_MAX_BYTES. */
+export function rotateLog(file: string, what: string): void {
+  try {
+    if (statSync(file).size > LOG_MAX_BYTES) truncateSync(file, 0);
+  } catch {
+    // No log yet.
+  }
+  try {
+    appendFileSync(file, `
+=== ${new Date().toISOString()} ${what}
+`);
+  } catch {
+    // As above.
+  }
 }

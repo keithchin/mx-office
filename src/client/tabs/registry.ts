@@ -84,10 +84,22 @@ export function tabVisibilityChanged(): void {
   for (const fn of visibilityListeners) fn();
 }
 
-/** Whether a tab is listed now: a built-in one always, a registered one unless its `shown()` says not. */
+const hiders: ((id: string) => boolean)[] = [];
+
+/**
+ * A feature that leaves some tabs, built-in ones too, out of the navigation for the project you're on (Expert
+ * mode leaves out the team's pages: ui/expert/tab.ts). `hide(id)` true: not listed; ?tab= and links still reach it.
+ * The feature calls tabVisibilityChanged() when its answer may have changed.
+ */
+export function hideTabsWhen(hide: (id: string) => boolean): void {
+  hiders.push(hide);
+}
+
+/** Whether a tab is listed now: unless a feature hides it here, a built-in one always and a registered one unless its `shown()` says not. */
 export function tabShown(id: string): boolean {
   const t = TABS.find((x) => x.id === id);
   try {
+    if (hiders.some((hide) => hide(id))) return false;
     return !t?.shown || t.shown();
   } catch {
     return true;

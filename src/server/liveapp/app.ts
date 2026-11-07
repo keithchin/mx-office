@@ -19,29 +19,27 @@
 // update takes the newest of them at once, saying which commits it brought in. Each phase is timed.
 
 import type { ChildProcess } from 'node:child_process';
-import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
-import { logAppender } from './log-append.js';
+import { mkdirSync } from 'node:fs';
+import { logAppender, rotateLog } from './log-append.js';
+import { runArgs } from './run-args.js';
+import { floorHead, watchedUpdate } from './in-place.js';
 import path from 'node:path';
 import type { LiveAppFailure, LiveAppPrefs, LiveAppState, LiveAppStatus, LiveServed } from '../../shared/protocol.js';
 import { updateLine as updateWord, type ChangeClass } from '../../shared/liveapp/speed.js';
 import { checkoutFetched, cleanBuild, defaultBranch, ensureCheckout, fetchBranch, findMpr, lookAtFloor, type Fetched, type FloorLook } from './checkout.js';
 import { classifyUpdate, commitsIn } from './classify.js';
 import { answers, answersWithin, HOT_TIMES, UpdateClock, watchFor, watchLine, type HotOutcome, type HotTimes, type WatchSaid } from './hot.js';
-import { databaseName, type LiveAppConfig } from './config.js';
-import { hotMode } from './hot-mode.js';
+import type { LiveAppConfig } from './config.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
-import { floorToolkitEnv } from '../toolkit-env.js';
-import { linuxMxbuildIn, linuxMxbuildMessage, MXBUILD_FROM, pickMxbuild, supportsMxbuildPath, supportsWatch, type MxbuildPick } from './mxbuild.js';
+import { linuxMxbuildIn, linuxMxbuildMessage, type MxbuildPick } from './mxbuild.js';
 import { readLastServed, writeServed } from './served.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
 /** Lines of the log kept with a failure (what it said as it stopped). */
 const FAIL_LINES = 8;
-/** The log file starts over past this size. */
-const LOG_MAX_BYTES = 5 * 1024 * 1024;
 const READY_POLL_MS = 2_000;
 /** mxcli says the build is done and the Mendix runtime is starting (as far as its log says: else it stays "building" until it answers). */
 const RUNTIME_STARTING = /\b(?:starting|started|start)\b[^\n]*\bruntime\b|\bruntime\b[^\n]*\b(?:starting|started)\b/i;
@@ -78,6 +76,8 @@ export interface LiveAppDeps {
   guard?(dir: string, from: string, to: string): Promise<{ hold: false } | { hold: true; why: string }>;
   /** The project's instance constants for a run in the checkout `dir` (`Module.Name=value`, app-instance/constants.ts): mxcli's `--constant`, never the model. */
   constants?(dir: string): Promise<string[]>;
+  /** Expert mode (./in-place.ts): the floor's own folder is run as it is, mxcli's watch reloading what changes; no checkout, fetch or auto-refresh. */
+  inPlace?(): boolean;
 }
 
 export class LiveApp {
@@ -133,6 +133,11 @@ export class LiveApp {
     if (this.s.status === 'stopped' || this.s.status === 'failed') this.set({ message });
   }
 
+  /** Where mxcli runs: the floor's own folder in place, else the live checkout. */
+  private get workDir(): string {
+    return this.d.inPlace?.() ? this.d.floorDir : this.checkout;
+  }
+
   /** The live checkout (<live dir>/<floor>). */
   get checkoutDir(): string {
     return this.checkout;
@@ -176,6 +181,7 @@ export class LiveApp {
    * on a newer main.
    */
   async poll(): Promise<void> {
+    if (this.d.inPlace?.()) return;
     const branch = this.s.branch;
     if (this.s.status !== 'running' || !branch || !this.s.served) return;
     const look: FloorLook = await lookAtFloor(this.d.floorDir, branch, 0).catch((err) => ({ ok: false, at: Date.now(), error: (err as Error).message }));
@@ -189,6 +195,7 @@ export class LiveApp {
    * every minute: ⟳ Restart does that.
    */
   async follow(head: string | undefined): Promise<void> {
+    if (this.d.inPlace?.()) return;
     if (!head || head === this.s.served?.sha) return;
     // An update or start under way: this one waits, and the next update goes to the newest main once (not one per merge).
     if ((this.s.status === 'updating' || this.s.status === 'starting') && head !== this.s.target?.sha) {
@@ -253,7 +260,8 @@ export class LiveApp {
   private async launch(update: boolean) {
     const gen = this.gen;
     mkdirSync(this.d.liveDir, { recursive: true });
-    this.rotateLog();
+    rotateLog(this.logFile, `${this.s.status} (${this.s.by ?? '?'})`);
+    if (this.d.inPlace?.()) return this.launchInPlace(gen);
     await ensureCheckout(this.checkout, this.d.floorDir);
     const branch = this.s.branch ?? (await defaultBranch(this.d.floorDir));
     const next = await fetchBranch(this.checkout, this.d.floorDir, branch);
@@ -288,6 +296,28 @@ export class LiveApp {
     this.cleanNext = false;
     this.set({ target: { sha: co.sha, subject: co.subject, ...(co.at ? { commitAt: co.at } : {}), ...(from ? { from } : {}) }, message: update ? `Updating to ${short(co.sha)}: building…` : `Building ${short(co.sha)}… (a cold start takes a minute or two)` });
     await this.spawnApp(mpr, gen);
+  }
+
+  /** In place: the floor's own folder built and run where the session works (what served stops first). */
+  private async launchInPlace(gen: number) {
+    const head = await floorHead(this.d.floorDir);
+    if (this.child) await this.kill();
+    if (gen !== this.gen) return;
+    const mpr = findMpr(this.d.floorDir);
+    if (!mpr) throw new Error('No Mendix project (.mpr) in the project folder');
+    this.projectDir = path.dirname(mpr);
+    this.mprRel = path.relative(this.d.floorDir, mpr).replaceAll('\\', '/');
+    this.set({ ...(head.branch ? { branch: head.branch } : {}), target: { sha: head.sha, ...(head.subject ? { subject: head.subject } : {}) }, message: 'Building the project folder… (a cold start takes a minute or two)' });
+    await this.spawnApp(mpr, gen);
+  }
+
+  /** In place: mxcli's watch picked up a change in the folder by itself (the session wrote the model); applied, it's a served reload. */
+  private watched(said: WatchSaid) {
+    if (said.kind === 'detected') return this.set({ message: 'Reloading a change in the project folder…' });
+    if (said.kind === 'failed') return this.set({ message: `The hot reload failed: ${said.why}` });
+    if (said.kind !== 'applied') return;
+    const at = Date.now();
+    void floorHead(this.d.floorDir).then((h) => this.s.served && this.set({ message: undefined, served: { ...this.s.served, sha: h.sha, ...(h.subject ? { subject: h.subject } : {}) }, lastUpdate: watchedUpdate(at, said.secs, said.how) }));
   }
 
   /**
@@ -365,36 +395,15 @@ export class LiveApp {
     if (!ports) throw new Error(`No three free ports left in ${cfg.ports.from}-${cfg.ports.to} (AGENT_OFFICE_LIVE_PORTS)`);
     if (gen !== this.gen) return;
     this.ports = ports;
-    const [app, admin, serve] = ports;
-    const args = ['run', '--local', '-p', path.basename(mpr), '--app-port', String(app), '--admin-port', String(admin), '--serve-port', String(serve)];
-    args.push('--db-host', `${cfg.db.host.includes(':') ? `[${cfg.db.host}]` : cfg.db.host}:${cfg.db.port}`, '--db-user', cfg.db.user, '--db-password', cfg.db.password, '--db-name', databaseName(this.d.floorId), '--ensure-db');
-    // The floor's toolkit.env (its MXBUILD_PATH) over the office's own, as for its workers.
-    const floorEnv = floorToolkitEnv(this.d.floorDir);
-    // The mxbuild, told to mxcli rather than left to its resolution (a cached Linux download can't run on Windows).
-    const pick = (this.d.mxbuild?.pick ?? pickMxbuild)(mpr, floorEnv);
-    let flag: boolean | undefined;
-    const extra: Record<string, string> = {};
-    if (pick.path) {
-      flag = await (this.d.mxbuild?.supportsFlag ?? supportsMxbuildPath)(this.d.mxcli!);
-      if (gen !== this.gen) return;
-      if (flag) args.push('--mxbuild-path', pick.path);
-      extra.MXBUILD_PATH = pick.path;
-    }
-    this.mxbuild = { pick, flag };
-    // Hot reload (on unless turned off): mxcli watches the checkout, so a page or logic change the office moves in applies in place.
-    const hot = await hotMode(this.d.mxcli!, { prefs: this.d.prefs, supportsWatch: this.d.supportsWatch ?? supportsWatch, free: this.d.freeMemory }, this.hotMisses);
-    if (gen !== this.gen) return;
-    if (hot.on) args.push('--watch');
-    else if (this.d.prefs?.().hotReload) this.note(`hot reload: ${hot.why}`);
+    const app = ports[0];
+    const run = await runArgs(this.d, mpr, ports, this.workDir, this.hotMisses, () => gen === this.gen);
+    if (!run) return;
+    const { args, hot } = run;
+    this.mxbuild = { pick: run.pick, flag: run.flag };
     this.watching = hot.on;
     this.set({ hot });
-    for (const c of (await this.d.constants?.(this.checkout).catch((err: Error) => (this.note(`instance constants: ${err.message}`), [])) ?? [])) args.push('--constant', c);
-    if (gen !== this.gen) return;
-    for (const s of pick.skipped) this.note(`mxbuild: ${s}`);
-    if (pick.path) this.note(`mxbuild: ${pick.path} (${MXBUILD_FROM[pick.source!]})${flag ? '' : ': this mxcli has no --mxbuild-path, so it only gets MXBUILD_PATH'}`);
-    else if (pick.expected) this.note(`mxbuild: Studio Pro ${pick.version} isn't installed (no ${pick.expected}); mxcli picks one itself`);
-    this.note(`$ mxcli ${args.map((a, i) => (args[i - 1] === '--db-password' ? '***' : a)).join(' ')}`);
-    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { ...floorEnv, ...extra, PGPASSWORD: cfg.db.password }, pgBinDir());
+    for (const n of run.notes) this.note(n);
+    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { ...run.env, PGPASSWORD: this.d.cfg.db.password }, pgBinDir());
     this.child = child;
     this.set({ appPort: app });
     let partial = '';
@@ -406,8 +415,8 @@ export class LiveApp {
         // The build that serves outlives the action that started it: its lines (a hot reload's) belong to the one under way.
         const serving = child === this.serving;
         this.note(l, serving ? this.gen : gen);
-        const said = this.hotWait && serving ? watchLine(l) : undefined;
-        if (said) this.hotWait?.(said);
+        const said = serving && (this.hotWait || this.d.inPlace?.()) ? watchLine(l) : undefined;
+        if (said) (this.hotWait ?? ((w: WatchSaid) => this.watched(w)))(said);
       }
     };
     child.stdout?.on('data', onData);
@@ -577,19 +586,6 @@ export class LiveApp {
     clearTimeout(this.soon);
     this.soon = undefined;
     this.d.changed(this.state);
-  }
-
-  private rotateLog() {
-    try {
-      if (statSync(this.logFile).size > LOG_MAX_BYTES) truncateSync(this.logFile, 0);
-    } catch {
-      // No log yet.
-    }
-    try {
-      appendFileSync(this.logFile, `\n=== ${new Date().toISOString()} ${this.s.status} (${this.s.by ?? '?'})\n`);
-    } catch {
-      // As above.
-    }
   }
 
   private set(patch: Partial<LiveAppState>) {

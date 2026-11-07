@@ -3,12 +3,13 @@
 // (store.ts, which the roster's one delivery path holds office prompts on). One per office, made on
 // first use (projectRunsOf in adapter.ts); runs a restart cut off carry on when it's made.
 
-import { agentKey, chosen, type PauseWhy, type ProjectRunView, type ResumeChoice, type ResumePreview, type RunProgress } from '../../shared/project-run.js';
+import { agentKey, chosen, type PauseWhy, type ProjectRunView, type ResumeChoice, type ResumePreview, type RunAgent, type RunProgress } from '../../shared/project-run.js';
+import { isAsleepStatus } from '../roster/bench.js';
 import type { RunRecord } from '../flow/types.js';
 import { PAUSE_FLOW, pauseFlow, RESUME_FLOW, resumeFlow, type PauseRun, type ResumeAgent, type ResumeRun } from './flows.js';
 import { previewFloor } from './preview.js';
-import { pacingOf, projectPause } from './store.js';
-import type { RunDeps } from './types.js';
+import { pacingOf, projectPause, setProjectPause } from './store.js';
+import type { RunDeps, RunFloor } from './types.js';
 
 const FLOWS = [RESUME_FLOW, PAUSE_FLOW];
 const GOING = new Set(['pending', 'running', 'waiting', 'paused', 'interrupted', 'needs-attention']);
@@ -40,6 +41,7 @@ export class ProjectRuns {
   async resume(floorId: string, choice: ResumeChoice, by: string, byId?: string, reason?: string): Promise<RunProgress | string> {
     const f = this.deps.floor(floorId);
     if (!f) return 'No such project';
+    if (f.noPrompts) return this.resumeQuiet(floorId, f, by);
     const { preview, candidates } = await previewFloor(this.deps, f);
     if (preview.blocked) return preview.blocked;
     this.stopGoing(floorId);
@@ -52,6 +54,27 @@ export class ProjectRuns {
     const run = this.deps.engine.create<ResumeRun>(RESUME_FLOW, { floor: floorId, by, byId, agents, i: 0, pacing: pacingOf(floorId), ...(reason ? { reason } : {}) }, { floor: floorId, by });
     void this.deps.engine.start(run.runId).catch((err) => console.error(`agent-office: resume of ${floorId} failed: ${(err as Error).message}`));
     return progressOf(run);
+  }
+
+  /**
+   * An Expert project's resume (RunFloor.noPrompts): the pause lifts and each sleeping session is started again on
+   * its own session with no message at all. One a restart cut off mid-turn stays asleep (starting it would type the
+   * carry-on prompt): the person reopens it.
+   */
+  private resumeQuiet(floorId: string, f: RunFloor, by: string): RunProgress {
+    this.stopGoing(floorId);
+    setProjectPause(floorId, undefined);
+    const now = this.deps.now();
+    const agents: RunAgent[] = f.team
+      .workers()
+      .filter((w) => w.kind === 'agent' && isAsleepStatus(w.status) && !!w.sessionId)
+      .map((w) => {
+        const a: RunAgent = { workerId: w.id, name: w.name, action: 'wake', status: 'woken' };
+        if (f.cutOff(w.id)) return { ...a, status: 'skipped', note: 'Cut off mid-turn by a restart: reopen the session yourself' };
+        const err = f.team.wake(w.id);
+        return err ? { ...a, status: 'failed', note: err } : a;
+      });
+    return { runId: `quiet-${floorId}-${now}`, kind: 'resume', floor: floorId, status: 'done', by, agents, startedAt: now, finishedAt: now };
   }
 
   /** Starts pausing the floor; the run, or why not. */

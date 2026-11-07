@@ -1,3 +1,4 @@
+import { expertOf } from '../expert/shell.js';
 import { existsSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import type { FloorDef } from '../building.js';
@@ -25,6 +26,7 @@ import { questionsOnWorker } from '../questions/index.js';
 import { changesOnWorker, observeChanges } from '../dev-changes/index.js';
 import { taskStoreAt } from '../tasks/index.js';
 import { queueTaskIds } from '../tasks/queue.js';
+import { expertOnWorker } from '../expert/index.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -158,6 +160,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       questionsOnWorker(ctx, floor, w);
       // A queued Developer change may start now (the lead back at work, awake): debounced, only with one waiting (dev-changes/).
       changesOnWorker(ctx, floor);
+      // An Expert project's session: an auto-commit once it's idle after a change, pushed in the background (expert/).
+      expertOnWorker(ctx, floor, w);
       ctx.machine.workersChanged();
       ctx.floorsChanged();
     },
@@ -237,5 +241,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
   rosterOf(ctx);
   // The team chatter listens from the start too (chatter/).
   chatterOf(ctx);
+  // Expert mode's loop timer hears its sessions' hooks from the start too (expert/).
+  expertOf(ctx);
   return { openFloor };
 }

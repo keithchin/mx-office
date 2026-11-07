@@ -63,6 +63,7 @@ import { signoffRoutes } from './signoff.js';
 import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
+import { expertRoutes } from './expert.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -243,6 +244,8 @@ export const routes: readonly Route[] = [
   localMergeRoutes.confirm,
   localMergeRoutes.review,
   localMergeRoutes.merge,
+  // Expert mode's proof strip (server/expert/).
+  expertRoutes.proof,
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,
@@ -298,6 +301,11 @@ export const routes: readonly Route[] = [
   dataImpactRoutes.act,
   phaseRoutes.view,
   phaseRoutes.act,
+  // Expert mode: the session screen, its preview's choices, starting the session, opening a folder (expert/).
+  expertRoutes.view,
+  expertRoutes.choices,
+  expertRoutes.session,
+  expertRoutes.open,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,
