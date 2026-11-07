@@ -10,7 +10,7 @@ import path from 'node:path';
 import { Building, type FloorDef } from '../src/server/building.js';
 import { clampSplit, isExpertMode, loopWords, projectMode, readSplit, splitKey, SPLIT_MIN_PX } from '../src/shared/expert.js';
 import { isModelChange, LOOP_GIVE_UP_MS, loopStep, loopView, median, newLoop, readLoop } from '../src/server/expert/loop.js';
-import { ExpertService } from '../src/server/expert/index.js';
+import { ExpertService } from '../src/server/expert/shell.js';
 import { noteWorkerHook } from '../src/server/workers/hook-bus.js';
 import { noteLiveState } from '../src/server/liveapp/state-bus.js';
 import { workersJson } from '../src/server/workers/persist.js';

@@ -14,7 +14,7 @@ import { onWorkerHook } from '../workers/hook-bus.js';
 import { onLiveState } from '../liveapp/state-bus.js';
 import { liveAppsIfMade } from '../liveapp/index.js';
 import { isModelChange, loopStep, loopView, newLoop, readLoop, type LoopEvent, type LoopState } from './loop.js';
-import { sessionWorker } from './session.js';
+import { sessionWorker } from './session-worker.js';
 import { headerOf } from './header.js';
 
 export type ExpertCtx = Pick<Ctx, 'cfg' | 'floors' | 'workerFloor'>;

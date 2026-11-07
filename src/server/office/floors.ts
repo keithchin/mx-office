@@ -1,4 +1,4 @@
-import { expertOf } from '../expert/index.js';
+import { expertOf } from '../expert/shell.js';
 import { existsSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import type { FloorDef } from '../building.js';

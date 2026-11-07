@@ -8,8 +8,8 @@
 import type { Route } from '../router.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import { floorParam } from './files.js';
-import { expertOf, isExpert } from '../../expert/index.js';
-import { ensureSession } from '../../expert/session.js';
+import { expertOf, isExpert } from '../../expert/shell.js';
+import { ensureSession } from '../../expert/session-worker.js';
 import { previewChoices } from '../../expert/choices.js';
 import { checkSourcePath } from '../../wizard/source-folder.js';
 import { audit } from '../../audit/index.js';
