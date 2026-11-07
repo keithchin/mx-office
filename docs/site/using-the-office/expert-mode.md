@@ -14,14 +14,14 @@ On **➕ Add a project**, admins have **Open existing toolkit project**. Type th
 
 ## The Session screen
 
-Arriving on an Expert-mode project opens **General › Session** (the Overview and the other pages are still in the navigation). The team-lead panel is not shown on an Expert-mode project.
+Arriving on an Expert-mode project opens **General › Session**. The Overview, Roadmap, Documents, Budget, Testing and Monitoring pages are still in the navigation; the team's own pages (Team, Team boards, Board, Approvals, Standup) and the team-lead panel are not shown on an Expert-mode project.
 
 - **Header**: the folder's branch, the app's Mendix version, the toolkit pin (or *toolkit not pinned*), the mxcli the office runs, and the session's state from its hooks: *Working*, *Idle · waiting for you*, *Needs you*, *Starting* or *Not running*. **Lock in** is there but not yet working.
 - **Phase strip**: for a phased project, the phase in progress (rows done, spend against its estimate, the next checkpoint) and a chip per phase. A click opens the [Roadmap](phased-delivery.md). A project delivered in one go has no strip.
-- **Live preview** (left): the project's live app, the same one as the [Live app](live-app.md) page. Pick a **page** of the app (those that open by address, read from the model at the running version) or a **demo user** to sign in as (demo users are fine for local work; the office never handles their passwords). After a new build or a hot reload the preview lights up with *Updated*.
-- **asked → visible**: from the prompt you submit to the first preview reload after the next model change (a toolkit `bin/exec.sh` or `mxcli exec`). The header shows the last time and the median of this session ("asked → visible 41 s · median 52 s").
+- **Live preview** (left): the project folder itself, run in place with hot reload, the way `mxcli run --watch` runs in your own folder: the session's working copy as it is, uncommitted changes included. When the session changes the model, mxcli's watch reloads the running app and the preview shows it. There is no checkout of main and no auto-refresh for an Expert-mode project; start and stop it here or on the [Live app](live-app.md) page. Pick a **page** of the app (those that open by address, read from the model at the running version) or a **demo user** to sign in as (demo users are fine for local work; the office never handles their passwords). After a new build or a hot reload the preview lights up with *Updated*.
+- **asked → visible**: from the prompt you submit to the first preview reload after the next model change. A model change is a toolkit `bin/exec.sh`, an `mxcli exec` or `apply`, or the `.mpr` (or its `mprcontents`) changing while the session works. The header shows the last time and the median of this session ("asked → visible 41 s · median 52 s").
 - **Session** (right): the real interactive `claude`, started in the project folder with no prompt, in a terminal coloured for the screen. Type in it as you would in your own terminal. The office never types into it: after an office restart it comes back with `--resume` and waits for you. **↗** pops it out into a window of its own; **⇄** swaps the sides.
-- **Background proof** (bottom): the last commit and its push, the budget, stuck status and decisions. Until the background proof part is installed it says *coming soon*.
+- **Background proof** (bottom): the last commit on the session branch (`session/main`) and its push, the budget meter, stuck status and the decision count. A push that fails shows here, not as a dialog.
 
 ### The split
 
@@ -29,5 +29,4 @@ Drag the divider between the preview and the session (a grip shows on hover); bo
 
 ## Notes
 
-- The preview runs the project's main branch, as the Live app page does: a change shows once it reaches main and the live app has picked it up.
 - The session runs on the office's own Claude sign-in or key, like any agent the office starts.

@@ -1,10 +1,11 @@
 // Expert mode's Session screen as a tab of the 1D view (?tab=session), from the tab registry (tabs/registry.ts).
 // Listed first in the navigation's General group, and only for an Expert-mode project (`mode` on the project:
 // shared/expert.ts). Arriving on an Expert-mode project opens it in place of the Overview. While you're on such
-// a project the team-lead panel steps aside (body.xs-project, ./expert.css): Expert mode has no coordinator.
+// a project the team-lead panel steps aside (body.xs-project, ./expert.css) and the team's own pages (Team, Team
+// boards, Board, Approvals, Standup) are left out of the navigation: Expert mode has no coordinator or roster.
 // The screen itself (./page.ts) loads the first time it's shown.
 
-import { registerTab, tabVisibilityChanged, type TabHooks } from '../../tabs/registry';
+import { hideTabsWhen, registerTab, tabVisibilityChanged, type TabHooks } from '../../tabs/registry';
 import { currentProjectTab, onProjectTab, openProjectTab } from '../../tabs/host';
 import { store } from '../../state';
 import { isExpertMode } from '../../../shared/expert';
@@ -13,6 +14,10 @@ import type * as Page from './page';
 import './expert.css';
 
 const expertHere = () => isExpertMode(store.currentFloor());
+
+/** The team's pages, left out of the navigation on an Expert-mode project (no coordinator, roster or gates there). */
+export const TEAM_ONLY = new Set(['org', 'teams', 'board', 'approvals', 'standup']);
+hideTabsWhen((id) => TEAM_ONLY.has(id) && expertHere());
 
 registerTab({
   id: 'session',

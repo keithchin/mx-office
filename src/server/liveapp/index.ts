@@ -33,6 +33,7 @@ import { findMpr } from './checkout.js';
 import { LiveConsoles } from './console/index.js';
 import { emitLiveReady } from './ready-bus.js';
 import { noteLiveState } from './state-bus.js';
+import { isExpertProject } from '../expert/mode.js';
 import { forgetServed, readLastServed } from './served.js';
 import { instancePorts } from '../app-instance/index.js';
 import { ModelUnits } from '../model/units.js';
@@ -158,6 +159,8 @@ export class LiveApps {
         taken: () => this.takenPorts(),
         changed: (state) => this.changed(state),
         prefs: () => this.prefsOf(floor.id),
+        // Expert mode: the session's own folder runs in place, mxcli's watch reloading the model the session writes (./in-place.ts).
+        inPlace: () => isExpertProject(floor),
         // Too little memory for hot reload's resident bundler: that start restarts for every change instead (./hot-mode.ts).
         freeMemory: availableMemory,
         // The project's instance constants (.agent-office/instance-constants.json) for each run, never the model.

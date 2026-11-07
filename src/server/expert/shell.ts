@@ -13,7 +13,7 @@ import type { ExpertView } from '../../shared/expert.js';
 import { isExpertProject } from './mode.js';
 import { onWorkerHook } from '../workers/hook-bus.js';
 import { onLiveState } from '../liveapp/state-bus.js';
-import { liveAppsIfMade } from '../liveapp/index.js';
+import { ModelStamps } from './stamp.js';
 import { isModelChange, loopStep, loopView, newLoop, readLoop, type LoopEvent, type LoopState } from './loop.js';
 import { sessionWorker } from './session-worker.js';
 import { headerOf } from './header.js';
@@ -24,6 +24,8 @@ export type ExpertCtx = Pick<Ctx, 'cfg' | 'floors' | 'workerFloor'>;
 export const isExpert = (floor: Floor | undefined): boolean => isExpertProject(floor);
 
 const SAVE_MS = 1000;
+/** Tool calls come in bursts: the model files are looked at once, this long after the first of a burst. */
+export const STAMP_DEBOUNCE_MS = 1500;
 
 export class ExpertService {
   private loops = new Map<string, Promise<LoopState>>();
@@ -31,6 +33,11 @@ export class ExpertService {
   /** What the live app last served per floor, to tell a new served reload from a repeat of the same state. */
   private servedKey = new Map<string, string>();
   private unsubs: (() => void)[] = [];
+  /** The model files' stamp per floor as last seen, and the debounced look at them after tool calls. */
+  private stamps = new ModelStamps();
+  private lastStamp = new Map<string, string | undefined>();
+  private stampTimers = new Map<string, NodeJS.Timeout>();
+  private firstToolAt = new Map<string, number>();
 
   constructor(
     private ctx: ExpertCtx,
@@ -45,6 +52,7 @@ export class ExpertService {
   stop() {
     for (const u of this.unsubs.splice(0)) u();
     for (const t of this.saveTimers.values()) clearTimeout(t);
+    for (const t of this.stampTimers.values()) clearTimeout(t);
   }
 
   /** The floor's timer (read from disk the first time). */
@@ -78,10 +86,34 @@ export class ExpertService {
     if (!w?.session) return;
     const p = (payload ?? {}) as { session_id?: unknown; tool_name?: unknown; tool_input?: { command?: unknown } };
     const at = this.now();
-    if (event === 'UserPromptSubmit') void this.step(floor, { kind: 'prompt', at, ...(typeof p.session_id === 'string' ? { session: p.session_id } : {}) });
-    else if (event === 'PostToolUse' && p.tool_name === 'Bash' && typeof p.tool_input?.command === 'string' && isModelChange(p.tool_input.command)) void this.step(floor, { kind: 'change', at });
-    // A turn ended: the live app looks at the project's branch now rather than at its next poll (a push may have landed).
-    else if (event === 'Stop') void liveAppsIfMade(this.ctx)?.of(floor).poll().catch(() => undefined);
+    if (event === 'UserPromptSubmit') {
+      void this.step(floor, { kind: 'prompt', at, ...(typeof p.session_id === 'string' ? { session: p.session_id } : {}) });
+      // What the model files look like as the ask starts: the next tool call that changes them is a model change.
+      void this.stamps.read(floor.dir).then((st) => this.lastStamp.set(floor.id, st));
+    } else if (event === 'PostToolUse' || event === 'PostToolUseFailure') {
+      if (event === 'PostToolUse' && p.tool_name === 'Bash' && typeof p.tool_input?.command === 'string' && isModelChange(p.tool_input.command)) void this.step(floor, { kind: 'change', at });
+      else this.lookAtModel(floor, at);
+    }
+  }
+
+  /** After a tool call while the session works: has the .mpr (or its mprcontents) changed? Debounced, one stat or two. */
+  private lookAtModel(floor: Floor, at: number) {
+    this.firstToolAt.set(floor.id, Math.min(this.firstToolAt.get(floor.id) ?? at, at));
+    if (this.stampTimers.has(floor.id)) return;
+    this.stampTimers.set(
+      floor.id,
+      setTimeout(() => {
+        this.stampTimers.delete(floor.id);
+        const since = this.firstToolAt.get(floor.id) ?? at;
+        this.firstToolAt.delete(floor.id);
+        void this.stamps.read(floor.dir).then((st) => {
+          const was = this.lastStamp.get(floor.id);
+          this.lastStamp.set(floor.id, st);
+          const busy = floor.workers.list().some((x) => x.session && x.status === 'working');
+          if (was !== undefined && st && st !== was && busy) void this.step(floor, { kind: 'change', at: since });
+        });
+      }, STAMP_DEBOUNCE_MS),
+    );
   }
 
   private live(s: LiveAppState) {

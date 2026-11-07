@@ -1,6 +1,7 @@
 // The asked → visible timer of an Expert-mode session (docs/mockups: the north-star number): a prompt
 // submitted (the session's UserPromptSubmit hook) starts it, the next model change (a PostToolUse that ran a
-// model-writing command: mxcli exec, the toolkit's bin/exec.sh) arms it, and the first served reload of the
+// model-writing command: mxcli exec or apply, the toolkit's bin/exec.sh; or the .mpr or its mprcontents changing
+// while the session works: ./stamp.ts) arms it, and the first served reload of the
 // preview after that change (the live app serving a new build, or a hot reload it confirmed) stops it. A
 // prompt asked while one is still timing keeps the first one's start: the change answers the first ask.
 // Samples are kept per Claude session (the median is over that session); a timing that never sees a change
@@ -16,7 +17,7 @@ export const LOOP_KEEP = 200;
 const RECENT = 12;
 
 /** A command that changes the model: the toolkit's exec script, or mxcli executing a script or statements. */
-export const MODEL_CHANGE = /(?:^|[;&|(]\s*|\b(?:bash|sh)\s+)(?:[^\s;&|]*[/\\])?exec\.sh(?![.\w])|\bmxcli(?:\.exe)?\b[^|;&\n]*?\s(?:exec|execute)\b|\bmxcli(?:\.exe)?\b[^|;&\n]*?\s-c\s+['"]?\s*(?:create|alter|drop|rename|move|grant|revoke)\b/i;
+export const MODEL_CHANGE = /(?:^|[;&|(]\s*|\b(?:bash|sh)\s+)(?:[^\s;&|]*[/\\])?exec\.sh(?![.\w])|\bmxcli(?:\.exe)?\b[^|;&\n]*?\s(?:exec|execute|apply)\b|\bmxcli(?:\.exe)?\b[^|;&\n]*?\s-c\s+['"]?\s*(?:create|alter|drop|rename|move|grant|revoke)\b/i;
 
 export function isModelChange(command: string): boolean {
   return MODEL_CHANGE.test(command);

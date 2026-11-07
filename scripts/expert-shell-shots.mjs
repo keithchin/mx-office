@@ -6,7 +6,9 @@
 //
 //   - arriving on the project opens the Session screen; the team-lead panel isn't there; Session is listed
 //   - the session starts by itself with no prompt (the fake agent's terminal), the header says its state
-//   - the phase strip shows; the proof strip says "coming soon" (no proof module answers yet)
+//   - the phase strip shows; the proof strip shows the session branch's commit, the budget, stuck and decisions
+//   - the preview runs the project folder in place: a model change reloads it (Updated) and the timer measures it
+//   - the team pages are left out of the navigation
 //   - the preview runs the app; the split resizes by keys and remembers it; App | Chat presets; swap
 //   - Portal Light and Dark, the navigation folded, no sideways scrolling, no page errors
 //
@@ -46,6 +48,12 @@ setTimeout(() => {
   const rows = [['SO-1042','Northwind Supplies','3 pallets','Packed'],['SO-1041','Blue Harbor Foods','12 boxes','Waiting'],['SO-1039','Summit Tools','1 crate','Shipped'],['SO-1038','Lakeside Office','40 reams','Waiting'],['SO-1036','Green Valley Farm','6 drums','Shipped']];
   const page = () => '<!doctype html><meta charset=utf-8><title>Order Desk</title><style>body{margin:0;font:14px system-ui,sans-serif;color:#1f2937;background:#f8fafc}header{background:#1e293b;color:#fff;padding:12px 20px;display:flex;gap:18px;align-items:center}header b{font-size:15px}header span{opacity:.8}main{padding:20px}h1{font-size:20px;margin:0 0 4px}p{color:#64748b;margin:0 0 16px}.cards{display:flex;gap:10px;margin-bottom:16px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:4px;padding:10px 14px;min-width:90px}.card b{display:block;font-size:18px}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid #eef2f7}th{background:#f1f5f9;font-weight:600}.s{padding:2px 8px;border-radius:10px;font-size:12px;background:#e0f2fe}</style><header><b>Order Desk</b><span>Orders</span><span>Customers</span><span>Reports</span></header><main><h1>Orders</h1><p>Orders waiting to ship, newest first. (' + fs.readFileSync('version.txt','utf8').trim() + ')</p><div class=cards><div class=card>Waiting<b>2</b></div><div class=card>Packed<b>1</b></div><div class=card>Shipped<b>2</b></div></div><table><tr><th>Order</th><th>Customer</th><th>Goods</th><th>Status</th></tr>' + rows.map((r) => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td><span class=s>' + r[3] + '</span></td></tr>').join('') + '</table></main>';
   require('http').createServer((q, s) => { s.setHeader('content-type', 'text/html'); s.end(page()); }).listen(port, () => console.log('Runtime started'));
+  let n = 1;
+  if (process.argv.includes('--watch')) fs.watchFile('version.txt', { interval: 200 }, () => {
+    n++;
+    console.log('Change detected, rebuilding (build #' + n + ')...');
+    setTimeout(() => console.log('build #' + n + ' applied via reload in 1.2s, 1 page'), 1200);
+  });
 }, 800);`;
 
 function fixture() {
@@ -66,6 +74,8 @@ function fixture() {
   git('add', '-A');
   git('commit', '-q', '-m', 'Order Desk: first version');
   fs.writeFileSync(path.join(data, 'floors.json'), JSON.stringify([{ id: 'order-desk', name: 'Order Desk', dir, palette: 2, addedBy: 'Alex Lee', addedAt: Date.now() - 86_400_000, mode: 'expert' }]));
+  // The stand-in mxcli is node: `node run --help`, asked from the office's folder, says it takes --watch (hot reload).
+  fs.writeFileSync(path.join(home, 'run'), "if (process.argv.includes('--help')) console.log('  --watch   rebuild and reload on model changes');\n");
   // An empty budget with the session as its one agent, for the phases' spend (scripts/phased-delivery-fixture.ts).
   fs.mkdirSync(path.join(data, 'budget'), { recursive: true });
   fs.writeFileSync(path.join(data, 'budget', 'order-desk.json'), JSON.stringify({ ledger: { version: 1, startedAt: Date.now() - 30 * 86_400_000, days: {}, rows: [], agents: { 'w:session': { key: 'w:session', name: 'Session', role: 'Developer', kind: 'worker' } }, seen: {}, stages: [] }, settings: { autoPause: true }, alerts: [] }));
@@ -81,9 +91,9 @@ async function main() {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
   }
   fs.mkdirSync(out, { recursive: true });
-  const { home } = fixture();
+  const { home, dir: projectDir } = fixture();
   const ghConfig = fs.mkdtempSync(path.join(os.tmpdir(), 'ao-empty-gh-'));
-  const office = await startTestOffice({ home, env: { GH_CONFIG_DIR: ghConfig, FAKE_MODE: 'turn' } });
+  const office = await startTestOffice({ home, env: { GH_CONFIG_DIR: ghConfig, FAKE_MODE: 'turn', FAKE_TURN_MS: '8000', FAKE_RATE_MS: '500' } });
   log('test office up at', office.base);
   const browser = await chromium.launch({ headless: true, executablePath: findChrome() });
   try {
@@ -91,7 +101,7 @@ async function main() {
     const u = new URL(office.base);
     const cookies = cookie.split('; ').map((c) => ({ name: c.slice(0, c.indexOf('=')), value: c.slice(c.indexOf('=') + 1), domain: u.hostname, path: '/' }));
     const proof = await fetch(`${office.base}/api/expert/proof?floor=order-desk`, { headers: { cookie } });
-    check(proof.status === 404, `no proof module yet: GET /api/expert/proof answers ${proof.status}`);
+    check(proof.status === 200, `GET /api/expert/proof answers ${proof.status}`);
     const newPage = async (viewport, theme) => {
       const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
       await ctx.addCookies(cookies);
@@ -115,10 +125,12 @@ async function main() {
     check(new URL(page.url()).searchParams.get('tab') === 'session' || (await page.isVisible('#session-view')), 'arriving on an Expert-mode project opens the Session screen');
     check(!(await page.isVisible('#lead-panel')), 'no team-lead panel on an Expert-mode project');
     check(await page.evaluate(() => { const b = document.querySelector('#pt-nav [data-nav="session"]'); return !!b && !b.closest('[hidden]'); }), 'Session is listed in the navigation');
+    check(await page.evaluate(() => ['org', 'teams', 'board', 'approvals', 'standup'].every((id) => { const b = document.querySelector(`#pt-nav [data-nav="${id}"]`); return !b || !!b.closest('[hidden]'); })), 'the team pages (Team, Team boards, Board, Approvals, Standup) are not in the navigation');
     await page.waitForSelector('.xs-term .xterm', { timeout: 30000 });
     check(true, 'the session started by itself (its terminal is showing)');
+    await page.waitForFunction(() => /Commit/i.test(document.querySelector('.xs-proof')?.textContent ?? ''), null, { timeout: 30000 }).catch(() => undefined);
     const proofText = await page.textContent('.xs-proof');
-    check(/coming soon/.test(proofText ?? ''), `the proof strip says coming soon (${proofText?.slice(0, 60)})`);
+    check(/Commit/i.test(proofText ?? '') && /Budget/i.test(proofText ?? '') && /Stuck/i.test(proofText ?? '') && /Decisions/i.test(proofText ?? ''), `the proof strip shows commit, budget, stuck and decisions (${proofText?.replace(/\s+/g, ' ').slice(0, 120)})`);
     // The app: started from the preview.
     const start = page.locator('.xs-empty button.primary');
     if (await start.count()) await start.click();
@@ -128,7 +140,19 @@ async function main() {
     await page.locator('.xs-term').click();
     await page.keyboard.type('Add a status filter to the orders list');
     await page.keyboard.press('Enter');
-    await settle(page, 4000);
+    // The session changes the model while it works (the fake agent's turn runs FAKE_TURN_MS): the .mpr moves, then
+    // mxcli's watch reloads the running app in place (the folder's version.txt is what the fake app shows).
+    await settle(page, 1500);
+    fs.writeFileSync(path.join(projectDir, 'OrderDesk.mpr'), 'changed by the session');
+    await settle(page, 3000);
+    fs.writeFileSync(path.join(projectDir, 'version.txt'), 'status filter added by the session');
+    await page.waitForSelector('.xs-preview-in.xs-changed', { timeout: 20000 }).catch(() => undefined);
+    check(await page.isVisible('.xs-preview-in.xs-changed'), 'an in-place reload lights the preview up (Updated)');
+    await settle(page, 1200);
+    const loopText = await page.textContent('.xs-ph2');
+    check(/asked → visible \d+ s/.test(loopText ?? ''), `the timer measured the in-place reload (${loopText?.replace(/\s+/g, ' ').trim()})`);
+    await shot(page, '06-session-reloaded');
+    await settle(page, 2500);
     check((await page.textContent('.xs-state'))?.length > 0, `the header says the session's state (${await page.textContent('.xs-state')})`);
     check(await page.isVisible('.xs-phases'), 'the phase strip shows for a phased project');
     check((await page.textContent('.xs-loop'))?.includes('asked → visible'), 'the preview header has the asked → visible timer');

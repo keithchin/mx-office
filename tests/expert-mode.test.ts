@@ -184,3 +184,14 @@ test('the split keeps both sides at least 320 px, resets to 50/50 and moves by k
   assert.deepEqual(readSplit({ pct: 'x', focus: 'nope' }), { pct: 50, focus: 'both', swapped: false });
   assert.deepEqual(readSplit(null), { pct: 50, focus: 'both', swapped: false });
 });
+
+test('a feature can leave built-in tabs out of the navigation (Expert mode hides the team pages), ?tab= still reaching them', async () => {
+  const { hideTabsWhen, tabShown } = await import('../src/client/tabs/registry.js');
+  let expert = false;
+  const team = new Set(['org', 'teams', 'board', 'approvals', 'standup']);
+  hideTabsWhen((id) => expert && team.has(id));
+  assert.equal(tabShown('org'), true, 'a Team project lists Team');
+  expert = true;
+  for (const id of team) assert.equal(tabShown(id), false, `${id} hidden on an Expert project`);
+  for (const id of ['command', 'roadmap', 'documents', 'budget', 'workers', 'settings']) assert.equal(tabShown(id), true, `${id} kept`);
+});
