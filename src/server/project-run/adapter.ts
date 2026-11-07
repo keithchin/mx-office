@@ -14,7 +14,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { studioStateOf } from '../studio/index.js';
 import { ProjectRuns } from './index.js';
 import { mergesSince, probeAgent } from './safety.js';
-import { projectPause, setProjectPause, useProjectRunFile } from './store.js';
+import { projectPause, useProjectRunFile } from './store.js';
 import { registerProjectPause } from '../budget/pause.js';
 import type { RunFloor } from './types.js';
 import { helperNotes } from '../restart/helpers.js';
@@ -84,10 +84,8 @@ export function projectRunsOf(ctx: Ctx): ProjectRuns {
         if (typeof res === 'string') console.error(`agent-office: couldn't pause ${floorId} for its budget: ${res}`);
       },
       resume: (floorId, by) =>
-        // An Expert project's session is never sent a resume brief: the pause just lifts, and the person carries on in it.
-        isExpertProject(ctx.floors.get(floorId))
-          ? setProjectPause(floorId, undefined)
-          : void runs.resume(floorId, { mode: 'work' }, by, undefined, 'the budget was raised or resumed').then((res) => {
+        // An Expert project's resume types nothing into its session (ProjectRuns.resumeQuiet).
+        void runs.resume(floorId, { mode: 'work' }, by, undefined, 'the budget was raised or resumed').then((res) => {
           if (typeof res === 'string') console.error(`agent-office: couldn't resume ${floorId}: ${res}`);
         }),
       pausedForBudget: (floorId) => projectPause(floorId)?.why === 'budget',

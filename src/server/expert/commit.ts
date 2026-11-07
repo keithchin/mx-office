@@ -92,8 +92,8 @@ export async function autoCommit(git: ProofGit, dir: string, seen: string | unde
       return ['-c', `user.name=${me.name}`, '-c', `user.email=${me.email}`];
     })();
     try {
-      // No --amend, no --no-verify: the project's own hooks run; a signing prompt never opens.
-      await git([...id, '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', message], dir);
+      // No --amend, no --no-verify: the project's own hooks and signing settings apply as they are.
+      await git([...id, 'commit', '--quiet', '-m', message], dir);
     } catch (err) {
       // Left as it was found: unstaged again (the files themselves are never touched).
       await git(['reset', '--quiet'], dir).catch(() => '');

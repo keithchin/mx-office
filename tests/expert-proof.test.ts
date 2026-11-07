@@ -93,15 +93,50 @@ test('session branch: created at HEAD on a clean tree, then kept; an existing on
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), SESSION_BRANCH);
 });
 
-test('session branch: uncommitted changes on another branch are reported, never switched over or touched', async () => {
+test('session branch: uncommitted changes on the default branch are carried along to session/main, nothing lost', async () => {
   const { dir } = repo();
   writeFileSync(path.join(dir, 'README.md'), 'edited by hand\n');
   writeFileSync(path.join(dir, 'new.txt'), 'untracked\n');
   const r = await ensureSessionBranch(runProofGit, dir);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), SESSION_BRANCH);
+  assert.equal(readFileSync(path.join(dir, 'README.md'), 'utf8'), 'edited by hand\n');
+  assert.ok(existsSync(path.join(dir, 'new.txt')));
+  assert.equal(git(dir, 'rev-list', '--count', '--all'), '1', 'nothing committed by taking the branch');
+});
+
+test('a commit that fails (a hook refusing it) is recorded in commit.error and tried again later; signing config is left alone', async () => {
+  const { dir } = repo();
+  const gd = path.join(dir, '.git');
+  writeFileSync(path.join(gd, 'hooks', 'pre-commit'), '#!/bin/sh\nif [ -f .git/block ]; then echo "blocked by the project hook" >&2; exit 1; fi\nexit 0\n', { mode: 0o755 });
+  writeFileSync(path.join(gd, 'block'), '');
+  const seen: string[][] = [];
+  const spy: ProofGit = (args, cwd, o) => (seen.push(args), runProofGit(args, cwd, o));
+  const { svc } = service({ git: spy, target: async () => ({ off: 'no remote' }), backoffMs: [50] });
+  await svc.attach('p', dir);
+  const head = git(dir, 'rev-parse', 'HEAD');
+  writeFileSync(path.join(dir, 'e.txt'), 'e\n');
+  assert.equal((await svc.check('p'))?.kind, 'error');
+  assert.match(svc.proof('p')!.commit!.error ?? '', /didn't go/);
+  assert.equal(git(dir, 'rev-parse', 'HEAD'), head);
+  assert.equal(git(dir, 'diff', '--cached', '--name-only'), '', 'unstaged again');
+  rmSync(path.join(gd, 'block'));
+  await until(() => git(dir, 'rev-parse', 'HEAD') !== head, 'retried and committed');
+  await until(() => !(svc.proof('p')?.commit?.error ?? '').includes("didn't go"), 'the commit error clears');
+  assert.ok(!seen.some((a) => a.some((x) => /gpgsign/i.test(x))), 'no signing override');
+  svc.stop();
+});
+
+test('session branch: uncommitted changes on any other branch are reported, never switched over or touched', async () => {
+  const { dir } = repo();
+  git(dir, 'checkout', '-q', '-b', 'feature/x');
+  writeFileSync(path.join(dir, 'README.md'), 'edited by hand\n');
+  writeFileSync(path.join(dir, 'new.txt'), 'untracked\n');
+  const r = await ensureSessionBranch(runProofGit, dir);
   assert.equal(r.ok, false);
-  assert.equal(r.branch, 'main');
-  assert.match((r as { why: string }).why, /Uncommitted changes on main/);
-  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), 'main');
+  assert.equal(r.branch, 'feature/x');
+  assert.match((r as { why: string }).why, /Uncommitted changes on feature\/x/);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), 'feature/x');
   assert.equal(readFileSync(path.join(dir, 'README.md'), 'utf8'), 'edited by hand\n');
   assert.ok(existsSync(path.join(dir, 'new.txt')));
   assert.equal(git(dir, 'branch', '--list', SESSION_BRANCH), '', 'no branch made');
@@ -109,9 +144,9 @@ test('session branch: uncommitted changes on another branch are reported, never 
   const { svc } = service();
   await svc.attach('p', dir);
   const p = svc.proof('p')!;
-  assert.equal(p.branch, 'main');
+  assert.equal(p.branch, 'feature/x');
   assert.equal(p.commit?.push, 'off');
-  assert.match(p.commit?.error ?? '', /Uncommitted changes on main/);
+  assert.match(p.commit?.error ?? '', /Uncommitted changes on feature\/x/);
   svc.onWorker('p', dir, agent('working', 'edit'));
   svc.onWorker('p', dir, agent('done'));
   assert.equal((await svc.check('p'))?.kind, 'off-branch');

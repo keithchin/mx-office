@@ -22,7 +22,8 @@ export interface RunFloor {
   sleep(id: string): string | undefined;
   /**
    * An Expert project (server/expert/): the office never types into its session, so a pause sends no handoff
-   * prompt and never stops a turn: the session sleeps once its turn is over.
+   * prompt and never stops a turn (the session sleeps once its turn is over), and a resume only starts the session
+   * again, with no brief and no message.
    */
   noPrompts?: boolean;
   /** Studio Pro has the floor's project open (Studio mode): mxcli writes are paused. */

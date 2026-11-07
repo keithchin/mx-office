@@ -56,6 +56,8 @@ interface FloorProof {
   timer?: NodeJS.Timeout;
   pushTimer?: NodeJS.Timeout;
   heldTries: number;
+  /** Auto-commits that failed in a row. */
+  commitFails: number;
   attached?: Promise<void>;
 }
 
@@ -71,7 +73,7 @@ export class ExpertProofService {
     let s = this.floors.get(id);
     if (!s || s.dir !== dir) {
       if (s) this.clear(s);
-      s = { id, dir, branch: '', touched: false, working: false, idleSince: this.deps.now(), commit: null, pushing: false, pushAgain: false, pushFails: 0, heldTries: 0 };
+      s = { id, dir, branch: '', touched: false, working: false, idleSince: this.deps.now(), commit: null, pushing: false, pushAgain: false, pushFails: 0, heldTries: 0, commitFails: 0 };
       this.floors.set(id, s);
     }
     return s;
@@ -164,7 +166,20 @@ export class ExpertProofService {
       s.touched = true;
       this.soon(s, this.deps.heldRetryMs ?? HELD_RETRY_MS);
     } else s.heldTries = 0;
-    if (out.kind === 'error' && s.commit) s.commit = { ...s.commit, error: out.error };
+    // A commit that didn't go (a hook, signing): kept for the strip and tried again later, with the push's back-off.
+    if (out.kind === 'error') {
+      if (s.commit) s.commit = { ...s.commit, error: out.error };
+      s.commitFails++;
+      const backoff = this.deps.backoffMs ?? PUSH_BACKOFF_MS;
+      s.touched = true;
+      this.soon(s, backoff[Math.min(s.commitFails - 1, backoff.length - 1)]);
+    } else if (out.kind === 'committed') {
+      s.commitFails = 0;
+      if (s.commit?.error && s.commit.push !== 'failed' && s.commit.push !== 'off') {
+        const { error: _e, ...rest } = s.commit;
+        s.commit = rest;
+      }
+    }
     this.afterHead(s);
     return out;
   }

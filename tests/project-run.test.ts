@@ -523,3 +523,19 @@ test('an Expert session (noPrompts): the pause types no handoff and never stops 
   assert.equal(w.floor.prompts.length, 0, 'nothing was typed into the session');
   assert.ok(projectPause(w.floor.id));
 });
+
+test('an Expert project’s resume (noPrompts) types nothing: the pause lifts, sleeping sessions start with no message, one cut off mid-turn stays asleep', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  w.run.noPrompts = true;
+  const ids = await team(w, ['pm', 'lead-developer']);
+  setProjectPause(w.floor.id, { by: 'Budget', at: w.clock.now, why: 'budget', waiting: [] });
+  w.cut.add(ids['lead-developer']);
+  const r = await w.runs.resume(w.floor.id, { mode: 'work' }, 'Keith');
+  assert.ok(typeof r !== 'string', String(r));
+  assert.equal(r.status, 'done');
+  assert.equal(projectPause(w.floor.id), undefined, 'the pause is lifted');
+  assert.deepEqual(w.floor.wakes.map((x) => [x.id, x.text]), [[ids.pm, undefined]], 'woken with no message');
+  assert.equal(w.floor.prompts.length, 0);
+  assert.equal(r.agents.find((a) => a.workerId === ids['lead-developer'])?.status, 'skipped');
+});

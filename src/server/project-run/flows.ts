@@ -465,7 +465,7 @@ export function pauseFlow(deps: RunDeps): WorkflowDef<PauseRun> {
             .filter((w) => w.kind === 'agent' && !isAsleepStatus(w.status))
             .map((w) => ({ key: w.id, workerId: w.id, role: deps.roster.roleOf(f.team, w.id), name: w.name, action: 'pause', status: 'pending' }));
           // Each is told the project is pausing: once it's resumed, each is owed word of that (roster/awareness.ts).
-          noteSlept(s.floor, agents.map((a) => a.key));
+          if (!f.noPrompts) noteSlept(s.floor, agents.map((a) => a.key));
           audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'pause.started', target: target(f), summary: `Paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ' (budget reached)' : ''}: ${agents.length} agent${agents.length === 1 ? '' : 's'} to wind down`, details: { agents: agents.map((a) => a.name), why: s.why } });
           deps.chatter?.(s.floor, `⏸ ${s.by} paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ': its budget is reached' : ''}: agents finish their turn, write a handoff note and sleep.`);
           f.team.changed();
