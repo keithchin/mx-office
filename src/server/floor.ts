@@ -438,6 +438,7 @@ export class Floor {
       palette: this.def.palette,
       addedBy: this.def.addedBy,
       addedAt: this.def.addedAt,
+      ...(this.def.mode ? { mode: this.def.mode } : {}),
       workers: ws.filter((w) => !DESK_BY_ID.get(w.deskId)?.station).length,
       busy: ws.filter((w) => w.status === 'working' || via?.has(w.id)).length,
       waiting: ws.filter((w) => w.kind === 'agent' && (w.status === 'needs_input' || (w.status === 'done' && !w.acked))).length,

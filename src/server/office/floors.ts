@@ -1,3 +1,4 @@
+import { expertOf } from '../expert/index.js';
 import { existsSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import type { FloorDef } from '../building.js';
@@ -237,5 +238,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
   rosterOf(ctx);
   // The team chatter listens from the start too (chatter/).
   chatterOf(ctx);
+  // Expert mode's loop timer hears its sessions' hooks from the start too (expert/).
+  expertOf(ctx);
   return { openFloor };
 }

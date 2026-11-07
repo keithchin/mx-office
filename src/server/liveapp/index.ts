@@ -32,6 +32,7 @@ import { readReadiness } from './readiness.js';
 import { findMpr } from './checkout.js';
 import { LiveConsoles } from './console/index.js';
 import { emitLiveReady } from './ready-bus.js';
+import { noteLiveState } from './state-bus.js';
 import { forgetServed, readLastServed } from './served.js';
 import { instancePorts } from '../app-instance/index.js';
 import { ModelUnits } from '../model/units.js';
@@ -219,6 +220,7 @@ export class LiveApps {
   /** Told to everyone on the floor; a start, a stop, a crash or a new commit reads what it has again. */
   private changed(state: LiveAppState) {
     this.consoles.sync(state);
+    noteLiveState(state);
     const floor = this.ctx.floors.get(state.floor);
     if (floor) this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(state) });
     const was = this.last.get(state.floor);

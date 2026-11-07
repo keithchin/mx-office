@@ -320,7 +320,7 @@ export class WorkerManager {
       this.tasks.notePrompt(w, prompt);
     }
     // Cut off mid-turn by a restart: it gets on with it, as whoever was watching would have told it to.
-    const carryOn = !prompt && w.interrupted && w.info.kind === 'agent' && !!w.info.sessionId;
+    const carryOn = !prompt && w.interrupted && w.info.kind === 'agent' && !!w.info.sessionId && !w.info.session; // an Expert-mode session carries on only when its person says
     w.interrupted = w.dozing = false;
     w.officeTurn = office; // a turn carried on is still whoever started it's
     this.launch(w, carryOn ? carryOnPrompt(this.team.openAsks(id)) : first, w.info.sessionId);
@@ -485,7 +485,7 @@ export class WorkerManager {
   /** Types a prompt into the agent's input box and submits it; `by` is the person who sent it, if any. */
   prompt(id: string, text: string, by?: string): string | undefined {
     const w = this.workers.get(id);
-    if (!w) return 'No such worker';
+    if (!w || w.info.session) return w ? "The office never types into an Expert-mode session: type in it yourself" : 'No such worker';
     if (w.dsh) {
       const clean = text.replace(/\r\n?/g, '\n').trim();
       if (!clean) return 'Empty prompt';

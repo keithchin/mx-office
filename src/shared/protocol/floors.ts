@@ -44,6 +44,8 @@ export interface FloorInfo {
   clone?: CloneProgress;
   /** The project the office was started in (`agent-office <dir>`): the office keeps its own data in its checkout. */
   local?: boolean;
+  /** Expert mode (shared/expert.ts): one person's own session, no team. Absent: Team mode. */
+  mode?: 'expert' | 'team';
   addedBy: string;
   addedAt: number;
   /**

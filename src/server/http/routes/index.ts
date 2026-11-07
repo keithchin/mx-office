@@ -83,6 +83,7 @@ import { teamServerRoutes } from './team-server.js';
 import { dataImpactRoutes } from './data-impact.js';
 import { csrfRoutes } from './csrf.js';
 import { phaseRoutes } from './phases.js';
+import { expertRoutes } from './expert.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -298,6 +299,11 @@ export const routes: readonly Route[] = [
   dataImpactRoutes.act,
   phaseRoutes.view,
   phaseRoutes.act,
+  // Expert mode: the session screen, its preview's choices, starting the session, opening a folder (expert/).
+  expertRoutes.view,
+  expertRoutes.choices,
+  expertRoutes.session,
+  expertRoutes.open,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

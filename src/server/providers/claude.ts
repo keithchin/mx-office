@@ -1,5 +1,6 @@
 // Claude Code: hooks from a settings file the office writes (its own hook route, /hooks/claude),
 // usage read off the session transcript and booked in the budget, and tasks the office names.
+import { noteWorkerHook } from '../workers/hook-bus.js';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { FAILS_TO_DESPAIR, outputFailed, toolAction } from '../../shared/actions.js';
@@ -164,6 +165,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
   // The Command Center's Chat view reads the conversation off it (convo/).
   noteTranscript(info.id, payload?.transcript_path);
   h.scheduleScan();
+  // Whoever follows this session's hooks (workers/hook-bus.ts: Expert mode's loop timer).
+  queueMicrotask(() => noteWorkerHook(info.id, event, payload));
   switch (event) {
     case 'SessionStart':
       // A fresh start or a resume: nothing of the old session runs in the background (workers/background-work.ts).

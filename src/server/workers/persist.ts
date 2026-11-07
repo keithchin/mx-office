@@ -42,6 +42,7 @@ export function workersJson(workers: Iterable<Worker>, stopping: boolean): strin
     pr: info.pr,
     pastPrs: info.pastPrs,
     meeting: info.meeting,
+    session: info.session,
     workedMs: workedMs(info),
     tracker: info.kind === 'agent' ? tracker : undefined,
     usage: providerAdapter(info.provider)?.usage?.persisted ? info.usage : undefined,
@@ -181,6 +182,7 @@ export function restoreWorkers(file: string, workers: Map<string, Worker>, defau
         viewers: [],
         viewerIds: [],
         meeting: typeof s.meeting === 'string' && DESK_BY_ID.get(s.deskId)?.room ? s.meeting : undefined,
+        ...(s.session === true ? { session: true as const } : {}),
         workedMs: typeof s.workedMs === 'number' && Number.isFinite(s.workedMs) && s.workedMs > 0 ? s.workedMs : undefined,
       };
       const w = newWorker(info, tracker, typeof s.hookToken === 'string' && s.hookToken ? s.hookToken : undefined);
