@@ -2,7 +2,8 @@
 // preview's pages and roles, starting the session, opening a folder; and the background proof strip's
 // source, which another module answers (GET /api/expert/proof): until it does, a 404 says "coming soon".
 
-import type { ExpertProof, ExpertView, PreviewChoices } from '../../../shared/expert';
+import type { ExpertView, PreviewChoices } from '../../../shared/expert';
+import type { ExpertProof } from '../../../shared/expert-proof';
 
 const q = (floor: string) => `floor=${encodeURIComponent(floor)}`;
 

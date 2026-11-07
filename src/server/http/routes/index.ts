@@ -63,6 +63,7 @@ import { signoffRoutes } from './signoff.js';
 import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
+import { expertRoutes } from './expert.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -83,7 +84,6 @@ import { teamServerRoutes } from './team-server.js';
 import { dataImpactRoutes } from './data-impact.js';
 import { csrfRoutes } from './csrf.js';
 import { phaseRoutes } from './phases.js';
-import { expertRoutes } from './expert.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -244,6 +244,8 @@ export const routes: readonly Route[] = [
   localMergeRoutes.confirm,
   localMergeRoutes.review,
   localMergeRoutes.merge,
+  // Expert mode's proof strip (server/expert/).
+  expertRoutes.proof,
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,

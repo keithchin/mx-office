@@ -2,13 +2,14 @@
 // GET /api/expert/choices?floor=&rev= the preview's pages and roles at a commit; POST /api/expert/session
 // {floor} starts the session (or wakes it, its conversation carried on); POST /api/expert/open {path} makes a
 // folder on the office's machine an Expert-mode project ("Open existing toolkit project", admins only, no
-// readiness checks yet). GET /api/expert/proof?floor= is the background proof strip's and isn't here: the
-// background proof module answers it. Signed in, and the POSTs from the office's own pages only.
+// readiness checks yet); GET /api/expert/proof?floor= is the background proof strip ({ branch, commit, budget,
+// stuck, decisions }, 409 for a Team project: ../../expert/index.ts). Signed in, the POSTs from the office's own pages only.
 
 import type { Route } from '../router.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import { floorParam } from './files.js';
 import { expertOf, isExpert } from '../../expert/shell.js';
+import { expertProofView } from '../../expert/index.js';
 import { ensureSession } from '../../expert/session-worker.js';
 import { previewChoices } from '../../expert/choices.js';
 import { checkSourcePath } from '../../wizard/source-folder.js';
@@ -25,6 +26,18 @@ async function json(req: Parameters<Route['handle']>[1]['req']): Promise<Record<
 }
 
 export const expertRoutes = {
+  /** GET /api/expert/proof?floor=<id>: { branch, commit, budget, stuck, decisions }. 409 for a Team project. */
+  proof: {
+    method: 'GET',
+    path: '/api/expert/proof',
+    auth: 'session',
+    async handle(ctx, { res, url }) {
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such project' });
+      if (!isExpert(floor)) return send(res, 409, { error: 'Not an Expert project' });
+      return send(res, 200, await expertProofView(ctx, floor));
+    },
+  },
   view: {
     method: 'GET',
     path: '/api/expert',

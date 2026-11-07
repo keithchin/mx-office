@@ -12,8 +12,8 @@ export function projectMode(v: unknown): ProjectMode | undefined {
   return v === 'expert' || v === 'team' ? v : undefined;
 }
 
-/** Whether a project record is an Expert-mode project. */
-export const isExpertMode = (p: { mode?: unknown } | undefined | null): boolean => p?.mode === 'expert';
+/** Whether a project record is an Expert-mode project (one rule, in shared/expert-proof.ts). */
+export { isExpertMode } from './expert-proof.js';
 
 /** What the session's header shows of it: busy, waiting for you, starting, or not running. */
 export type SessionState = 'busy' | 'waiting' | 'starting' | 'off';
@@ -67,17 +67,8 @@ export interface PreviewChoices {
   problem?: string;
 }
 
-/**
- * The background proof strip's source (slice 2 owns it: GET /api/expert/proof?floor=). Mirrored here so the
- * session screen can draw it once it exists; until then the route answers 404 and the strip says so.
- */
-export interface ExpertProof {
-  branch: string;
-  commit: { sha: string; message: string; at: number; push: 'ok' | 'pending' | 'failed' | 'off'; error?: string } | null;
-  budget: { spentUsd: number; totalUsd: number; todayUsd: number; paused: boolean } | null;
-  stuck: { stuck: boolean; idleSec: number; reason?: string } | null;
-  decisions: number;
-}
+/** The background proof strip's source (GET /api/expert/proof): shared/expert-proof.ts. */
+export type { ExpertProof } from './expert-proof.js';
 
 // ---- The split between the preview and the session ------------------------------------------------------
 

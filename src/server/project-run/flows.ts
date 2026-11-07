@@ -377,6 +377,16 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
       set(a, 'asleep');
       continue;
     }
+    // An Expert session (RunFloor.noPrompts): nothing typed into it, never stopped mid-turn; it sleeps once idle.
+    if (f.noPrompts) {
+      if (w.status === 'needs_input') set(a, 'waiting-on-you', 'Waiting on you in its terminal');
+      else if (busy(w.status)) set(a, 'finishing', 'Finishing its turn');
+      else if (between(w.status)) {
+        const err = f.sleep(w.id);
+        set(a, err ? 'failed' : 'asleep', err);
+      }
+      continue;
+    }
     if ((a.status === 'handoff' || a.status === 'finishing') && forceStop(deps, f, s, a, w, now, settleMs)) {
       changed = true;
       continue;
@@ -455,7 +465,7 @@ export function pauseFlow(deps: RunDeps): WorkflowDef<PauseRun> {
             .filter((w) => w.kind === 'agent' && !isAsleepStatus(w.status))
             .map((w) => ({ key: w.id, workerId: w.id, role: deps.roster.roleOf(f.team, w.id), name: w.name, action: 'pause', status: 'pending' }));
           // Each is told the project is pausing: once it's resumed, each is owed word of that (roster/awareness.ts).
-          noteSlept(s.floor, agents.map((a) => a.key));
+          if (!f.noPrompts) noteSlept(s.floor, agents.map((a) => a.key));
           audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'pause.started', target: target(f), summary: `Paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ' (budget reached)' : ''}: ${agents.length} agent${agents.length === 1 ? '' : 's'} to wind down`, details: { agents: agents.map((a) => a.name), why: s.why } });
           deps.chatter?.(s.floor, `⏸ ${s.by} paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ': its budget is reached' : ''}: agents finish their turn, write a handoff note and sleep.`);
           f.team.changed();

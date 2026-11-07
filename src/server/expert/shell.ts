@@ -9,7 +9,8 @@ import path from 'node:path';
 import type { Ctx } from '../office/context.js';
 import type { Floor } from '../floor.js';
 import type { LiveAppState } from '../../shared/protocol.js';
-import { isExpertMode, type ExpertView } from '../../shared/expert.js';
+import type { ExpertView } from '../../shared/expert.js';
+import { isExpertProject } from './mode.js';
 import { onWorkerHook } from '../workers/hook-bus.js';
 import { onLiveState } from '../liveapp/state-bus.js';
 import { liveAppsIfMade } from '../liveapp/index.js';
@@ -20,7 +21,7 @@ import { headerOf } from './header.js';
 export type ExpertCtx = Pick<Ctx, 'cfg' | 'floors' | 'workerFloor'>;
 
 /** Whether a floor is an Expert-mode project (`mode: 'expert'` on its record). */
-export const isExpert = (floor: Floor | undefined): boolean => isExpertMode(floor?.def);
+export const isExpert = (floor: Floor | undefined): boolean => isExpertProject(floor);
 
 const SAVE_MS = 1000;
 

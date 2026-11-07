@@ -119,6 +119,14 @@ html body.lite .xs h1.xs-title { margin: 0; font-size: 16px; line-height: 1.3; f
 /* ---- Proof strip ----------------------------------------------------------------------------------- */
 .xs-proof { display: flex; align-items: stretch; min-height: 34px; background: var(--card); border-top: 1px solid var(--line); font-size: 13px; overflow-x: auto; scrollbar-width: none; }
 .xs-pc { display: flex; align-items: center; gap: 6px; padding: 0 14px; border-right: 1px solid var(--line); white-space: nowrap; }
+.xs-pd { width: 7px; height: 7px; border-radius: 50%; background: var(--faint, var(--muted)); flex: none; }
+.xs-pc.good .xs-pd { background: var(--good); }
+.xs-pc.warn .xs-pd { background: var(--warn); }
+.xs-pc.bad .xs-pd { background: var(--bad); }
+.xs-pc.idle .xs-pd { display: none; }
+.xs-sha { font: 12px var(--mono, ui-monospace, Consolas, monospace); }
+.xs-reason { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.xs-perr { color: var(--bad-ink); max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
 .xs-pk { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); }
 .xs-pm { color: var(--muted); }
 .xs-soon { color: var(--muted); }
