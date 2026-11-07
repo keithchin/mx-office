@@ -20,6 +20,11 @@ export interface RunFloor {
   cutOff(id: string): boolean;
   /** Puts an agent between turns to sleep, its session kept (WorkerManager.sleep). Why not, if not. */
   sleep(id: string): string | undefined;
+  /**
+   * An Expert project (server/expert/): the office never types into its session, so a pause sends no handoff
+   * prompt and never stops a turn: the session sleeps once its turn is over.
+   */
+  noPrompts?: boolean;
   /** Studio Pro has the floor's project open (Studio mode): mxcli writes are paused. */
   studioOpen(): boolean;
   /** A few lines of the floor's chatter since `since` that involve `name`. */

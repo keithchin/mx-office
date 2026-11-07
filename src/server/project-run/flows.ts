@@ -377,6 +377,16 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
       set(a, 'asleep');
       continue;
     }
+    // An Expert session (RunFloor.noPrompts): nothing typed into it, never stopped mid-turn; it sleeps once idle.
+    if (f.noPrompts) {
+      if (w.status === 'needs_input') set(a, 'waiting-on-you', 'Waiting on you in its terminal');
+      else if (busy(w.status)) set(a, 'finishing', 'Finishing its turn');
+      else if (between(w.status)) {
+        const err = f.sleep(w.id);
+        set(a, err ? 'failed' : 'asleep', err);
+      }
+      continue;
+    }
     if ((a.status === 'handoff' || a.status === 'finishing') && forceStop(deps, f, s, a, w, now, settleMs)) {
       changed = true;
       continue;

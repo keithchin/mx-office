@@ -14,11 +14,12 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { studioStateOf } from '../studio/index.js';
 import { ProjectRuns } from './index.js';
 import { mergesSince, probeAgent } from './safety.js';
-import { projectPause, useProjectRunFile } from './store.js';
+import { projectPause, setProjectPause, useProjectRunFile } from './store.js';
 import { registerProjectPause } from '../budget/pause.js';
 import type { RunFloor } from './types.js';
 import { helperNotes } from '../restart/helpers.js';
 import { turnsStarted } from './turns.js';
+import { isExpertProject } from '../expert/mode.js';
 
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -38,6 +39,7 @@ function runFloor(ctx: Ctx, floor: Floor): RunFloor {
     issues: () => floor.github.issues.items,
     cutOff: (id) => floor.workers.cutOff(id),
     sleep: (id) => floor.workers.sleep(id),
+    ...(isExpertProject(floor) ? { noPrompts: true } : {}),
     studioOpen: () => !!studioStateOf(floor.id)?.open,
     chatter: (name, since) =>
       chatterOf(ctx)
@@ -82,7 +84,10 @@ export function projectRunsOf(ctx: Ctx): ProjectRuns {
         if (typeof res === 'string') console.error(`agent-office: couldn't pause ${floorId} for its budget: ${res}`);
       },
       resume: (floorId, by) =>
-        void runs.resume(floorId, { mode: 'work' }, by, undefined, 'the budget was raised or resumed').then((res) => {
+        // An Expert project's session is never sent a resume brief: the pause just lifts, and the person carries on in it.
+        isExpertProject(ctx.floors.get(floorId))
+          ? setProjectPause(floorId, undefined)
+          : void runs.resume(floorId, { mode: 'work' }, by, undefined, 'the budget was raised or resumed').then((res) => {
           if (typeof res === 'string') console.error(`agent-office: couldn't resume ${floorId}: ${res}`);
         }),
       pausedForBudget: (floorId) => projectPause(floorId)?.why === 'budget',
