@@ -1,0 +1,148 @@
+/* Expert mode's Session screen (ui/expert/page.ts): the Portal navigation stays on the left; the page is the
+   header, the phase strip, the split (preview ‖ session) and the proof strip, filling the window under the top
+   bar. In the theme's tokens, so Portal Light and Dark only change their values; the terminal is the mockup's
+   navy screen in both. On an Expert-mode project (body.xs-project) the team-lead panel steps aside. */
+
+body.lite.xs-project, body.lite.lp-on.xs-project, body.lite.lp-on.lp-collapsed.xs-project { --lp-space: 0px; }
+body.lite.xs-project :is(#lead-panel, .lp-rail, .lp-fab, .lp-backdrop) { display: none !important; }
+
+body.lite.xs-on :is(#pt-head, .pt-band, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch, #summary, #setup, #needs-you) { display: none !important; }
+html body.lite.xs-on .lite-main { padding: 0 !important; max-width: none !important; margin-right: 0 !important; }
+html body.lite.xs-on { overflow: hidden; }
+/* Popped out: the session alone, the whole window. */
+body.lite.xs-pop :is(#pt-nav, .lite-bar, .xs-head, .xs-phases, .xs-preview, .xs-div, .xs-proof, .xs-sh .xs-icon) { display: none !important; }
+html body.lite.xs-pop .lite-main { margin: 0 !important; }
+body.lite.xs-pop .xs { height: 100vh; }
+body.lite.xs-pop .xs-split[data-focus] .xs-session { display: flex !important; flex: 1 1 100% !important; }
+
+.xs { --xs-gap: 0px; display: flex; flex-direction: column; height: calc(100vh - var(--pt-top, 56px)); min-height: 520px; background: var(--paper-2, var(--paper)); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.xs [hidden] { display: none !important; }
+.xs .xs-grow { flex: 1; min-width: 8px; }
+.xs .xs-muted { color: var(--muted); font-size: 12.5px; }
+
+/* ---- Header ---------------------------------------------------------------------------------------- */
+.xs-head { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--line); min-height: 48px; flex-wrap: wrap; }
+html body.lite .xs h1.xs-title { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 600; letter-spacing: 0; }
+.xs-chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.xs-chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--sunken, var(--paper)); font: 12px var(--mono, ui-monospace, Consolas, monospace); color: var(--ink-2, var(--ink)); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.xs-chip-i { color: var(--muted); font-size: 11px; }
+.xs-segs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.xs-seg { border: 0; background: var(--card); color: var(--ink-2, var(--ink)); font: inherit; font-size: 13px; padding: 4px 12px; cursor: pointer; }
+.xs-seg + .xs-seg { border-left: 1px solid var(--line); }
+.xs-seg[aria-pressed='true'] { background: var(--accent-soft, var(--sunken)); color: var(--link, var(--accent)); font-weight: 600; }
+.xs-state { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px; font-size: 13px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); white-space: nowrap; }
+.xs-state::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--faint, var(--muted)); }
+.xs-state.waiting { background: var(--accent-soft, var(--sunken)); color: var(--link, var(--accent)); }
+.xs-state.waiting::before { background: var(--accent); }
+.xs-state.busy { background: var(--warn-soft); color: var(--warn-ink); }
+.xs-state.busy::before { background: var(--warn); animation: xs-pulse 1.2s ease-in-out infinite; }
+.xs-state.starting::before { background: var(--warn); }
+@keyframes xs-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .xs-state.busy::before { animation: none; } }
+.xs-lockin[disabled] { opacity: .55; cursor: not-allowed; }
+
+/* ---- Phase strip ----------------------------------------------------------------------------------- */
+.xs-phases { display: grid; grid-template-columns: minmax(220px, auto) minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--line); }
+.xs-ph-info { display: grid; gap: 2px; border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
+.xs-ph-t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.xs-ph-s { font-size: 12.5px; color: var(--muted); }
+.xs-ph-pct { background: var(--accent-soft); color: var(--link, var(--accent)); }
+.xs-ok { background: var(--good-soft); color: var(--good-ink); }
+.xs-ph-chips { min-width: 0; }
+
+/* ---- The split ------------------------------------------------------------------------------------- */
+.xs-split { flex: 1; min-height: 0; display: flex; position: relative; }
+.xs-split[data-swapped='true'] { flex-direction: row-reverse; }
+.xs-pane { min-width: 320px; min-height: 0; display: flex; flex-direction: column; flex: 1 1 50%; }
+.xs-split[data-focus='app'] :is(.xs-session, .xs-div), .xs-split[data-focus='chat'] :is(.xs-preview, .xs-div) { display: none; }
+.xs-split[data-focus='app'] .xs-preview, .xs-split[data-focus='chat'] .xs-session { flex: 1 1 100%; }
+.xs-split.xs-dragging { cursor: col-resize; user-select: none; }
+.xs-split.xs-dragging iframe { pointer-events: none; }
+.xs-div { flex: none; width: 7px; margin: 0 -3px; z-index: 2; position: relative; cursor: col-resize; display: grid; place-items: center; touch-action: none; }
+.xs-div::before { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: var(--line); }
+.xs-div:hover::before, .xs-div:focus-visible::before, .xs-dragging .xs-div::before { width: 3px; left: 2px; background: var(--accent); }
+.xs .xs-div:focus, .xs .xs-div:focus-visible { outline: none !important; box-shadow: none !important; }
+.xs-grip { position: relative; width: 5px; height: 28px; border-radius: 3px; background: var(--card); border: 1px solid var(--rule-strong, var(--line)); opacity: 0; transition: opacity .12s; }
+.xs-div:hover .xs-grip, .xs-div:focus-visible .xs-grip, .xs-dragging .xs-grip { opacity: 1; }
+
+/* ---- Preview --------------------------------------------------------------------------------------- */
+.xs-preview { background: var(--paper-2, var(--paper)); }
+.xs-preview-in { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.xs-ph, .xs-ph2 { display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; flex-wrap: wrap; min-width: 0; }
+.xs-ph2 { padding-top: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.xs-ph-l { font-weight: 600; }
+.xs-sel { flex: 0 1 200px; max-width: 220px; min-width: 96px; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--card); color: var(--ink); font: inherit; font-size: 13px; }
+.xs-rolenote { font-size: 12px; color: var(--muted); }
+.xs-loop { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--good-soft); color: var(--good-ink); white-space: nowrap; }
+.xs-loop.timing { background: var(--warn-soft); color: var(--warn-ink); }
+.xs-loop b { font-family: var(--mono, ui-monospace, Consolas, monospace); }
+.xs-loopmed, .xs-reloaded { color: var(--muted); white-space: nowrap; }
+.xs-reloaded::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 6px; vertical-align: 1px; }
+.xs-reloaded:empty::before { display: none; }
+.xs-spark { height: 16px; width: auto; fill: var(--faint, var(--muted)); }
+.xs-stagebox { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; padding: 8px 12px 12px; }
+.xs-frame { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.xs-frame .lv { flex: 1; min-height: 0; }
+.xs-frame .lv-stage { height: auto; flex: 1 1 auto; min-height: 0; border-radius: 4px; border: 1px solid var(--line); background: var(--card); }
+/* The viewer's toolbar kept to one line: back, forward, reload, home, the address and Open ↗. */
+.xs-frame .lv-group, .xs-frame .lv-sub, .xs-frame .lv-bar > .lv-btn[aria-label='Zoom'], .xs-frame .lv-bar > .lv-btn[aria-label='Copy link'], .xs-frame .lv-bar > .lv-btn[aria-label='Full screen'] { display: none; }
+.xs-frame .lv-bar { flex-wrap: nowrap; }
+.xs-frame .lv-address { min-width: 80px; }
+.xs-empty { margin: auto; max-width: 360px; text-align: center; color: var(--muted); }
+.xs-empty h3 { margin: 0 0 6px; color: var(--ink); font-size: 16px; }
+.xs-changed-badge { position: absolute; top: 16px; right: 22px; padding: 2px 10px; border-radius: 10px; background: var(--purple, #7c3aed); color: #fff; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.xs-changed .xs-changed-badge { opacity: 1; transform: none; }
+.xs-changed .xs-frame .lv-stage { box-shadow: 0 0 0 2px var(--purple, #7c3aed); transition: box-shadow .2s; }
+@media (prefers-reduced-motion: reduce) { .xs-changed-badge { transition: none; } }
+/* A narrow preview: the second line keeps only the timer and the reload. */
+@container (max-width: 480px) { .xs-loopmed, .xs-sparkbox, .xs-ph-l { display: none; } .xs-sel { flex: 1 1 0; } }
+.xs-preview { container-type: inline-size; }
+
+/* ---- Session --------------------------------------------------------------------------------------- */
+.xs-session { background: var(--card); border-left: 1px solid var(--line); }
+.xs-split[data-swapped='true'] .xs-session { border-left: 0; border-right: 1px solid var(--line); }
+.xs-sh { display: flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; height: 40px; border-bottom: 1px solid var(--line); }
+.xs-sh-l { font-weight: 600; }
+.xs-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 3px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; font-size: 12px; }
+.xs-sess-state { color: var(--muted); font-size: 12.5px; }
+.xs-icon { border: 0; background: none; color: var(--ink-2, var(--ink)); width: 28px; height: 28px; border-radius: 3px; cursor: pointer; font-size: 15px; }
+.xs-icon:hover { background: var(--hover, var(--sunken)); }
+.xs-termbox { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #0f172a; }
+.xs-term { position: absolute; inset: 0; padding: 10px 6px 8px 14px; }
+.xs-term .xterm { height: 100%; }
+.xs-term .xterm-viewport { background: #0f172a !important; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+.xs-cover { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(15, 23, 42, .92); color: #e2e8f0; }
+.xs-cover-in { max-width: 380px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+.xs-cover-in p { margin: 0; }
+.xs-cover .xs-muted { color: #94a3b8; }
+
+/* ---- Proof strip ----------------------------------------------------------------------------------- */
+.xs-proof { display: flex; align-items: stretch; min-height: 34px; background: var(--card); border-top: 1px solid var(--line); font-size: 13px; overflow-x: auto; scrollbar-width: none; }
+.xs-pc { display: flex; align-items: center; gap: 6px; padding: 0 14px; border-right: 1px solid var(--line); white-space: nowrap; }
+.xs-pk { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); }
+.xs-pm { color: var(--muted); }
+.xs-soon { color: var(--muted); }
+.xs-push { font-weight: 600; }
+.xs-push.ok { color: var(--good-ink); }
+.xs-push.pending { color: var(--warn-ink); }
+.xs-push.failed { color: var(--bad-ink); }
+.xs-bad { color: var(--bad-ink); }
+.xs-meter { display: inline-block; width: 64px; height: 5px; border-radius: 3px; background: var(--sunken, var(--line)); overflow: hidden; }
+.xs-meter > i { display: block; height: 100%; background: var(--accent); }
+
+/* ---- Open existing toolkit project ----------------------------------------------------------------- */
+.modal.xs-open { width: min(520px, calc(100vw - 32px)); }
+.xs-open-form { display: grid; gap: 10px; }
+.xs-open-form label { display: grid; gap: 4px; font-weight: 600; }
+.xs-open-path { padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); font: 13px var(--mono, ui-monospace, Consolas, monospace); }
+.xs-open-err { margin: 0; color: var(--bad-ink); }
+.xs-open-actions { display: flex; justify-content: flex-end; }
+.xs-open .xs-muted { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  .xs { height: auto; min-height: calc(100vh - var(--pt-top, 56px)); }
+  .xs-split { flex-direction: column; }
+  .xs-split[data-swapped='true'] { flex-direction: column-reverse; }
+  .xs-pane { min-width: 0; flex: none !important; height: 60vh; }
+  .xs-div { display: none; }
+}

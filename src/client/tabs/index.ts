@@ -11,3 +11,4 @@ import '../ui/walkthroughs/tab';
 import '../ui/security/tab';
 import '../ui/app-workspace/tab';
 import '../ui/roadmap/tab';
+import '../ui/expert/tab';

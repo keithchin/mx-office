@@ -3,6 +3,7 @@
  * (/pixel), and the home page (/home): the connection, the windows that hear from it, what you have open for the others to
  * see, notifications, and coming in (signing in, and your name the first time).
  */
+import { setPageNet } from './page-net';
 import { Net } from '../net';
 import { AVATAR_COLORS, loadProfile, loadSettings, saveProfile, store, type Settings } from '../state';
 import { randomLook } from '../../shared/avatar';
@@ -47,6 +48,7 @@ export function flatSession(page: '/start' | '/home' | '/clients' | '/lite' | '/
   const saved = loadProfile();
   store.profile = { name: saved?.name ?? 'Guest', color: saved?.color ?? AVATAR_COLORS[1], look: saved?.look ?? randomLook() };
   const net = new Net(() => store.profile);
+  setPageNet(net);
   const settings = loadSettings();
   const notifier = new DesktopNotifier(() => settings.notify, openWorker);
   // Through Phone access, risky actions ask for the password again (ui/reauth.ts); the phone version asks its own way.
