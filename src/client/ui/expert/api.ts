@@ -5,6 +5,7 @@
 import type { ExpertView, PreviewChoices } from '../../../shared/expert';
 import type { ExpertProof } from '../../../shared/expert-proof';
 import type { ReadyFixId, ReadyReport } from '../../../shared/expert-ready';
+import type { LockInMerge, LockInRun, LockInView } from '../../../shared/expert-lockin';
 
 const q = (floor: string) => `floor=${encodeURIComponent(floor)}`;
 
@@ -46,3 +47,11 @@ export async function getProof(floor: string): Promise<ExpertProof | 'missing' |
     return undefined;
   }
 }
+
+/** Lock in (server/expert-lockin/): the panel, and its steps. */
+export const getLockIn = (floor: string) => getJson<LockInView>(`/api/expert/lockin?${q(floor)}`);
+export const runLockIn = (floor: string) => post<{ run: LockInRun }>('/api/expert/lockin/run', { floor });
+export const mergeLockIn = (floor: string, commit: string, accept: string[], confirmImpact: boolean) => post<{ merged: LockInMerge }>('/api/expert/lockin/merge', { floor, commit, accept, confirmImpact });
+export const publishLockIn = (floor: string) => post<{ ok: true; note?: string }>('/api/expert/lockin/publish', { floor });
+export const deployLockIn = (floor: string) => post<{ id: string }>('/api/expert/lockin/deploy', { floor });
+export const closePhaseLockIn = (floor: string, phase: string) => post<{ ok: true }>('/api/expert/lockin/close-phase', { floor, phase });

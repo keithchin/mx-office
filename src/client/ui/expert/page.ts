@@ -24,6 +24,7 @@ import { splitter } from './split';
 import { sessionPreview } from './preview';
 import { proofStrip } from './proof';
 import { phaseBar } from './phases';
+import { openLockIn } from './lockin';
 import '../terminal.css';
 import '../liveapp/viewer.css';
 import './expert.css';
@@ -40,6 +41,9 @@ export function sessionState(w: WorkerInfo | undefined): SessionState {
 
 const STATE_WORDS: Record<SessionState, string> = { busy: 'Working', waiting: 'Idle · waiting for you', starting: 'Starting', off: 'Not running' };
 
+const LOCKIN_TITLE = 'Lock in: full checks at the head of session/main, then merge to main, publish or request a deploy. You choose when: a phase end or before a deploy';
+const LOCKIN_BUSY = 'Lock in waits while the session is working: wait for its turn to end, or stop it';
+
 const popped = () => new URLSearchParams(location.search).get('pop') === '1';
 
 export function sessionPage(container: HTMLElement): TabHooks {
@@ -48,8 +52,10 @@ export function sessionPage(container: HTMLElement): TabHooks {
   const seg = (f: SplitFocus, label: string, title: string) => h('button.xs-seg', { type: 'button', 'data-focus': f, title, onclick: () => split.focus(f) }, label);
   const segs = h('div.xs-segs', { role: 'group', 'aria-label': 'Focus' }, seg('app', 'App', 'The preview only'), seg('both', 'Both', 'The preview and the session side by side'), seg('chat', 'Chat', 'The session only'));
   const statePill = h('span.xs-state', { role: 'status', 'aria-live': 'polite' });
-  const lockIn = h('button.btn.primary.xs-lockin', { type: 'button', disabled: true, title: 'Lock in: full checks, merge and publish. Coming soon' }, 'Lock in');
-  const head = h('header.xs-head', {}, h('h1.xs-title', {}, 'Session'), chips, h('span.xs-grow'), segs, statePill, lockIn);
+  // Lock in (./lockin.ts): the person's choice, never automatic. Off while the session works, and it says why.
+  const lockIn = h('button.btn.primary.xs-lockin', { type: 'button', title: LOCKIN_TITLE, onclick: () => store.floor && openLockIn(store.floor, lockIn) }, '🔒 Lock in');
+  const lockWhy = h('span.xs-lock-why', { role: 'status' });
+  const head = h('header.xs-head', {}, h('h1.xs-title', {}, 'Session'), chips, h('span.xs-grow'), segs, statePill, h('span.xs-lockwrap', {}, lockIn, lockWhy));
   const phases = phaseBar();
 
   const preview = sessionPreview({ startApp: () => net?.send({ t: 'liveapp.start' }), openLive: () => openProjectTab('live') });
@@ -110,6 +116,10 @@ export function sessionPage(container: HTMLElement): TabHooks {
     const s = sessionState(w);
     statePill.className = `xs-state ${s}`;
     statePill.textContent = w?.status === 'needs_input' ? 'Needs you' : STATE_WORDS[s];
+    const working = s === 'busy';
+    lockIn.disabled = working;
+    lockIn.title = working ? LOCKIN_BUSY : LOCKIN_TITLE;
+    lockWhy.textContent = working ? 'wait, or stop the turn' : '';
     sessState.textContent = w?.usage ? `$${w.usage.cost.toFixed(2)} this session` : '';
     cover.hidden = s !== 'off' && s !== 'starting';
     if (!cover.hidden) {

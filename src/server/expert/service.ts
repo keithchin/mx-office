@@ -184,6 +184,28 @@ export class ExpertProofService {
     return out;
   }
 
+  /**
+   * Commits what's pending now, whatever HEAD did since the last look (Lock in: its checks must see everything):
+   * the same commit path as the auto-commit (never an amend, the project's hooks apply), then pushed as usual.
+   */
+  async commitNow(id: string, dir: string): Promise<CommitOutcome> {
+    const s = this.stateOf(id, dir);
+    await this.attach(id, dir);
+    clearTimeout(s.timer);
+    s.timer = undefined;
+    s.touched = false;
+    const out = await serial(dir, async () => {
+      if (s.branch !== SESSION_BRANCH) await this.takeBranch(s);
+      const r = await autoCommit(this.deps.git, dir, undefined, this.deps.identity);
+      if (r.kind === 'committed') s.seen = r.sha;
+      else if (r.kind === 'moved' || r.kind === 'clean') s.seen = r.head;
+      await this.readHead(s);
+      return r;
+    });
+    this.afterHead(s);
+    return out;
+  }
+
   /** The session branch's newest commit into s.commit (its push state kept when it's the same commit). */
   private async readHead(s: FloorProof) {
     const info = await this.headInfo(s.dir);

@@ -66,6 +66,7 @@ import { localMergeRoutes } from './local-merge.js';
 import { expertRoutes } from './expert.js';
 import { expertCreateRoutes } from './expert-create.js';
 import { expertReadyRoutes } from './expert-ready.js';
+import { expertLockInRoutes } from './expert-lockin.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -248,6 +249,7 @@ export const routes: readonly Route[] = [
   localMergeRoutes.merge,
   // Expert mode's proof strip (server/expert/).
   expertRoutes.proof,
+  ...Object.values(expertLockInRoutes),
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,

@@ -1,0 +1,61 @@
+/* The Lock in panel (./lockin.ts): checks, where it goes, the phase. Mockup: docs/mockups/expert-mode screen 5. */
+.modal.xl { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.xl-head { display: flex; align-items: flex-start; gap: 12px; }
+.xl-head .close { margin-left: auto; }
+.xl-tile { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 15px; }
+.xl-ht h2 { margin: 0; }
+.xl-ht p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.xl-body { overflow-y: auto; display: grid; gap: 16px; }
+.xl-sec { display: grid; gap: 8px; }
+.xl-sh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.xl-sh h3 { margin: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.xl-meta { color: var(--muted); font-size: 13px; }
+.xl-sh .grow, .xl-foot .grow, .xl-phase .grow { flex: 1; }
+.xl-rows { border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.xl-row { display: grid; grid-template-columns: 28px 150px minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 9px 14px; border-top: 1px solid var(--line); }
+.xl-row:first-child { border-top: 0; }
+.xl-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 700; background: var(--good-soft); color: var(--good-ink); }
+.xl-row[data-state='warn'] .xl-ico { background: var(--warn-soft); color: var(--warn-ink); }
+.xl-row[data-state='failed'] .xl-ico { background: var(--bad-soft); color: var(--bad-ink); }
+.xl-row[data-state='not-run'] .xl-ico, .xl-row[data-state='waiting'] .xl-ico { background: var(--line); color: var(--muted); }
+.xl-row[data-state='running'] .xl-ico { background: var(--line); color: var(--accent); animation: xl-spin 1.2s linear infinite; }
+@keyframes xl-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .xl-row[data-state='running'] .xl-ico { animation: none; } }
+.xl-name { font-weight: 600; }
+.xl-say { display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: baseline; min-width: 0; }
+.xl-sum { font-size: 14px; }
+.xl-detail { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.xl-act { justify-self: end; }
+.xl-fix { white-space: nowrap; }
+.xl-empty { margin: 0; padding: 12px 14px; color: var(--muted); font-size: 13px; }
+.xl-note { margin: 0; padding: 8px 12px; border-radius: 6px; background: var(--sunken, var(--bg)); font-size: 13px; }
+.xl-note.xl-busy { background: var(--warn-soft); color: var(--warn-ink); }
+.xl-err { margin: 0; padding: 8px 12px; border-radius: 6px; background: var(--bad-soft); color: var(--bad-ink); font-size: 13px; }
+.xl-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.xl-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.xl-card h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px; }
+.xl-card p { margin: 0; font-size: 13px; line-height: 1.45; }
+.xl-card .btn { align-self: flex-start; }
+.xl-ci { color: var(--muted); }
+.xl-req { margin-top: auto !important; }
+.xl-badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--line); color: var(--ink); }
+.xl-badge.ok { background: var(--good-soft); color: var(--good-ink); }
+.xl-badge.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.xl-badge.bad { background: var(--bad-soft); color: var(--bad-ink); }
+.xl-why { color: var(--muted); }
+.xl-steps { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.xl-accepts, .xl-impact { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; }
+.xl-impact { border-color: var(--warn-ink); background: var(--warn-soft); color: var(--warn-ink); }
+.xl-impact-h { margin: 0; font-weight: 600; }
+.xl-impact ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.xl-accept { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.xl-accept input { margin-top: 2px; }
+.xl-phase { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--good-ink); border-radius: 6px; background: var(--good-soft); color: var(--good-ink); font-size: 13.5px; }
+.xl-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.xl-last { color: var(--muted); font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  .xl-cards { grid-template-columns: minmax(0, 1fr); }
+  .xl-row { grid-template-columns: 24px minmax(0, 1fr); }
+  .xl-say, .xl-act { grid-column: 2; justify-self: start; }
+}

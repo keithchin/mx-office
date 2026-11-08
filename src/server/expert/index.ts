@@ -26,6 +26,7 @@ import { onForgetFloor } from '../office/forget.js';
 import { runProofGit } from './git.js';
 import { pushBranch, pushTarget } from './push.js';
 import { ExpertProofService } from './service.js';
+import { lockInDecisions } from '../expert-lockin/book.js';
 
 export { ExpertProofService } from './service.js';
 
@@ -130,5 +131,6 @@ export async function expertProofView(ctx: Ctx, floor: Floor): Promise<ExpertPro
   if (isExpertProject(floor)) await svc.attach(floor.id, floor.dir);
   const p = svc.proof(floor.id);
   const [stuck, decisions] = await Promise.all([stuckOfFloor(ctx, floor, p), decisionCount(floor.dir)]);
-  return { branch: p?.branch ?? '', commit: p?.commit ?? null, budget: budgetOfFloor(ctx, floor), stuck, decisions };
+  // Lock in's own rows in the decision log count too (expert-lockin/book.ts).
+  return { branch: p?.branch ?? '', commit: p?.commit ?? null, budget: budgetOfFloor(ctx, floor), stuck, decisions: decisions + lockInDecisions(ctx.cfg.dataDir, floor.id) };
 }
