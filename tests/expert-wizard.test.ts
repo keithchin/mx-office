@@ -13,7 +13,8 @@ import { blankExpertForm, cleanExpertPlan, DEFAULT_EXPERT_MODEL, EXPERT_BRIEF_FI
 import { expertPlanOf, readForm } from '../src/server/expert/create.js';
 import { cleanPlan } from '../src/server/wizard/plan.js';
 import { newJob, type JobState, type StepImpl } from '../src/server/wizard/job.js';
-import { withExpert, withMxcliVersion, type ExpertStepDeps } from '../src/server/wizard/expert-step.js';
+import { expertLocalOnlyRules, withExpert, withMxcliVersion, type ExpertStepDeps } from '../src/server/wizard/expert-step.js';
+import { localOnlyRules, withRules } from '../src/server/wizard/local-only.js';
 import { expertSettingsOf, sessionModelOf } from '../src/server/expert/settings.js';
 import { ensureSession } from '../src/server/expert/session-worker.js';
 import { expertCreateRoutes } from '../src/server/http/routes/expert-create.js';
@@ -252,4 +253,37 @@ test('Create is for admins, from the office’s own pages', async () => {
   };
   assert.equal(await call(true, 'http://elsewhere.test'), 403);
   assert.equal(await call(false, 'http://office.test'), 403);
+});
+
+test('an Expert project’s CLAUDE.md gets the local-only rule in Expert words; a Team project keeps the Team wording', async () => {
+  const root = tmp('rules');
+  try {
+    const team = localOnlyRules(path.join(root, 'bare.git'), true);
+    const inner = fakeSteps(root, []);
+    const settings = inner.settings;
+    // The inner settings step writes the Team wording, as withLocalOnly does.
+    inner.settings = async (job, io) => {
+      const r = await settings(job, io);
+      writeFileSync(path.join(root, 'CLAUDE.md'), withRules('# Order Desk\n', team));
+      return r;
+    };
+    const steps = withExpert({ setMode: () => undefined, setBudget: () => undefined, pinToolkit: async (sha) => ({ sha, dir: root }), mxcliLatest: async () => undefined }, inner);
+    const job = Object.assign(newJob(expertPlanOf(form(), online, 'Sam') as ProjectPlan, 'Sam'), { dir: root, floor: 'f1' });
+    await steps.settings(job, { log: () => undefined });
+    const md = readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+    assert.equal(md, withRules('# Order Desk\n', expertLocalOnlyRules(true)));
+    assert.match(md, /Work on `session\/main`/);
+    assert.match(md, /office commits and pushes it in the background to Team Server/);
+    assert.match(md, /Merging to main happens at Lock in, when the user chooses it/);
+    assert.match(md, /Never push to GitHub/);
+    assert.doesNotMatch(md, /Lead/);
+    assert.equal(md.match(/<!-- agent-office:local-only -->/g)?.length, 1, 'one rule, replaced in place');
+    // A Team plan: the Team wording stays.
+    writeFileSync(path.join(root, 'CLAUDE.md'), withRules('# Travel\n', team));
+    const teamJob = Object.assign(newJob(cleanPlan({ name: 'travel-approval', entry: 'greenfield', mendix: '11.12.4', localOnly: true }, VERSIONS, 'Test-Org') as ProjectPlan, 'Sam'), { dir: root, floor: 'f2' });
+    await steps.settings(teamJob, { log: () => undefined });
+    assert.match(readFileSync(path.join(root, 'CLAUDE.md'), 'utf8'), /tell the Lead it is ready/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

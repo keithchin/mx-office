@@ -16,6 +16,8 @@ import type { StepId } from '../../shared/wizard.js';
 import { EXPERT_BRIEF_FILE, LATEST, isExpertPlan, type ExpertPlan } from '../../shared/expert-setup.js';
 import type { JobState, StepImpl, StepIO, StepResult } from './job.js';
 import { PROJECT_FILE } from '../toolkit-pin/record.js';
+import { withRules } from './local-only.js';
+import { SESSION_BRANCH } from '../../shared/expert-proof.js';
 
 export interface ExpertStepDeps {
   /** Marks the floor Expert mode, titled as typed (Building.setMode); why not, if it couldn't. */
@@ -44,6 +46,24 @@ export function withMxcliVersion(text: string, version: string): string {
   if (i >= 0) lines[i] = `MXCLI_VERSION=${version}`;
   else lines.push(`MXCLI_VERSION=${version}`);
   return `${lines.join('\n')}\n`;
+}
+
+const RULES_BEGIN = '<!-- agent-office:local-only -->';
+const RULES_END = '<!-- /agent-office:local-only -->';
+
+/** The local-only rule in an Expert project's CLAUDE.md (in place of the Team wording: no Leads, no merges by hand). */
+export function expertLocalOnlyRules(teamServer: boolean): string {
+  return [
+    RULES_BEGIN,
+    teamServer ? '## Not on GitHub: the code goes to Mendix Team Server' : '## Local only: this project is not on GitHub',
+    '',
+    `It was created in Mx Office in Expert mode${teamServer ? ', on Mendix Team Server without a GitHub mirror' : ''}.`,
+    '',
+    '- Never push to GitHub, never add a GitHub remote, and never run `gh` commands that publish anything (`gh repo create`, `gh issue create`, `gh pr create`, `gh release`, `gh gist`).',
+    `- Work on \`${SESSION_BRANCH}\`. The office commits and pushes it in the background${teamServer ? ' to Team Server' : ''}; you don't need to push.`,
+    '- Merging to main happens at Lock in, when the user chooses it. Don’t merge to main yourself.',
+    RULES_END,
+  ].join('\n');
 }
 
 export function withExpert(deps: ExpertStepDeps, steps: Record<StepId, StepImpl>): Record<StepId, StepImpl> {
@@ -125,6 +145,16 @@ export function withExpert(deps: ExpertStepDeps, steps: Record<StepId, StepImpl>
       const record = { model: x.model, demoUsers: x.demoUsers, ...(x.mxcli !== LATEST ? { mxcli: x.mxcli } : {}), ...(x.title ? { title: x.title } : {}) };
       const next = { ...saved, mode: 'expert', expert: record };
       const did: string[] = [];
+      // The local-only rule in Expert words (the inner step wrote the Team wording: Leads, merges by hand).
+      if (job.plan.localOnly) {
+        const claude = path.join(job.dir, 'CLAUDE.md');
+        const before = existsSync(claude) ? readFileSync(claude, 'utf8') : '';
+        const after = withRules(before, expertLocalOnlyRules(!!job.plan.teamServer));
+        if (after !== before) {
+          writeFileSync(claude, after);
+          did.push('CLAUDE.md: Expert rule');
+        }
+      }
       if (JSON.stringify(next) !== JSON.stringify(saved)) {
         writeFileSync(f, `${JSON.stringify(next, null, 2)}\n`);
         did.push(`${x.model === 'opus' ? 'Opus' : 'Sonnet'}, demo users ${x.demoUsers ? 'on locally' : 'off'}`);
