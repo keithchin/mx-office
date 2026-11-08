@@ -46,3 +46,6 @@ export async function getProof(floor: string): Promise<ExpertProof | 'missing' |
     return undefined;
   }
 }
+
+/** "Send to session": fills the session's input with `text`, never submitting it (server/expert-checks/send.ts). */
+export const sendToSession = (floor: string, text: string) => post<{ ok: true }>('/api/expert/send', { floor, text });

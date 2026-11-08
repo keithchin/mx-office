@@ -64,6 +64,7 @@ import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
 import { expertRoutes } from './expert.js';
+import { expertChecksRoutes } from './expert-checks.js';
 import { expertCreateRoutes } from './expert-create.js';
 import { expertReadyRoutes } from './expert-ready.js';
 import { decisionRoutes } from './decisions.js';
@@ -248,6 +249,9 @@ export const routes: readonly Route[] = [
   localMergeRoutes.merge,
   // Expert mode's proof strip (server/expert/).
   expertRoutes.proof,
+  // Expert mode's background checks: Send to session, run now (server/expert-checks/).
+  expertChecksRoutes.send,
+  expertChecksRoutes.run,
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,
