@@ -11,7 +11,7 @@ weight: 3
 
 ## Open New project
 
-Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a page over the office with a slim bar: **Office $… today** (what the office has spent today, planning included) and **✕**, which closes it. Your draft is kept in the office, so closing the page, a reload or another tab loses nothing: the start page offers **Continue** (or **Discard**) for it next time. Continue brings back the description, the way you started and, for a change or assurance, the app's repository. Setups that didn't finish are cards at the top of the start page (see [Unfinished setups](#unfinished-setups)).
+Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It first asks **How do you want to build?**: **Team mode** (a governed agent team, the flow on this page) or **Expert mode** (your own Claude session in the project folder, with the office in the background: a short one-page setup, see [Expert mode](../using-the-office/expert-mode.md#start-a-new-project-in-expert-mode)). Pick Team mode and **Continue**. (From a client's page, ＋ New project goes straight to Team mode.) It opens a page over the office with a slim bar: **Office $… today** (what the office has spent today, planning included) and **✕**, which closes it. Your draft is kept in the office, so closing the page, a reload or another tab loses nothing: the start page offers **Continue** (or **Discard**) for it next time. Continue brings back the description, the way you started and, for a change or assurance, the app's repository. Setups that didn't finish are cards at the top of the start page (see [Unfinished setups](#unfinished-setups)).
 
 ## 1. What would you like to build?
 

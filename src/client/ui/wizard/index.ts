@@ -76,8 +76,14 @@ export async function openWizard(opts: WizardOptions) {
   // ✨ New project is the brief-first flow (./new/): start page, live brief with the Chief Analyst, approve,
   // domains, team & budget. This form stays as the editor of a setup's answers (the setup panel's buttons).
   if (!opts.job && !opts.floor) {
-    const { openNewProject } = await import('./new');
-    return openNewProject({ net: opts.net, go: opts.go, ...(opts.client ? { client: opts.client } : {}), edit: (job) => void openWizard({ ...opts, job, page: 2 }) });
+    const team = async () => {
+      const { openNewProject } = await import('./new');
+      return openNewProject({ net: opts.net, go: opts.go, ...(opts.client ? { client: opts.client } : {}), edit: (job) => void openWizard({ ...opts, job, page: 2 }) });
+    };
+    // From a client's page: that client's project is a Team project. Otherwise Expert or Team first (./expert/).
+    if (opts.client) return team();
+    const { openModeChoice } = await import('./expert');
+    return openModeChoice({ net: opts.net, go: opts.go, team: () => void team() });
   }
   let info: WizardInfo;
   let editing: JobView | undefined;

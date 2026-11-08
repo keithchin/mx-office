@@ -8,7 +8,8 @@
 import type { JobView } from '../../../shared/wizard';
 import type { SetupBlocker } from '../../../shared/setup-cancel';
 import type { StudioInfo } from '../../../shared/studio';
-import { failHeadline, plainError, setupGroups } from '../../../shared/setup-groups';
+import { failHeadline, plainError, setupGroups as teamGroups } from '../../../shared/setup-groups';
+import { expertSetupGroups, isExpertPlan } from '../../../shared/expert-setup';
 import { h, toast } from '../dom';
 import { startResume } from '../project-run/api';
 import { projectUrl } from '../viewpick';
@@ -18,6 +19,8 @@ import { groupsView } from './groups';
 import { operationBox } from './operation';
 
 const POLL_MS = 1200;
+/** An Expert project's setup in the Expert wizard's words (shared/expert-setup.ts); a Team setup's five groups otherwise. */
+const setupGroups = (job: JobView) => (isExpertPlan(job.plan) ? expertSetupGroups(job) : teamGroups(job));
 const COMPASS =
   '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 5.4 9 9 5.4 10.6 7 7z" fill="currentColor"/></svg>';
 const TICK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -47,7 +50,7 @@ export function progressView(first: JobView, go: (floor: string) => void, admin:
   let stopped = false;
   let shownFail: string | undefined;
   let readyFor: string | undefined;
-  const name = () => job.plan.name;
+  const name = () => job.plan.expert?.title || job.plan.name;
 
   const titleText = h('span', {});
   const title = h('h3.sg-title', {}, h('span.sg-ca', {}), titleText);
@@ -149,7 +152,7 @@ export function progressView(first: JobView, go: (floor: string) => void, admin:
 
   const readyCard = async (floor: string) => {
     readyFor = floor;
-    const open = h('button.btn.primary', { type: 'button' }, '→ Open project') as HTMLButtonElement;
+    const open = h('button.btn.primary', { type: 'button' }, isExpertPlan(job.plan) ? '→ Open session' : '→ Open project') as HTMLButtonElement;
     open.addEventListener('click', () => go(floor));
     const studioSlot = h('span.sg-studio', {});
     const link = h('button.sg-link', { type: 'button', 'aria-expanded': String(detailsOpen), 'aria-controls': 'sg-logwrap' }, detailsOpen ? 'Hide setup details' : 'View setup details');

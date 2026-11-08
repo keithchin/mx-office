@@ -2,6 +2,7 @@
 // with the mxcli project toolkit, and the checks both sides make on what was typed. Pure code with no
 // Node imports, so the wizard page and the server agree on what a valid project name is.
 
+import type { ExpertPlan } from './expert-setup.js';
 import type { BudgetChoice } from './budget/levels.js';
 import type { TeamShape } from './roster/coverage.js';
 import type { PlanBrief } from './brief.js';
@@ -234,6 +235,13 @@ export interface ProjectPlan {
    * caller). Required on a plan from the New project flow; the team step applies it. An edit never changes it.
    */
   autonomy?: AutonomyAsk & Partial<AutonomyChoice>;
+  /**
+   * Expert mode (shared/expert-setup.ts, server/wizard/expert-step.ts): the project is one person's own session, set up
+   * by the thin Expert wizard: no team, gates, issue or Discovery; the session's model, the pins, demo users, the budget
+   * and the brief in `expert`. Absent: a Team-mode setup.
+   */
+  mode?: 'expert';
+  expert?: ExpertPlan;
 }
 
 /** A plan's design choice (shared/design/): an exact version, never "the latest". */

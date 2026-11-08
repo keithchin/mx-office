@@ -349,6 +349,19 @@ export class Building {
     return def;
   }
 
+  /** Sets how a project is run (the Expert wizard's setup marks its new project 'expert', titled as typed); why not, if it can't. */
+  setMode(id: string, mode: ProjectMode, title?: string): FloorDef | string {
+    const def = this.defs.find((d) => d.id === id);
+    if (!def) return 'No such project';
+    const name = title?.trim().slice(0, 100) || def.name;
+    if (def.mode === mode && def.name === name) return def;
+    if (this.refused()) return this.refused()!;
+    def.mode = mode;
+    def.name = name;
+    this.save();
+    return def;
+  }
+
   /** Makes a checkout of `repo` at `dir` a floor without asking GitHub (offline test mode; `local`: a local-only project, origin a bare repo here). */
   adopt(input: string, dir: string, by: string, local = false): FloorDef | string {
     const repo = normalizeRepo(input);

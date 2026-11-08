@@ -16,9 +16,10 @@ export function sessionWorker(floor: Floor): WorkerInfo | undefined {
 
 /**
  * Makes sure the session runs: started the first time (no prompt), woken when it's asleep (its conversation
- * carried on with --resume, nothing typed). Resolves to the worker, or why it couldn't.
+ * carried on with --resume, nothing typed). `model`: the first start's `--model` (the Expert wizard's choice,
+ * expert/settings.ts); undefined starts on the person's own default. Resolves to the worker, or why it couldn't.
  */
-export async function ensureSession(floor: Floor, by: string, owner?: string): Promise<WorkerInfo | string> {
+export async function ensureSession(floor: Floor, by: string, owner?: string, model?: string): Promise<WorkerInfo | string> {
   const had = sessionWorker(floor);
   if (had) {
     if (!isAsleep(had.status)) return had;
@@ -27,7 +28,7 @@ export async function ensureSession(floor: Floor, by: string, owner?: string): P
   }
   const seat = nextFreeSeat((id) => floor.workers.deskOccupied(id), floor.plan.wing);
   if (!seat) return 'No free desk for the session';
-  const r = await floor.workers.spawn(seat.id, by, undefined, false, 'agent', 'claude', undefined, undefined, undefined, owner);
+  const r = await floor.workers.spawn(seat.id, by, undefined, false, 'agent', 'claude', model, undefined, undefined, owner);
   if (typeof r === 'string') return r;
   r.session = true;
   // Renaming saves the worker (with its session mark) and tells everyone.

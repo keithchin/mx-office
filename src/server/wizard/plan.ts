@@ -12,6 +12,7 @@ import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 import { checkTeamFrom, cleanTeamFrom, type KnownSource } from '../../shared/team-from.js';
 import { cleanBrief, cleanDomains, counts, safeFileName, type PlanBrief, type ReadState } from '../../shared/brief.js';
 import { cleanAsk } from '../roster/autonomy-choice.js';
+import { cleanExpertFields } from '../../shared/expert-setup.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -90,6 +91,8 @@ export function cleanPlan(raw: unknown, versions: string[], org: string, teams?:
     ...(teamFrom ? { teamFrom } : {}),
     // The autonomy step's answer (level, acknowledgement, by stage); Wizard.start checks it and records who and when.
     ...(cleanAsk(r.autonomy) ? { autonomy: cleanAsk(r.autonomy) } : {}),
+    // Expert mode (shared/expert-setup.ts): the session's model, the pins, demo users, the budget and the brief.
+    ...cleanExpertFields(r),
   };
 }
 

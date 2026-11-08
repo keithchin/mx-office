@@ -64,6 +64,7 @@ import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
 import { expertRoutes } from './expert.js';
+import { expertCreateRoutes } from './expert-create.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -302,6 +303,9 @@ export const routes: readonly Route[] = [
   phaseRoutes.view,
   phaseRoutes.act,
   // Expert mode: the session screen, its preview's choices, starting the session, opening a folder (expert/).
+  // The Expert wizard: its pin choices and Create and open session (expert/create.ts).
+  expertCreateRoutes.setupInfo,
+  expertCreateRoutes.create,
   expertRoutes.view,
   expertRoutes.choices,
   expertRoutes.session,
