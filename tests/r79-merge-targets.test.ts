@@ -120,7 +120,7 @@ test('merge targets in real git: the lead’s branch, not the notes or script dr
     assert.deepEqual(t.pick, { branch: 'office/carl-1cb4', sha: journal }, 'the only branch with the model work, at its head');
 
     // The lead asks to merge exactly the work commit (under the journal commit): that commit is offered.
-    const ask = mergeAskOf({ id: 'e1', by: 'Carl', at: Date.now(), title: `DC-9: approve merge of ${work.slice(0, 7)} (office/carl-1cb4)`, details: 'Checked as a requester at 390 and 1280 px.' })!;
+    const ask = mergeAskOf({ id: 'e1', by: 'Carl', at: Date.now(), title: `DC-9: approve merge of ${work.slice(0, 12)} (office/carl-1cb4)`, details: 'Checked as a requester at 390 and 1280 px.' })!;
     const t2 = await mergeTargetsFor(ctx, floor, { id: 'DC-9' }, { asks: [ask] });
     assert.deepEqual(t2.pick, { branch: 'office/carl-1cb4', sha: work });
     assert.deepEqual(t2.options[0].asked?.by, 'Carl');
