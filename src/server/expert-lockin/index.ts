@@ -7,7 +7,8 @@
 // Edit in Studio Pro pieces (studio/), which never start it in a test office. Pages hear "roster.changed".
 //
 // A test office may script the checks, the licence and demo users with AGENT_OFFICE_TEST_LOCKIN=<file.json>
-// ({ "checks": { "journeys": { "status": "failed", … } }, "licence": "free", "demoUsers": { "on": true, "count": 6 } })
+// ({ "checks": { "journeys": { "status": "failed", … } }, "licence": "free", "demoUsers": { "on": true, "count": 6 },
+// "impact": { "status": "impact", "lines": [ … ] } })
 // for screenshots and the docs. Outside test mode that variable is ignored.
 
 import { readFileSync, statSync } from 'node:fs';
@@ -36,6 +37,7 @@ interface Script {
   checks?: Partial<Record<LockInCheckKind, string | Partial<LockInCheck>>>;
   licence?: Licence;
   demoUsers?: { on: boolean; count?: number };
+  impact?: NonNullable<LockInView['impact']>;
   delayMs?: number;
 }
 
@@ -98,6 +100,8 @@ export function lockInOf(ctx: Ctx, checks?: LockInChecks): LockInService {
       return { name: e.GIT_COMMITTER_NAME, email: e.GIT_COMMITTER_EMAIL };
     },
     impact: async (f, base, sha) => {
+      const sc = scriptFor(f.dir);
+      if (sc?.impact) return sc.impact;
       const floor = real(f);
       if (!floor) return { status: 'unknown', lines: ['The project is gone'] };
       const { impactAt, kindAt } = await import('../local-merge/describe.js');

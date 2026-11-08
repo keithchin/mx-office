@@ -146,7 +146,7 @@ export function openLockIn(floor: string, opener: HTMLElement | null = document.
     const parts: HTMLElement[] = [h('div.xl-sh', {}, h('h3', {}, 'Where it goes'), h('span.xl-meta', {}, 'every option merges session/main into main first'))];
     // Merge to main.
     let mergeBadge: [string, string];
-    let mergeText = `A milestone in history: ${plural(view.ahead, 'commit')} since the last lock-in, merged into main with a receipt of the checks.`;
+    let mergeText = `A milestone in history: ${plural(view.ahead, 'commit')} on session/main that main hasn’t got, merged with a receipt of the checks.`;
     if (m) {
       mergeBadge = ['ok', 'Merged'];
       mergeText = `Merged as ${short(m.merge)} (${plural(m.commits, 'commit')}). ${m.push === 'ok' ? 'Pushed to Team Server.' : m.push === 'pending' ? 'Pushing to Team Server…' : m.push === 'failed' ? `Push failed: ${m.pushError ?? ''}` : m.pushError ?? 'Not pushed.'} ${m.session === 'fast-forward' ? 'session/main carries on from it.' : m.session === 'merged-main' ? 'main was merged into session/main.' : m.sessionNote ?? ''}`;
@@ -257,7 +257,9 @@ export function openLockIn(floor: string, opener: HTMLElement | null = document.
     }
     v = got;
     draw();
-    if (got.running || got.merged?.push === 'pending' || got.merged?.session === 'waiting') timer = setTimeout(() => void load(), POLL_MS);
+    // The phase's rows are read from main a little after it moves: looked at again for a short while after a merge.
+    const phaseLag = !!got.merged && !!got.phase && !got.phase.complete && !got.closed && Date.now() - got.merged.at < 30_000;
+    if (got.running || got.merged?.push === 'pending' || got.merged?.session === 'waiting' || phaseLag) timer = setTimeout(() => void load(), phaseLag ? 3000 : POLL_MS);
   }
 
   checksBox.append(h('p.xl-empty', {}, 'Reading…'));

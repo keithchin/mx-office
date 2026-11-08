@@ -66,16 +66,42 @@ Importing past spend from earlier local sessions is not offered yet.
 
 Arriving on an Expert-mode project opens **General › Session**. The Overview, Roadmap, Documents, Budget, Testing and Monitoring pages are still in the navigation; the team's own pages (Team, Team boards, Board, Approvals, Standup) and the team-lead panel are not shown on an Expert-mode project.
 
-- **Header**: the folder's branch, the app's Mendix version, the toolkit pin (or *toolkit not pinned*), the mxcli the office runs, and the session's state from its hooks: *Working*, *Idle · waiting for you*, *Needs you*, *Starting* or *Not running*. **Lock in** is there but not yet working.
+- **Header**: the folder's branch, the app's Mendix version, the toolkit pin (or *toolkit not pinned*), the mxcli the office runs, and the session's state from its hooks: *Working*, *Idle · waiting for you*, *Needs you*, *Starting* or *Not running*. **Lock in** opens the Lock in panel (below); it is off while the session is working ("wait, or stop the turn").
 - **Phase strip**: for a phased project, the phase in progress (rows done, spend against its estimate, the next checkpoint) and a chip per phase. A click opens the [Roadmap](phased-delivery.md). A project delivered in one go has no strip.
 - **Live preview** (left): the project folder itself, run in place with hot reload, the way `mxcli run --watch` runs in your own folder: the session's working copy as it is, uncommitted changes included. When the session changes the model, mxcli's watch reloads the running app and the preview shows it. There is no checkout of main and no auto-refresh for an Expert-mode project; start and stop it here or on the [Live app](live-app.md) page. Pick a **page** of the app (those that open by address, read from the model at the running version) or a **demo user** to sign in as (demo users are fine for local work; the office never handles their passwords). After a new build or a hot reload the preview lights up with *Updated*.
 - **asked → visible**: from the prompt you submit to the first preview reload after the next model change. A model change is a toolkit `bin/exec.sh`, an `mxcli exec` or `apply`, or the `.mpr` (or its `mprcontents`) changing while the session works. The header shows the last time and the median of this session ("asked → visible 41 s · median 52 s").
 - **Session** (right): the real interactive `claude`, started in the project folder with no prompt, in a terminal coloured for the screen. Type in it as you would in your own terminal. The office never types into it: after an office restart it comes back with `--resume` and waits for you. **↗** pops it out into a window of its own; **⇄** swaps the sides.
-- **Background proof** (bottom): the last commit on the session branch (`session/main`) and its push, the budget meter, stuck status and the decision count. A push that fails shows here, not as a dialog.
+- **Background proof** (bottom): the last commit on the session branch (`session/main`) and its push, the budget meter, stuck status and the decision count (PROJECT.md's decisions plus everything Lock in did). A push that fails shows here, not as a dialog.
 
 ### The split
 
 Drag the divider between the preview and the session (a grip shows on hover); both sides stay at least 320 px wide. Double-click it (or press Enter on it) for half and half; with the divider focused, the arrow keys move it (Shift for bigger steps) and Home and End go to the limits. **App | Both | Chat** in the header show the preview only, both, or the session only. The split, the focus and the side are remembered per project in your browser. Folding the navigation to icons (**«** or **[**) gives both sides more room.
+
+## Lock in
+
+Lock in is how work on `session/main` reaches `main`. You choose the moment: a phase end, or before a deploy. It never runs by itself and never per change. Press **Lock in** in the Session header (admins only).
+
+**Step 1: checks.** What the session left uncommitted is committed first (the same commit as the background auto-commit; if that commit fails, Lock in doesn't start and says why). Then, at exactly that head:
+
+| Check | What it is |
+| --- | --- |
+| mx check | Mendix's full `mx check`, the same check the merge confirm and the Security page use, kept per commit. |
+| Microflow tests | All of them, through the Testing runner (`mxcli test`). *None in this app* is shown as a warning, not a failure. |
+| Journeys | The journeys under `tests/` at that commit, with their results recorded at exactly that commit. A journey with no result there is *due* and shows as *Not run*: run it in the session, or let the background tests run it. |
+| Lint | `mxcli lint` against the baseline the toolkit committed (`.claude/lint-baseline.json`). New errors fail; new warnings are a warning. |
+| Demo users | On or off in the model. They block a deploy request, nothing else. |
+
+The checks run in the office's own work folders, so the session keeps working meanwhile; the panel shows each one as it finishes. Every result is recorded in the testing ledger at that commit. **Fix in session** copies a prompt for the session: paste it and press Enter (the office never types into the session).
+
+**Step 2: where it goes.**
+
+- **Merge to main**: only when the checks pass, or when you tick each failed or not-run check as a known failure (recorded as an override in the decision log). If the change may affect stored data (an entity or attribute deleted or renamed, found by the data-impact check), you confirm that impact by name first. The office merges exactly the checked commit with `--no-ff` in a temporary folder, as the office, with a receipt in the merge commit listing the checks at that commit; it never forces anything. A conflict stops the merge, names the files and resolves nothing: ask the session to merge `main` into `session/main`, then lock in again. After the merge, `main` is pushed to Team Server in the background and `session/main` carries on from the new `main` (a fast-forward, or `main` merged in when the session committed after the checks and is idle). The session keeps running.
+- **Publish to sandbox** (Free App): the office opens Studio Pro on the merged `main` (the same flow as *Edit in Studio Pro*). Press **Run** once to check it starts, then **Publish**. Free Apps have no deploy API.
+- **Request deploy** (licensed app): raises a deploy request in **Needs you** for the node owner to approve, with the checks at the merged commit. The office never deploys. It is blocked while demo users are on (the panel says so and offers **Switch to seed users**), and for a Free App.
+
+**Phase end.** On a phased project whose current phase has every row done, the panel offers **Close phase N** after the merge: the phase is marked done and the next one starts. Its checkpoint and phase report are on the [Roadmap](phased-delivery.md).
+
+Everything Lock in does (the checks, overrides, a confirmed data impact, the merge, publish, a deploy request, closing a phase) is written to the decision log and the audit log, and counts in the proof strip's **Decisions**.
 
 ## Notes
 
