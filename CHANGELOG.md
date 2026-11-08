@@ -8,6 +8,16 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 Nothing waiting yet.
 
+## 2026-11-08 · release 85 (`22fa39f`)
+
+- **Expert mode.** A project can now be one person's own Claude Code session, with the office in the background, instead of an agent team. **✨ New project** first asks Expert or Team mode; Team mode is unchanged.
+- **Expert wizard.** One page: name, Mendix version, a Team Server app created or connected (the Mendix account from Settings, no token field), toolkit and mxcli pins, git and push always on, demo users for local work, a budget with pause at 100 %, Sonnet or Opus, and an optional brief saved to `docs/project-brief.md`. **Create and open session** runs the same setup as Team mode with no team, gates or Discovery.
+- **Open existing toolkit project** (admins, ➕ Add a project). A read-only readiness check of a folder on the office's machine: toolkit and its pin, mxcli, Mendix and Studio Pro, git, Team Server remote, demo users, tests, budget and lint baseline. Each problem has its own Fix button that writes only what it says; nothing is required to attach, and only demo users block a Deploy.
+- **Session screen.** The project's left navigation (Team-only pages hidden), a header with the branch, pins and the session's state, the phase strip for a phased project, the app running in place from the project folder with hot reload (page and role pickers, an *asked → visible* timer), and the real `claude` in the project folder. The split between them can be dragged, reset, moved by keys, focused (App | Both | Chat) and swapped. The office never types into an Expert session, also not on resume.
+- **Background proof.** Work happens on a `session/main` branch: changes are committed shortly after the session goes idle (skipped when you or Studio Pro already committed), and pushed to Team Server in the background, never forced. The strip at the bottom shows the last commit and push, the budget, stuck status and decisions. At 100 % budget the session sleeps once idle; it is never stopped mid-turn.
+- **Still to come:** Lock in is shown but not active yet, the strip has no tests or lint yet, and picking a demo user in the preview opens the app's sign-in page.
+- **Fixed:** a merge-targets test that failed about one run in 25.
+
 ## 2026-11-03 · release 84 (`1c1f84c`)
 
 - **Phased delivery (part 1).** A project's Build can be delivered in phases: business-outcome slices of the build plan with a foundation phase first, each with its rows, journeys, an estimate, a checkpoint and a publish switch. The team proposes phases at the Build Plan gate (`propose_phases`, `office-workers phases propose`), the Project Manager approves or edits them there, and later changes are proposed by the team or made by the PM, every one recorded in the phase history. A phase's exit criteria come only from the office's records (its journeys passed on main, the model check, no open data impact).
