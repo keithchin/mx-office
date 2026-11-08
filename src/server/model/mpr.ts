@@ -72,7 +72,7 @@ export const KIND_OF_TYPE: Record<string, string> = {
   Queues$Queue: 'queue',
 };
 
-function unitFile(projectDir: string, id: string): string {
+export function unitFile(projectDir: string, id: string): string {
   return path.join(projectDir, 'mprcontents', id.slice(0, 2), id.slice(2, 4), `${id}.mxunit`);
 }
 

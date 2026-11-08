@@ -10,7 +10,38 @@ Every project is in **Team mode** unless it says otherwise; projects from before
 
 ## Open an existing toolkit project
 
-On **➕ Add a project**, admins have **Open existing toolkit project**. Type the full path of the app's folder on the office's machine (a folder with the mxcli project toolkit in it) and press **Open session**. The office makes it an Expert-mode project and opens its Session screen. There are no readiness checks yet: the office only refuses its own folders, system folders, a whole drive and your whole home folder.
+On **➕ Add a project**, admins have **Open existing toolkit project**. Type the full path of the app's folder on the office's machine (a folder with the mxcli project toolkit in it) and press **Check folder**. The office refuses its own folders, system folders, a whole drive and your whole home folder.
+
+### The readiness check
+
+The office looks at the folder and shows one row per check, each with a green tick, an amber or a red mark and one plain line:
+
+| Check | What it looks at |
+|---|---|
+| Toolkit | The toolkit's skills, subagents and project scripts, which toolkit commit the project is on (PROJECT.md's `Toolkit commit:` line, else an estimate from the copied scripts) and whether it is pinned. Not pinned means a toolkit update would change the project. |
+| mxcli | Which mxcli the session uses: the copy in the folder, the one on the PATH, or the office's; and its version. |
+| Mendix version | The version the `.mpr` was saved with, and whether that Studio Pro is installed here. |
+| Git repository | Commits on the current branch, uncommitted changes and the last commit's subject. |
+| Team Server remote | Whether the folder has a Team Server remote. An existing GitHub `origin` is fine; remote addresses are never shown. |
+| Demo users | On or off, and how many. Demo users are fine for local work; they are the only thing that blocks a Deploy at Lock in. |
+| Tests | Microflow tests (`@test` in `tests/*.test.mdl`), journeys and e2e scripts. Amber when there are no microflow tests. |
+| Budget | Whether the project has a budget. |
+| Lint baseline | The findings in `.claude/lint-baseline.json`. It is taken as the baseline, so sessions show only new findings. |
+
+**The check never writes to the folder.** It reads files, runs only git commands that read (without optional locks), reads the `.mpr` from a temporary copy and asks mxcli only for its version. Each check has a time limit, and the result is kept for a minute. **Check again** looks afresh.
+
+**Nothing is required to attach.** **Attach and open session** makes the Expert-mode project and opens its Session screen. If the folder is already an Expert project, the button is **Open session**.
+
+### Fixes
+
+Each fix runs only when you press its button, and writes only what it says:
+
+- **Pin `<commit>`**: writes the toolkit pin into `agent-office.project.json`.
+- **Add Team Server remote**: creates a new app in the Mendix Portal or uses an existing one by its App ID, adds a `teamserver` remote and records the app in `agent-office.project.json`. Any existing remote, such as a GitHub `origin`, stays as it is. Nothing is committed or pushed: the session's background proof pushes its branch there. It uses the Mendix account in **Settings › Connections**.
+- **Switch to seed users** and **Ask session to add**: these are model changes the session should make. The office notes them (in its own data, not in the folder) and the row says **Ask the session after attaching**.
+- **Set budget**: a total in US dollars with auto-pause at 100 %. Before the folder is attached it is kept and set on the project when you attach.
+
+Importing past spend from earlier local sessions is not offered yet.
 
 ## The Session screen
 

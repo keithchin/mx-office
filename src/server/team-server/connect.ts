@@ -68,29 +68,33 @@ async function treeWith(g: TsGit, dir: string, base: string, files: Record<strin
   }
 }
 
+export type PortalAppDeps = Pick<ConnectDeps, 'g' | 'name' | 'description' | 'endpoints' | 'api' | 'projectId' | 'jobId' | 'sent' | 'onLine'>;
+
+/** Step 1 of connecting: the Portal app, made by the Projects API or one whose App ID was given (checked with ls-remote). Throws in words. */
+export async function portalApp(d: PortalAppDeps): Promise<{ projectId: string; how: 'made' | 'linked' }> {
+  const say = d.onLine ?? (() => undefined);
+  if (d.projectId) {
+    const r = await d.g.auth(os.tmpdir(), ['ls-remote', '--heads', teamServerUrl(d.projectId, d.endpoints.git)], { allowFail: true, timeoutMs: 2 * 60_000 });
+    if (r.code !== 0) throw new Error(gitRefusalWords(r.tail.join(' ') || `couldn't reach the Team Server repository of ${d.projectId}`));
+    return { projectId: d.projectId, how: 'linked' };
+  }
+  const name = portalAppName(d.name);
+  if (!name) throw new Error(`“${d.name}” can’t be a Mendix app name: use letters, digits, spaces, - or _`);
+  let jobId = d.jobId;
+  if (!jobId) {
+    say(`Creating the app “${name}” in the Mendix Portal…`);
+    jobId = await createProject(d.api, { name, summary: portalSummary(d.description) || undefined });
+    d.sent?.(jobId);
+  }
+  return { projectId: await waitForProject(d.api, jobId, say), how: 'made' };
+}
+
 /** Makes or checks the Portal app, then puts the project on Team Server as above. Throws in words (token-free). */
 export async function connectProject(d: ConnectDeps): Promise<Connected> {
   const { g, dir } = d;
   const main = d.main ?? 'main';
-  const say = d.onLine ?? (() => undefined);
   // 1. The Portal app.
-  let projectId = d.projectId;
-  let how: 'made' | 'linked' = 'linked';
-  if (projectId) {
-    const r = await g.auth(os.tmpdir(), ['ls-remote', '--heads', teamServerUrl(projectId, d.endpoints.git)], { allowFail: true, timeoutMs: 2 * 60_000 });
-    if (r.code !== 0) throw new Error(gitRefusalWords(r.tail.join(' ') || `couldn't reach the Team Server repository of ${projectId}`));
-  } else {
-    const name = portalAppName(d.name);
-    if (!name) throw new Error(`“${d.name}” can’t be a Mendix app name: use letters, digits, spaces, - or _`);
-    let jobId = d.jobId;
-    if (!jobId) {
-      say(`Creating the app “${name}” in the Mendix Portal…`);
-      jobId = await createProject(d.api, { name, summary: portalSummary(d.description) || undefined });
-      d.sent?.(jobId);
-    }
-    projectId = await waitForProject(d.api, jobId, say);
-    how = 'made';
-  }
+  const { projectId, how } = await portalApp(d);
   const rec: TeamServerRecord = { projectId, url: teamServerUrl(projectId, d.endpoints.git), remote: TEAMSERVER_REMOTE, how, by: d.by, at: (d.now ?? Date.now)() };
   // 2. The remote and both mains.
   await ensureRemote(g, dir, rec);
