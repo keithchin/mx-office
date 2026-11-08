@@ -8,6 +8,25 @@ weight: 2.7
 
 Every project is in **Team mode** unless it says otherwise; projects from before Expert mode stay as they were.
 
+## Start a new project in Expert mode
+
+**✨ New project** first asks **How do you want to build?**
+
+- **Expert mode**: your own Claude session, with the office in the background. For experienced builders making new apps.
+- **Team mode**: a governed agent team. For rebuilds, migrations, governed delivery, and people new to Mendix. **Continue** goes on to the brief-first flow ([Create your first project](../get-started/first-project.md)), unchanged.
+
+(From a client's page, **＋ New project** goes straight to Team mode.)
+
+The Expert wizard is one page in three sections (admins only, like every setup):
+
+1. **App**: the project name (the folder and the Team Server app take its lower-case form, like `order-desk`), the **Mendix version** (11.12.4 by default, from the same list the Team wizard shows), and **Create on Team Server** or **Connect existing app** (paste the App ID from the Portal: the app's Settings › General). The Mendix account from Settings › Connections shows *Mendix account connected*; the wizard never asks for a token. Without one, it says *Connect in Settings*.
+2. **Tools and safety**: the **toolkit version** (*Latest release*, the newest commit of the office's toolkit clone, or one of the commits before it) and the **mxcli version** (*Latest release*, the mxcli the office runs). The toolkit is pinned for the project as in Team mode; the mxcli version goes into the project's `.claude/toolkit.env` as `MXCLI_VERSION`, for the toolkit's bootstrap. **Git, with auto-commit and push to Team Server** is always on. **Demo users, local only** is on by default: fine while you build; Lock in will block Deploy until seed users replace them.
+3. **Budget and brief**: the **budget** in USD (the alert comes at 80 %, and the session pauses at 100 %: always on), the **model** (**Sonnet** by default, **Opus** one switch away; it becomes the session's `--model`, and `/model` in the session still works), and an optional one-paragraph **brief**. The brief is saved to `docs/project-brief.md` in the project. The office never sends it to the session: ask the session to read it, or just start talking.
+
+**Create and open session** runs the same setup as Team mode: the app on Team Server (made, or the existing one connected and checked), the clone, the Mendix app made with the picked Studio Pro, the toolkit's scaffold at its pin and the pre-commit hook, then the first commit pushed to Team Server. There is no GitHub repository (as Team Server without a mirror), no intake answers, no register rows, no gate-check, no Discovery issue and no team. The project is marked Expert mode as soon as it's cloned, the model, demo users and mxcli pin are saved in `agent-office.project.json` (under `expert`), and the budget is set. The progress shows in five groups (Team Server app, Mendix app, Toolkit and mxcli, Settings and first push, Session); a failed step shows its error with **Retry** and **Cancel & undo**, as in Team mode, and Cancel & undo never deletes the Team Server app. When it's done, the project's Session screen opens and the session starts in the folder, on the chosen model, with nothing typed into it.
+
+A test office never calls the Mendix Portal: there, the project's origin is the test office's local stand-in, and the first group says so.
+
 ## Open an existing toolkit project
 
 On **➕ Add a project**, admins have **Open existing toolkit project**. Type the full path of the app's folder on the office's machine (a folder with the mxcli project toolkit in it) and press **Open session**. The office makes it an Expert-mode project and opens its Session screen. There are no readiness checks yet: the office only refuses its own folders, system folders, a whole drive and your whole home folder.

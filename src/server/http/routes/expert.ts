@@ -11,6 +11,7 @@ import { floorParam } from './files.js';
 import { expertOf, isExpert } from '../../expert/shell.js';
 import { expertProofView } from '../../expert/index.js';
 import { ensureSession } from '../../expert/session-worker.js';
+import { sessionModelOf } from '../../expert/settings.js';
 import { previewChoices } from '../../expert/choices.js';
 import { checkSourcePath } from '../../wizard/source-folder.js';
 import { audit } from '../../audit/index.js';
@@ -71,7 +72,8 @@ export const expertRoutes = {
       const floor = ctx.floors.get(String(body.floor ?? ''));
       if (!floor) return send(res, 404, { error: 'No such project' });
       if (!isExpert(floor)) return send(res, 409, { error: 'This project is in Team mode: it has no session of its own' });
-      const r = await ensureSession(floor, session.account?.name ?? 'someone', session.account?.id);
+      // The Expert wizard's model choice (expert/settings.ts) applies as the session's --model; no prompt is ever passed.
+      const r = await ensureSession(floor, session.account?.name ?? 'someone', session.account?.id, sessionModelOf(floor.dir));
       if (typeof r === 'string') return send(res, 409, { error: r });
       ctx.floorsChanged();
       return send(res, 200, { workerId: r.id });

@@ -1,0 +1,90 @@
+/* ✨ New project's mode choice and the Expert wizard (ui/wizard/expert/), on the Team flow's page (../new/new.css):
+   the approved mockup (docs/mockups/expert-mode, #mode and #wizard) in the office's color tokens. */
+#modal-root .xw-in { max-width: 1048px; margin: 0 auto; padding: 32px 24px 40px; }
+#modal-root .xw-crumb { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+#modal-root .xw h1 { font-size: 26px; font-weight: 500; }
+#modal-root .xw-lede { margin-top: 8px; color: var(--ink-2, var(--ink)); max-width: 760px; }
+#modal-root .xw-foot { display: flex; align-items: center; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+
+/* Mode choice */
+#modal-root .xw-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+#modal-root .xw-card { display: flex; flex-direction: column; gap: 12px; text-align: left; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--nw-rl); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; box-shadow: var(--nw-shadow); transition: border-color var(--nw-t), box-shadow var(--nw-t); }
+#modal-root .xw-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+#modal-root .xw-card[aria-checked='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--nw-pop); }
+#modal-root .xw-card-h { display: flex; align-items: center; gap: 10px; }
+#modal-root .xw-card-h h2 { font-size: 19px; font-weight: 500; flex: 1; }
+#modal-root .xw-card-h .nw-ico { width: 18px; height: 18px; }
+#modal-root .xw-radio { width: 20px; height: 20px; border-radius: 50% !important; border: 1.5px solid var(--rule-strong); flex: none; display: grid; place-items: center; }
+#modal-root .xw-card[aria-checked='true'] .xw-radio { border-color: var(--accent); }
+#modal-root .xw-card[aria-checked='true'] .xw-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50% !important; background: var(--accent); }
+#modal-root .xw-line { color: var(--ink-2, var(--ink)); font-size: 15px; }
+#modal-root .xw-pic { height: 112px; border: 1px solid var(--line); border-radius: var(--nw-r); background: color-mix(in srgb, var(--ink) 3%, var(--card)); display: flex; align-items: center; justify-content: center; gap: 10px; overflow: hidden; }
+#modal-root .xw-term, #modal-root .xw-app { display: inline-flex; flex-direction: column; gap: 6px; width: 150px; height: 80px; padding: 12px; border-radius: 3px; vertical-align: middle; }
+#modal-root .xw-term { background: #0f1729; }
+#modal-root .xw-term i, #modal-root .xw-app i { display: block; height: 4px; border-radius: 2px; background: #6b7487; width: 70%; }
+#modal-root .xw-term i:nth-child(2) { width: 90%; }
+#modal-root .xw-term i.ok { background: #3fbf6a; width: 50%; }
+#modal-root .xw-term i.ac { background: #b07ff0; width: 80%; }
+#modal-root .xw-term b { width: 6px; height: 7px; background: #e5e7eb; }
+#modal-root .xw-app { background: var(--card); border: 1px solid var(--line); padding: 0 0 8px; }
+#modal-root .xw-app i { background: color-mix(in srgb, var(--ink) 18%, transparent); margin: 0 12px; }
+#modal-root .xw-app i.bar { height: 12px; margin: 0 0 4px; width: 100%; border-radius: 3px 3px 0 0; background: #0f1729; }
+#modal-root .xw-team { position: relative; width: 240px; height: 84px; }
+#modal-root .xw-team i { position: absolute; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50% !important; color: #fff; font: 600 10px/1 var(--font, inherit); font-style: normal; }
+#modal-root .xw-team .co { left: 106px; top: 0; background: #146ff4; }
+#modal-root .xw-team .ca { left: 20px; top: 50px; background: #7a3fc4; }
+#modal-root .xw-team .dv { left: 78px; top: 50px; background: #0f9b8e; }
+#modal-root .xw-team .dv2 { left: 136px; top: 50px; background: #2b6cd4; }
+#modal-root .xw-team .qa { left: 194px; top: 50px; background: #e06a1b; }
+#modal-root .xw-team .gate { left: 180px; top: 2px; width: 44px; height: 20px; border-radius: 3px !important; border: 1px dashed #9a6ad8; color: #7a3fc4; background: color-mix(in srgb, #7a3fc4 8%, var(--card)); }
+
+/* The Expert wizard */
+#modal-root .xw-in.wide { max-width: 1060px; }
+#modal-root .xw-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; margin-top: 20px; align-items: start; }
+#modal-root .xw-form { display: grid; gap: 16px; min-width: 0; }
+#modal-root .xw-sec { border: 1px solid var(--line); border-radius: var(--nw-rl); background: var(--card); box-shadow: var(--nw-shadow); }
+#modal-root .xw-sec-h { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+#modal-root .xw-sec-h h2 { font-size: 15px; font-weight: 500; }
+#modal-root .xw-num { width: 22px; height: 22px; border-radius: 50% !important; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+#modal-root .xw-sec-b { padding: 6px 18px 18px; display: grid; gap: 4px; }
+#modal-root .xw-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#modal-root .xw-row.three { grid-template-columns: 1fr 1fr 1fr; }
+#modal-root .xw-approw { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+#modal-root .xw-seg button { padding: 7px 14px; }
+#modal-root .xw-seg button[aria-checked='true'] { background: var(--nw-sel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+#modal-root .xw-acct { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+#modal-root .xw-acct.ok { color: var(--good-ink); }
+#modal-root .xw-acct.warn { color: var(--warn-ink); }
+#modal-root .xw-acct .nw-link { margin-left: 4px; }
+#modal-root .xw-tog { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
+#modal-root .xw-tog:last-child { border-bottom: 0; }
+#modal-root .xw-tog label { font-weight: 500; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+#modal-root .xw-lock { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--muted); }
+#modal-root .xw-lock .nw-ico { width: 12px; height: 12px; }
+#modal-root .xw-sw { appearance: none; width: 34px; height: 20px; border-radius: 10px !important; background: var(--rule-strong); position: relative; margin: 1px 0 0; cursor: pointer; transition: background var(--nw-t); }
+#modal-root .xw-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50% !important; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: left var(--nw-t); }
+#modal-root .xw-sw:checked { background: var(--accent); }
+#modal-root .xw-sw:checked::after { left: 16px; }
+#modal-root .xw-sw:disabled { cursor: default; opacity: .65; }
+#modal-root .nw-field .xw-tog { border: 0; padding: 4px 0 0; }
+#modal-root .xw-opt { font-weight: 400; color: var(--muted); }
+#modal-root .xw-brief-h { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
+#modal-root .xw-count { font-size: 12px; color: var(--faint); white-space: nowrap; }
+#modal-root .xw-aside { display: grid; gap: 14px; position: sticky; top: 16px; }
+#modal-root .xw-next { border: 1px solid var(--line); border-radius: var(--nw-rl); background: var(--card); padding: 16px 18px; box-shadow: var(--nw-shadow); }
+#modal-root .xw-next h3 { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2, var(--ink)); margin-bottom: 8px; }
+#modal-root .xw-next ol { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+#modal-root .xw-alt { display: flex; gap: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--nw-rl); background: color-mix(in srgb, var(--ink) 3%, var(--card)); font-size: 13px; }
+#modal-root .xw-alt .nw-ico { margin-top: 2px; }
+#modal-root .xw-problem { color: var(--bad-ink); font-size: 13px; }
+#modal-root .xw-problem:empty { display: none; }
+
+@media (max-width: 900px) {
+  #modal-root .xw-grid { grid-template-columns: minmax(0, 1fr); }
+  #modal-root .xw-aside { position: static; }
+}
+@media (max-width: 640px) {
+  #modal-root .xw-in { padding: 20px 16px 32px; }
+  #modal-root .xw-cards, #modal-root .xw-row, #modal-root .xw-row.three { grid-template-columns: minmax(0, 1fr); }
+  #modal-root .xw-term, #modal-root .xw-app { width: 110px; }
+}

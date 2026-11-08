@@ -46,6 +46,8 @@ import { useGateLock } from '../worktree-sweep/index.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 import { withDesign } from './design-step.js';
+import { withExpert } from './expert-step.js';
+import { officeExpertDeps } from '../expert/create.js';
 import { designOf } from '../design/index.js';
 import { withAdopt } from './adopt-step.js';
 import { adoptFromOf, adoptSetupOf } from '../adopt-from/index.js';
@@ -423,7 +425,8 @@ export class Wizard {
   }
 
   private go(job: JobState) {
-    void this.book.run(job, withAdopt(adoptSetupOf(this.ctx), withDesign(designOf(this.ctx), setupSteps(this.deps())))).then(() => {
+    // Expert mode's setup (expert-step.ts) round the usual steps: the same create and connect, no team.
+    void this.book.run(job, withAdopt(adoptSetupOf(this.ctx), withDesign(designOf(this.ctx), withExpert(officeExpertDeps(this.ctx, () => this.cfg.toolkitDir), setupSteps(this.deps()))))).then(() => {
       if (job.status !== 'done') return;
       this.ctx.toastAll(`✨ ${job.plan.name}: the project setup finished`);
       // The brief is in the project now (docs/project-brief.md, sources/): its draft and attached files go.
