@@ -65,6 +65,7 @@ import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
 import { expertRoutes } from './expert.js';
 import { expertCreateRoutes } from './expert-create.js';
+import { expertReadyRoutes } from './expert-ready.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
@@ -310,6 +311,8 @@ export const routes: readonly Route[] = [
   expertRoutes.choices,
   expertRoutes.session,
   expertRoutes.open,
+  expertReadyRoutes.check,
+  expertReadyRoutes.fix,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

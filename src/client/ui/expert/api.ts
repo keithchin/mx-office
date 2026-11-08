@@ -1,9 +1,10 @@
 // Expert mode's calls (server/http/routes/expert.ts): the session screen's header and loop timer, the
-// preview's pages and roles, starting the session, opening a folder; and the background proof strip's
+// preview's pages and roles, starting the session, checking and opening a folder; and the background proof strip's
 // source, which another module answers (GET /api/expert/proof): until it does, a 404 says "coming soon".
 
 import type { ExpertView, PreviewChoices } from '../../../shared/expert';
 import type { ExpertProof } from '../../../shared/expert-proof';
+import type { ReadyFixId, ReadyReport } from '../../../shared/expert-ready';
 
 const q = (floor: string) => `floor=${encodeURIComponent(floor)}`;
 
@@ -30,6 +31,10 @@ export const getExpert = (floor: string) => getJson<ExpertView>(`/api/expert?${q
 export const getChoices = (floor: string, rev: string) => getJson<PreviewChoices>(`/api/expert/choices?${q(floor)}&rev=${encodeURIComponent(rev)}`);
 export const startSession = (floor: string) => post<{ workerId: string }>('/api/expert/session', { floor });
 export const openFolder = (path: string) => post<{ floor: string }>('/api/expert/open', { path });
+/** The readiness check of a folder (cached a minute; `fresh` is Check again). */
+export const checkReady = (path: string, fresh = false) => post<ReadyReport>('/api/expert/ready', { path, fresh });
+/** One readiness fix, clicked by the person. */
+export const fixReady = (path: string, fix: ReadyFixId, more: { total?: number; projectId?: string; name?: string } = {}) => post<{ message: string; report: ReadyReport }>('/api/expert/ready/fix', { path, fix, ...more });
 
 /** The proof strip's answer: the proof, 'missing' while no module answers the route, or undefined when it couldn't be read. */
 export async function getProof(floor: string): Promise<ExpertProof | 'missing' | undefined> {

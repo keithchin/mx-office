@@ -1,8 +1,8 @@
 // Expert mode's routes (server/expert/): GET /api/expert?floor= is the session screen's header and loop timer;
 // GET /api/expert/choices?floor=&rev= the preview's pages and roles at a commit; POST /api/expert/session
 // {floor} starts the session (or wakes it, its conversation carried on); POST /api/expert/open {path} makes a
-// folder on the office's machine an Expert-mode project ("Open existing toolkit project", admins only, no
-// readiness checks yet); GET /api/expert/proof?floor= is the background proof strip ({ branch, commit, budget,
+// folder on the office's machine an Expert-mode project ("Open existing toolkit project", admins only; the
+// readiness check before it is ../expert-ready.ts, and a budget asked for there is set here); GET /api/expert/proof?floor= is the background proof strip ({ branch, commit, budget,
 // stuck, decisions }, 409 for a Team project: ../../expert/index.ts). Signed in, the POSTs from the office's own pages only.
 
 import type { Route } from '../router.js';
@@ -15,6 +15,7 @@ import { sessionModelOf } from '../../expert/settings.js';
 import { previewChoices } from '../../expert/choices.js';
 import { checkSourcePath } from '../../wizard/source-folder.js';
 import { audit } from '../../audit/index.js';
+import { readyOnAttach } from '../../expert-ready/index.js';
 import { SHA_RE } from '../../../shared/app-explorer.js';
 
 async function json(req: Parameters<Route['handle']>[1]['req']): Promise<Record<string, unknown> | undefined> {
@@ -98,6 +99,7 @@ export const expertRoutes = {
       const floor = ctx.floors.get(def.id) ?? ctx.openFloor(def);
       ctx.floorsChanged();
       if (!floor) return send(res, 500, { error: `Couldn't open the project at ${checked.path}: see the office's log` });
+      readyOnAttach(ctx, floor, by);
       audit.record({ floor: floor.id, actor: { kind: 'human', name: by }, action: 'expert.open', target: { kind: 'floor', id: floor.id, label: floor.def.name }, summary: `Opened ${floor.def.name} in Expert mode from ${checked.path}`, severity: 'info' });
       return send(res, 200, { floor: floor.id });
     },
