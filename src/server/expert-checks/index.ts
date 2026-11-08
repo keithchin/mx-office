@@ -135,8 +135,12 @@ export function checksOnWorker(ctx: Ctx, floor: Floor, w: WorkerInfo) {
   backgroundChecksOf(ctx).busy(floor.id, floor.dir, BUSY.has(w.status));
 }
 
+/** AGENT_OFFICE_EXPERT_CHECKS=0 turns the idle runs off (troubleshooting, and the loop timer measured without them). */
+export const idleChecksOn = (env: NodeJS.ProcessEnv = process.env) => env.AGENT_OFFICE_EXPERT_CHECKS !== '0';
+
 /** The background proof settled (the session idle, its change committed or seen): a run after the debounce. */
 export function checksOnSettled(ctx: Ctx, floorId: string) {
+  if (!idleChecksOn()) return;
   const floor = ctx.floors.get(floorId);
   if (floor && isExpertProject(floor)) backgroundChecksOf(ctx).settled(floor.id, floor.dir);
 }

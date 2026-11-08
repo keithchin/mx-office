@@ -14,7 +14,6 @@
 .xs-ck:focus { outline: none; }
 .xs-ck-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--line); }
 .xs-ck-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
-.xs-ck-icon { color: var(--muted); }
 .xs-ck-chip { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--good-soft); color: var(--good-ink); white-space: nowrap; }
 .xs-ck-chip.bad { background: var(--warn-soft); color: var(--warn-ink); }
 .xs-ck-x { border: 0; background: none; color: var(--muted); font-size: 14px; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; }
@@ -41,4 +40,5 @@
 .xs-ck-notes { margin: 4px 0 2px; padding-left: 18px; color: var(--muted); font-size: 12px; }
 .xs-ck-prompt { margin: 0; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; background: var(--card-dim, var(--sunken)); }
 .xs-ck-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
-.xs-ck-why { font-size: 12px; color: var(--warn-ink); }
+.xs-ck-why { flex-basis: 100%; font-size: 12px; color: var(--warn-ink); }
+.xs-ck .xs-grow { flex: 1; }

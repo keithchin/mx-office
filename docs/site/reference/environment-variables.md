@@ -25,6 +25,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_ALLOW_REAL_AGENTS` | `1`: let real agent CLIs start in test mode anyway (each one opens an incident) |
 | `AGENT_OFFICE_SEED_INCIDENTS` | `0`: skip the one-off import of the 2026-10-06 incidents; `1`: apply it to any office without incidents |
 | `AGENT_OFFICE_BUDGET`, `AGENT_OFFICE_BUDGET_PAUSE` | Office-wide daily budget for Claude Code spend, and stop hiring when it's spent |
+| `AGENT_OFFICE_EXPERT_CHECKS` | `0`: no [background tests and lint](../using-the-office/expert-mode.md#tests-and-lint-in-the-background) when an Expert session goes idle (troubleshooting). Lock in still runs its checks |
 | `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across projects |
 | `AGENT_OFFICE_WEBHOOK` | Slack or Discord webhook when a worker needs input or finishes |
 | `AGENT_OFFICE_TURN` | TURN servers for voice |

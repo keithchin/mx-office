@@ -112,7 +112,7 @@ export function checksPopover(o: { anchor: HTMLElement; floor: string; focus: Ch
     const prompt = promptOf(picked);
     const why = !prompt ? 'Nothing failed to send' : blocked;
     el.replaceChildren(
-      h('header.xs-ck-head', {}, h('span.xs-ck-icon', { 'aria-hidden': 'true' }, o.focus === 'tests' ? '⚗' : '✓'), h('h2', { id: titleId }, o.focus === 'tests' ? 'Tests in the background' : 'Lint in the background'), chip ? h(`span.xs-ck-chip${reg || bad || l?.errors ? '.bad' : ''}`, {}, chip) : null, h('span.xs-grow'), h('button.xs-ck-x', { type: 'button', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => (close(), o.anchor.focus()) }, '✕')),
+      h('header.xs-ck-head', {}, h('h2', { id: titleId }, o.focus === 'tests' ? 'Tests in the background' : 'Lint in the background'), chip ? h(`span.xs-ck-chip${reg || bad || l?.errors ? '.bad' : ''}`, {}, chip) : null, h('span.xs-grow'), h('button.xs-ck-x', { type: 'button', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => (close(), o.anchor.focus()) }, '✕')),
       h('div.xs-ck-body', {}, ...(o.focus === 'tests' ? [testsPart(t), lintPart(l)] : [lintPart(l), testsPart(t)])),
       prompt ? h('p.xs-ck-prompt', { title: 'What goes into the session’s input' }, h('span.xs-ck-muted', {}, 'Sends: '), prompt) : '',
       h(
