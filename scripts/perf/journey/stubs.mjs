@@ -12,7 +12,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const isWin = process.platform === 'win32';
 export const MENDIX_VERSION = '11.12.4';
 
-const SHIM_CS = `using System; using System.Diagnostics; using System.IO; using System.Text; using System.Runtime.InteropServices;
+export const SHIM_CS = `using System; using System.Diagnostics; using System.IO; using System.Text; using System.Runtime.InteropServices;
 class Shim {
   [DllImport("kernel32.dll")] static extern uint GetConsoleCP();
   static string Q(string s) {
@@ -45,7 +45,7 @@ class Shim {
 }
 `;
 
-function csc() {
+export function csc() {
   const root = path.join(process.env.WINDIR ?? 'C:\\Windows', 'Microsoft.NET');
   for (const fw of ['Framework64', 'Framework']) {
     const p = path.join(root, fw, 'v4.0.30319', 'csc.exe');

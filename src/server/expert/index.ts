@@ -26,6 +26,8 @@ import { onForgetFloor } from '../office/forget.js';
 import { runProofGit } from './git.js';
 import { pushBranch, pushTarget } from './push.js';
 import { ExpertProofService } from './service.js';
+import { lockInDecisions } from '../expert-lockin/book.js';
+import { checksOnSettled, checksOnWorker, proofChecks, stopBackgroundChecks } from '../expert-checks/index.js';
 
 export { ExpertProofService } from './service.js';
 
@@ -53,6 +55,7 @@ export function expertProofOf(ctx: Ctx): ExpertProofService {
       const floor = ctx.floors.get(floorId);
       if (floor) ctx.toFloor(floor, { t: 'roster.changed', floor: floorId });
     },
+    settled: (floorId) => checksOnSettled(ctx, floorId),
   });
   offices.set(ctx.cfg, svc);
   onForgetFloor((f) => svc.forget(f.id));
@@ -63,6 +66,7 @@ export function expertProofOf(ctx: Ctx): ExpertProofService {
 export function expertOnWorker(ctx: Ctx, floor: Floor, w: WorkerInfo | string) {
   if (typeof w === 'string' || !isExpertProject(floor)) return;
   expertProofOf(ctx).onWorker(floor.id, floor.dir, w);
+  checksOnWorker(ctx, floor, w);
 }
 
 /** The office starts: every Expert project attached (its session branch taken) a little after the floors open. */
@@ -74,6 +78,7 @@ export function startExpertProof(ctx: Ctx): () => void {
   return () => {
     clearTimeout(t);
     offices.get(ctx.cfg)?.stop();
+    stopBackgroundChecks(ctx);
   };
 }
 
@@ -124,11 +129,12 @@ async function stuckOfFloor(ctx: Ctx, floor: Floor, p: { working: boolean; idleS
   }
 }
 
-/** GET /api/expert/proof: the strip's numbers, exactly ExpertProof's fields. */
+/** GET /api/expert/proof: the strip's numbers, exactly ExpertProof's fields (tests and lint: ../expert-checks/). */
 export async function expertProofView(ctx: Ctx, floor: Floor): Promise<ExpertProof> {
   const svc = expertProofOf(ctx);
   if (isExpertProject(floor)) await svc.attach(floor.id, floor.dir);
   const p = svc.proof(floor.id);
   const [stuck, decisions] = await Promise.all([stuckOfFloor(ctx, floor, p), decisionCount(floor.dir)]);
-  return { branch: p?.branch ?? '', commit: p?.commit ?? null, budget: budgetOfFloor(ctx, floor), stuck, decisions };
+  // Lock in's own rows in the decision log count too (expert-lockin/book.ts).
+  return { branch: p?.branch ?? '', commit: p?.commit ?? null, budget: budgetOfFloor(ctx, floor), stuck, decisions: decisions + lockInDecisions(ctx.cfg.dataDir, floor.id), ...proofChecks(ctx, floor.id) };
 }

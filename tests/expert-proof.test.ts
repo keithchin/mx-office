@@ -326,7 +326,7 @@ test('commit message: areas from the changed files, the model first, capped', ()
   assert.match(many, /… and 10 more/);
 });
 
-test('status: exactly { branch, commit, budget, stuck, decisions }, decisions from PROJECT.md', async () => {
+test('status: exactly { branch, commit, budget, stuck, decisions, tests, lint }, decisions from PROJECT.md', async () => {
   const { dir } = repo();
   writeFileSync(path.join(dir, 'PROJECT.md'), '# App\n\n## Decisions\n\n| Stage | Decision | Status |\n|---|---|---|\n| 1 | Filter defaults to my team | CONFIRMED |\n| 2 | Seed users | ASSUMED |\n\n## Other\n');
   git(dir, 'add', '.');
@@ -337,7 +337,10 @@ test('status: exactly { branch, commit, budget, stuck, decisions }, decisions fr
   const floor = { id: 'p', dir, def: { id: 'p', name: 'App', dir, mode: 'expert' }, workers: { list: () => [] }, github: { pulls: { items: [] }, issues: { items: [] } } };
   const ctx = { cfg: { dataDir: data }, floors: new Map([['p', floor]]), toFloor: () => undefined, workerFloor: () => undefined } as never;
   const v = await expertProofView(ctx, floor as never);
-  assert.deepEqual(Object.keys(v).sort(), ['branch', 'budget', 'commit', 'decisions', 'stuck']);
+  assert.deepEqual(Object.keys(v).sort(), ['branch', 'budget', 'commit', 'decisions', 'lint', 'stuck', 'tests']);
+  // The background checks' cells (slice 6): null until a run started.
+  assert.equal(v.tests, null);
+  assert.equal(v.lint, null);
   assert.equal(v.branch, SESSION_BRANCH);
   assert.deepEqual(Object.keys(v.commit!).filter((k) => k !== 'error').sort(), ['at', 'message', 'push', 'sha']);
   assert.equal(v.commit!.message, 'project file');

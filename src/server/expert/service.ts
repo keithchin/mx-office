@@ -30,6 +30,8 @@ export interface ProofDeps {
   now(): number;
   /** The project's proof changed (a commit, a push): pages look again. */
   changed(floorId: string): void;
+  /** The session is idle and its change committed (or found committed or clean): the background checks may run (slice 6). */
+  settled?(floorId: string): void;
   debounceMs?: number;
   heldRetryMs?: number;
   backoffMs?: readonly number[];
@@ -180,6 +182,29 @@ export class ExpertProofService {
         s.commit = rest;
       }
     }
+    this.afterHead(s);
+    if (!s.working && (out.kind === 'committed' || out.kind === 'moved' || out.kind === 'clean')) this.deps.settled?.(s.id);
+    return out;
+  }
+
+  /**
+   * Commits what's pending now, whatever HEAD did since the last look (Lock in: its checks must see everything):
+   * the same commit path as the auto-commit (never an amend, the project's hooks apply), then pushed as usual.
+   */
+  async commitNow(id: string, dir: string): Promise<CommitOutcome> {
+    const s = this.stateOf(id, dir);
+    await this.attach(id, dir);
+    clearTimeout(s.timer);
+    s.timer = undefined;
+    s.touched = false;
+    const out = await serial(dir, async () => {
+      if (s.branch !== SESSION_BRANCH) await this.takeBranch(s);
+      const r = await autoCommit(this.deps.git, dir, undefined, this.deps.identity);
+      if (r.kind === 'committed') s.seen = r.sha;
+      else if (r.kind === 'moved' || r.kind === 'clean') s.seen = r.head;
+      await this.readHead(s);
+      return r;
+    });
     this.afterHead(s);
     return out;
   }
