@@ -55,3 +55,5 @@ export const mergeLockIn = (floor: string, commit: string, accept: string[], con
 export const publishLockIn = (floor: string) => post<{ ok: true; note?: string }>('/api/expert/lockin/publish', { floor });
 export const deployLockIn = (floor: string) => post<{ id: string }>('/api/expert/lockin/deploy', { floor });
 export const closePhaseLockIn = (floor: string, phase: string) => post<{ ok: true }>('/api/expert/lockin/close-phase', { floor, phase });
+/** "Send to session": fills the session's input with `text`, never submitting it (server/expert-checks/send.ts). */
+export const sendToSession = (floor: string, text: string) => post<{ ok: true }>('/api/expert/send', { floor, text });

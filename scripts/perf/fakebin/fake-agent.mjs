@@ -14,6 +14,7 @@
 // FAKE_DIR       where transcripts go (default <tmp>/test-offices-fake-agent). Never a real ~/.claude;
 //                claude-home: ~/.claude/projects/… when ~ is a test office's folder (see below).
 // FAKE_ESCALATE  raise an escalation to the Project Manager once, this many ms after starting.
+// FAKE_ECHO      1: echo the unsubmitted input line ("> text"), as a real prompt shows what's typed.
 // FAKE_TURN_MS   the least time a turn takes (default 0: a few hundred ms).
 // FAKE_SLOW_MS   how long a prompt with "slow" in it keeps its turn going (default 60000).
 // FAKE_FLOOD     KB of wide, coloured session output (flood.mjs) written to its terminal as it starts, the way a
@@ -270,6 +271,8 @@ process.stdin.on('data', (d) => {
     }
   }
   buf = buf.slice(i);
+  // FAKE_ECHO=1: the input line as typed so far (unsubmitted) shows, as a real prompt shows it.
+  if (process.env.FAKE_ECHO === '1') process.stdout.write(`\r\x1b[2K> ${cur}`);
   if (waiting && parts.length) {
     // The answer to its permission prompt: the turn carries on and ends.
     waiting = false;

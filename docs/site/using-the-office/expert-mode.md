@@ -4,7 +4,7 @@ description: One person's own Claude Code session in the project folder, with th
 weight: 2.7
 ---
 
-**Expert mode** is for someone who already builds Mendix apps with Claude Code, mxcli and the mxcli project toolkit and wants to keep working exactly that way, with the office's preview, phases and (soon) background proof round it. A project in Expert mode has no Project Coordinator, no Leads and no roster: the session is yours, and subagents, skills, slash commands and plan mode are whatever Claude Code and the toolkit in the folder give you.
+**Expert mode** is for someone who already builds Mendix apps with Claude Code, mxcli and the mxcli project toolkit and wants to keep working exactly that way, with the office's preview, phases and background proof round it. A project in Expert mode has no Project Coordinator, no Leads and no roster: the session is yours, and subagents, skills, slash commands and plan mode are whatever Claude Code and the toolkit in the folder give you.
 
 Every project is in **Team mode** unless it says otherwise; projects from before Expert mode stay as they were.
 
@@ -71,7 +71,28 @@ Arriving on an Expert-mode project opens **General › Session**. The Overview, 
 - **Live preview** (left): the project folder itself, run in place with hot reload, the way `mxcli run --watch` runs in your own folder: the session's working copy as it is, uncommitted changes included. When the session changes the model, mxcli's watch reloads the running app and the preview shows it. There is no checkout of main and no auto-refresh for an Expert-mode project; start and stop it here or on the [Live app](live-app.md) page. Pick a **page** of the app (those that open by address, read from the model at the running version) or a **demo user** to sign in as (demo users are fine for local work; the office never handles their passwords). After a new build or a hot reload the preview lights up with *Updated*.
 - **asked → visible**: from the prompt you submit to the first preview reload after the next model change. A model change is a toolkit `bin/exec.sh`, an `mxcli exec` or `apply`, or the `.mpr` (or its `mprcontents`) changing while the session works. The header shows the last time and the median of this session ("asked → visible 41 s · median 52 s").
 - **Session** (right): the real interactive `claude`, started in the project folder with no prompt, in a terminal coloured for the screen. Type in it as you would in your own terminal. The office never types into it: after an office restart it comes back with `--resume` and waits for you. **↗** pops it out into a window of its own; **⇄** swaps the sides.
-- **Background proof** (bottom): the last commit on the session branch (`session/main`) and its push, the budget meter, stuck status and the decision count (PROJECT.md's decisions plus everything Lock in did). A push that fails shows here, not as a dialog.
+- **Background proof** (bottom): the last commit on the session branch (`session/main`) and its push, the background **Tests** and **Lint**, the budget meter, stuck status and the decision count (PROJECT.md's decisions plus everything Lock in did). A push that fails shows here, not as a dialog.
+
+### Tests and lint in the background
+
+When the session goes idle after a change, the office commits it (above) and, a few seconds later, checks that commit:
+
+- the **affected microflow tests**: the toolkit's `bin/affected-tests.sh` picks them from the MDL scripts the change ran (the session's `bin/exec.sh` calls and changed `.mdl` files). It runs with `--no-model`, so it never opens the `.mpr` the preview runs. Without the script, the office takes the tests and journeys that name the changed modules. When the model changed and no script says where, every journey runs;
+- the **affected journeys** (`tests/**` and `journeys/**`, `.journey.json` or `.journey.js`), played on the preview itself, one at a time;
+- **lint against the baseline**: `mxcli lint` in the office's own copy of the commit, compared with `.claude/lint-baseline.json` the way the toolkit's lint gate compares (vendor modules left out, rules that couldn't run not counted). Only new findings show.
+
+Each result is recorded in the testing ledger at the commit it ran on, the same records Team mode makes, so the **Testing** page and Lock in see them. Journeys play on the preview, which serves the working folder: they are recorded at the commit only while the folder is exactly that commit (nothing uncommitted). Otherwise the strip shows the result but no record is written, and says so. The first lint run makes the office's own copy of the app and says *first lint run, may take a few minutes*. The strip shows them as **Tests** ("5/6 journeys · J04b regressed · 0 microflow", or *running…*) and **Lint** ("0 errors +1 warn"). *Regressed* means it passed at an earlier commit. A click opens the detail: what failed and why, where it passed before, the new lint findings, and how the set was chosen.
+
+**Send to session** puts a short prompt about the picked failure in the session's input. It never presses Enter: read it, change it if you like, and send it yourself. It works only while the session waits at its prompt. While the session works, starts or is asking you something, the button is off and says why.
+
+The checks stay out of the session's way:
+
+- They never run while the session works. A new turn cancels a pending run, and a run under way stops at the next safe point: journeys at once, while an mxcli microflow test run that already started finishes (stopping it mid-way isn't safe). It runs again the next time the session is idle.
+- One run per project at a time. A commit that was already checked isn't checked again.
+- Each step waits while the preview builds or reloads. Lint and microflow tests run in the office's own copies of the commit, never on the project folder's `.mpr`, and mxcli runs at below-normal priority.
+- Journeys need the preview running. When it isn't, the popover says so and they run on the next idle.
+
+`AGENT_OFFICE_EXPERT_CHECKS=0` in the office's environment turns the idle runs off.
 
 ### The split
 
@@ -81,17 +102,17 @@ Drag the divider between the preview and the session (a grip shows on hover); bo
 
 Lock in is how work on `session/main` reaches `main`. You choose the moment: a phase end, or before a deploy. It never runs by itself and never per change. Press **Lock in** in the Session header (admins only).
 
-**Step 1: checks.** What the session left uncommitted is committed first (the same commit as the background auto-commit; if that commit fails, Lock in doesn't start and says why). Then, at exactly that head:
+**Step 1: checks.** What the session left uncommitted is committed first (the same commit as the background auto-commit; if that commit fails, Lock in doesn't start and says why). Then the checks run at exactly that head, through the same runner as the background checks but on everything (not only the affected set). Lock in waits for a background run that is under way, and the session's turns don't stop a Lock in run.
 
 | Check | What it is |
 | --- | --- |
 | mx check | Mendix's full `mx check`, the same check the merge confirm and the Security page use, kept per commit. |
 | Microflow tests | All of them, through the Testing runner (`mxcli test`). *None in this app* is shown as a warning, not a failure. |
-| Journeys | The journeys under `tests/` at that commit, with their results recorded at exactly that commit. A journey with no result there is *due* and shows as *Not run*: run it in the session, or let the background tests run it. |
+| Journeys | Every journey at that commit, played on the preview one at a time and recorded at that commit. They need the preview running: when it isn't, they show as *Not run* with that reason (start the preview and run the checks again, or accept them by name). |
 | Lint | `mxcli lint` against the baseline the toolkit committed (`.claude/lint-baseline.json`). New errors fail; new warnings are a warning. |
 | Demo users | On or off in the model. They block a deploy request, nothing else. |
 
-The checks run in the office's own work folders, so the session keeps working meanwhile; the panel shows each one as it finishes. Every result is recorded in the testing ledger at that commit. **Fix in session** copies a prompt for the session: paste it and press Enter (the office never types into the session).
+Lint and tests run in the office's own work folders and journeys on the preview, so the session can keep working meanwhile; the panel shows each one as it finishes. Every result is recorded in the testing ledger at that commit. **Fix in session** copies a prompt for the session: paste it and press Enter (the office never types into the session).
 
 **Step 2: where it goes.**
 

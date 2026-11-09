@@ -73,7 +73,7 @@ export function sessionPage(container: HTMLElement): TabHooks {
     h('div.xs-termbox', {}, termHost, cover),
   );
   const row = h('div.xs-split', {}, previewPane, divider, sessionPane);
-  const proof = proofStrip();
+  const proof = proofStrip({ worker: () => worker() });
   const root = h('div.xs', {}, head, phases, row, proof.el);
   container.append(root);
 
@@ -128,6 +128,7 @@ export function sessionPage(container: HTMLElement): TabHooks {
       );
     }
     term?.show(w && s !== 'off' ? w.id : undefined);
+    proof.session();
   }
   async function start(byHand = false) {
     const floor = store.floor;

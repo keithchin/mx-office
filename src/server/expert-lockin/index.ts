@@ -1,5 +1,5 @@
 // Lock in wired to the office (the work is ./service.ts): one service per office, made on first use. Its checks are
-// ./checks.ts officeLockInChecks (slice 6's runner replaces it at merge); the commit path is the background proof's
+// slice 6's background runner (./bg-checks.ts: every test and journey at the commit, lint, mx check); the commit path is the background proof's
 // (expert/service.ts commitNow); data impact is the local merge's (local-merge/describe.ts); the push is the
 // session branch's push (expert/push.ts); the licence comes from the cached Deploy API read (team-server/); demo
 // users from the readiness check's look at the model (expert-ready/model.ts); the deploy request is an ask in
@@ -27,7 +27,8 @@ import { runProofGit } from '../expert/git.js';
 import { pushBranch, pushTarget } from '../expert/push.js';
 import { decisionCount, expertProofOf } from '../expert/index.js';
 import type { Licence, LockInCheck, LockInCheckKind, LockInPhase, LockInView } from '../../shared/expert-lockin.js';
-import { officeLockInChecks, scriptedLockInChecks, type LockInChecks } from './checks.js';
+import { scriptedLockInChecks, type LockInChecks } from './checks.js';
+import { backgroundLockInChecks } from './bg-checks.js';
 import { LockInService, type LFloor } from './service.js';
 
 export { LockInService } from './service.js';
@@ -82,7 +83,7 @@ export function lockInOf(ctx: Ctx, checks?: LockInChecks): LockInService {
   let s = offices.get(ctx.cfg);
   if (s) return s;
   const real = (f: LFloor): Floor | undefined => ctx.floors.get(f.id);
-  const office = checks ?? officeLockInChecks(ctx);
+  const office = checks ?? backgroundLockInChecks(ctx);
   s = new LockInService({
     git: runProofGit,
     dataDir: ctx.cfg.dataDir,

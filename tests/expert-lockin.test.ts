@@ -17,7 +17,9 @@ import { runProofGit, type ProofGit } from '../src/server/expert/git.js';
 import { autoCommit } from '../src/server/expert/commit.js';
 import { pushBranch, pushTarget } from '../src/server/expert/push.js';
 import { LockInService, type LockInDeps } from '../src/server/expert-lockin/service.js';
-import { journeysVerdict, lintVerdict, scriptedLockInChecks, type LockInChecks } from '../src/server/expert-lockin/checks.js';
+import { scriptedLockInChecks, type LockInChecks } from '../src/server/expert-lockin/checks.js';
+import { backgroundLockInChecks, rowsOf } from '../src/server/expert-lockin/bg-checks.js';
+import { BackgroundChecks, type ChecksDeps, type ChecksResult, type StepIn } from '../src/server/expert-checks/runner.js';
 import { forgetLockIn, lockInBook } from '../src/server/expert-lockin/book.js';
 import { LOCKIN_TRAILER } from '../src/server/expert-lockin/merge.js';
 import { testingStore } from '../src/server/testing/index.js';
@@ -356,20 +358,78 @@ test('mergeRefusal: no run, still running, another commit, and a failure not acc
   assert.equal(mergeRefusal({ run, running: false }, { accept: ['Lint'] }), undefined);
 });
 
-test('lint against the baseline and journeys at the commit', () => {
-  const sum = { bySeverity: { errors: 0, warnings: 3, infos: 0, hints: 0 }, total: 3, topRules: [{ ruleId: 'CONV010', count: 3, severity: 'warning', example: 'Shop.Page' }] };
-  assert.equal(lintVerdict(sum, { counts: { CONV010: 3 } }, []).status, 'passed');
-  const w = lintVerdict(sum, { counts: { CONV010: 2 } }, []);
-  assert.equal(w.status, 'warn');
-  assert.match(w.detail!, /1 new warning: CONV010 in Shop\.Page/);
-  assert.equal(lintVerdict({ ...sum, bySeverity: { ...sum.bySeverity, errors: 1 }, topRules: [{ ruleId: 'SEC001', count: 1, severity: 'error' }] }, { counts: {} }, []).status, 'failed');
-  assert.equal(lintVerdict(undefined, undefined, ['mxcli lint failed']).status, 'not-run');
-  assert.equal(journeysVerdict([], new Map()).status, 'warn');
-  assert.equal(journeysVerdict(['J-01', 'J-02'], new Map([['J-01', 'passed'], ['J-02', 'passed']])).status, 'passed');
-  const due = journeysVerdict(['J-01', 'J-02'], new Map([['J-01', 'passed']]));
-  assert.equal(due.status, 'not-run');
-  assert.match(due.detail!, /1 journey due, no result at this commit: J-02/);
-  assert.equal(journeysVerdict(['J-01'], new Map([['J-01', 'failed']])).status, 'failed');
+test('slice 6’s result as Lock in rows: every journey and test at the commit, regressions, none, couldn’t run, lint, mx check, records', () => {
+  const zero = { passed: 0, failed: 0, notRun: 0, total: 0 };
+  const r: ChecksResult = {
+    commit: 'c'.repeat(40), scope: 'all', kinds: ['mxcheck', 'tests', 'journeys', 'lint'], startedAt: 0, endedAt: 1, cancelled: false,
+    selection: { scope: 'all', tests: [], journeys: ['tests/J-04.journey.json', 'tests/J-05.journey.json'], how: 'everything', notes: [] },
+    tests: { state: 'done', commit: 'c'.repeat(40), startedAt: 0, scope: 'all', journeys: { passed: 1, failed: 1, notRun: 0, total: 2 }, microflow: zero, failures: [{ kind: 'journey', id: 'J-05', detail: 'step 2: no rows', passedAt: 'b'.repeat(40), record: 'tr_j' }], notes: [] },
+    lint: { state: 'done', commit: 'c'.repeat(40), startedAt: 0, errors: 0, warnings: 1, findings: [{ rule: 'CONV010', severity: 'warning', module: 'Shop', document: 'Orders', message: 'x' }], baseline: true },
+    mxcheck: { status: 'pass' },
+    records: ['tr_j', 'tr_l'],
+  };
+  const rows = rowsOf(r, new Map([['tr_j', { source: 'office-journey', sourceKey: 'k' }], ['tr_l', { source: 'office-check', sourceKey: 'expert-lint:x' }]]));
+  assert.deepEqual(rows.map((c) => `${c.kind}:${c.status}:${c.summary}`), ['mx-check:passed:0 errors', 'microflow-tests:warn:None in this app', 'journeys:failed:1 of 2 passed', 'lint:warn:0 new errors · 1 new warning']);
+  assert.match(rows[2].detail!, /J-05 \(regressed\): step 2: no rows/);
+  assert.equal(rows[2].record, 'tr_j');
+  assert.equal(rows[3].record, 'tr_l');
+  assert.match(rows[3].detail!, /CONV010 in Shop\.Orders/);
+  const off = rowsOf({ ...r, tests: { ...r.tests!, journeys: { passed: 0, failed: 0, notRun: 2, total: 2 }, failures: [], notes: ['The preview isn’t running: start it and the journeys run on the next idle'] }, lint: { ...r.lint!, state: 'skipped', note: 'no mxcli' }, mxcheck: { status: 'error', why: 'no mx' } }, new Map());
+  assert.deepEqual(off.map((c) => c.status), ['not-run', 'warn', 'not-run', 'not-run']);
+  assert.match(off[2].detail!, /2 journeys didn’t run: The preview isn’t running/);
+});
+
+test('Lock in on slice 6’s runner: waits for the background run under way, runs every journey (scope all) and the mx check, the session’s turns don’t cancel it, live progress', async () => {
+  let release: (() => void) | undefined;
+  const asked: { scope: string; journeys: number }[] = [];
+  const head = 'd'.repeat(40);
+  const steps = (k: string) => async (i: StepIn) => {
+    asked.push({ scope: `${k}:${i.scope}`, journeys: i.selection.journeys.length });
+    if (k === 'lint' && i.scope === 'affected') await new Promise<void>((r) => (release = r));
+    if (k === 'journeys') {
+      await new Promise((r) => setTimeout(r, 30));
+      return { counts: { passed: 3, failed: 0, notRun: 0, total: 3 }, failures: [], notes: [], records: [] };
+    }
+    if (k === 'lint') return { delta: { errors: 0, warnings: 0, findings: [], baseline: true }, records: [] };
+    return { counts: { passed: 2, failed: 0, notRun: 0, total: 2 }, failures: [], notes: [], records: [] };
+  };
+  const deps: ChecksDeps = {
+    head: async () => head,
+    select: async (_d, _t, o) => ({ scope: o.scope, tests: ['a.test'], journeys: o.scope === 'all' ? ['J1', 'J2', 'J3'] : ['J1'], how: o.scope, notes: [] }),
+    lint: steps('lint'),
+    journeys: steps('journeys'),
+    microflow: steps('microflow'),
+    mxcheck: async () => ({ status: 'pass' }),
+    previewBusy: () => false,
+    changed: () => undefined,
+    now: () => Date.now(),
+    debounceMs: 5,
+    pollMs: 5,
+  };
+  const bg = new BackgroundChecks(deps);
+  bg.settled('p', '/x');
+  await until(() => !!release, 'the background run is under way');
+  const progress: string[] = [];
+  const commits: string[] = [];
+  const run = backgroundLockInChecks({ cfg: { dataDir: mkdtempSync(path.join(tmpdir(), 'lockin-bg-')) } } as never, () => bg, 5).run({ id: 'p', dir: '/x' }, head, {
+    kinds: ['mx-check', 'microflow-tests', 'journeys', 'lint'],
+    by: 'Pat',
+    onProgress: (c) => progress.push(`${c.kind}:${c.status}`),
+    onCommit: (c) => commits.push(c),
+  });
+  await new Promise((r) => setTimeout(r, 40));
+  assert.ok(progress.every((x) => x.endsWith(':waiting')) && progress.length === 4, `waits for the background run: ${progress.join(', ')}`);
+  bg.busy('p', '/x', true); // the session starts a turn: the background run stops at its next safe point
+  release!();
+  await new Promise((r) => setTimeout(r, 10));
+  bg.busy('p', '/x', false);
+  bg.busy('p', '/x', true); // and a turn during Lock in's run doesn't stop it
+  const rows = await run;
+  assert.deepEqual(rows.map((c) => `${c.kind}:${c.status}:${c.summary}`), ['mx-check:passed:0 errors', 'microflow-tests:passed:2 of 2 passed', 'journeys:passed:3 of 3 passed', 'lint:passed:0 new errors · 0 new warnings']);
+  assert.ok(asked.some((a) => a.scope === 'journeys:all' && a.journeys === 3), 'every journey at the commit');
+  assert.ok(progress.includes('journeys:running') || progress.includes('lint:running'), `live progress: ${progress.join(', ')}`);
+  assert.deepEqual(commits, [head]);
+  bg.stop();
 });
 
 test('routes: admins only, from the office’s own pages, Expert projects only; Lock in refused while the session works', async () => {

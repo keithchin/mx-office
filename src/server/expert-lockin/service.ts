@@ -133,6 +133,14 @@ export class LockInService {
           run.checks = run.checks.map((x) => (x.kind === c.kind ? c : x));
           this.d.changed(floor.id);
         },
+        // The runner reads HEAD itself: when the session committed while Lock in waited its turn, the checks ran (and
+        // the merge takes) that commit.
+        onCommit: (sha) => {
+          if (sha === run.commit) return;
+          run.commit = sha;
+          this.save(floor.id);
+          this.d.changed(floor.id);
+        },
       });
       for (const c of out) run.checks = run.checks.map((x) => (x.kind === c.kind ? c : x));
       // Everything in the ledger at the exact commit (a microflow run that recorded itself isn't added twice).

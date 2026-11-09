@@ -4,6 +4,9 @@
 // The session works on `session/main`; the office commits what the session changed once it goes idle (never
 // amending, never twice: a commit the toolkit or Studio Pro made itself is left alone), pushes the branch in the
 // background without force, and reads the budget, stuck detection and the toolkit's decision log beside it.
+// Slice 6 adds the background checks' TESTS and LINT cells (shared/expert-checks.ts).
+
+import type { ProofLint, ProofTests } from './expert-checks.js';
 
 /** The branch an Expert session works on; Lock in merges it into main. */
 export const SESSION_BRANCH = 'session/main';
@@ -50,6 +53,10 @@ export interface ExpertProof {
   stuck: ProofStuck | null;
   /** Rows in the toolkit's decision log (PROJECT.md ## Decisions). */
   decisions: number;
+  /** The background checks' microflow tests and journeys (slice 6); null until a run started. Optional for older answers. */
+  tests?: ProofTests | null;
+  /** The background lint delta against the baseline (slice 6); null until a run started. */
+  lint?: ProofLint | null;
 }
 
 /** Whether a project record is an Expert project: its `mode` says so; no mode is a Team project. */

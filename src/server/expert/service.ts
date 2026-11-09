@@ -30,6 +30,8 @@ export interface ProofDeps {
   now(): number;
   /** The project's proof changed (a commit, a push): pages look again. */
   changed(floorId: string): void;
+  /** The session is idle and its change committed (or found committed or clean): the background checks may run (slice 6). */
+  settled?(floorId: string): void;
   debounceMs?: number;
   heldRetryMs?: number;
   backoffMs?: readonly number[];
@@ -181,6 +183,7 @@ export class ExpertProofService {
       }
     }
     this.afterHead(s);
+    if (!s.working && (out.kind === 'committed' || out.kind === 'moved' || out.kind === 'clean')) this.deps.settled?.(s.id);
     return out;
   }
 

@@ -64,6 +64,7 @@ import { stageRoutes } from './stage.js';
 import { branchAheadRoutes } from './branch-ahead.js';
 import { localMergeRoutes } from './local-merge.js';
 import { expertRoutes } from './expert.js';
+import { expertChecksRoutes } from './expert-checks.js';
 import { expertCreateRoutes } from './expert-create.js';
 import { expertReadyRoutes } from './expert-ready.js';
 import { expertLockInRoutes } from './expert-lockin.js';
@@ -250,6 +251,9 @@ export const routes: readonly Route[] = [
   // Expert mode's proof strip (server/expert/).
   expertRoutes.proof,
   ...Object.values(expertLockInRoutes),
+  // Expert mode's background checks: Send to session, run now (server/expert-checks/).
+  expertChecksRoutes.send,
+  expertChecksRoutes.run,
   decisionRoutes.view,
   decisionRoutes.act,
   dispatchRoutes.view,
