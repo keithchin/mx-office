@@ -8,6 +8,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 Nothing waiting yet.
 
+## 2026-11-09 · release 86 (`0c31cb9`)
+
+- **Expert mode: tests and lint in the background.** When the session goes idle after a change, the office runs the affected microflow tests, the affected journeys on the running app and a lint check against the project's baseline (new findings only). A new turn cancels a waiting run and it runs again at the next idle moment; one run per project at a time, at low priority, never opening the model file the preview uses. Results are recorded in the testing ledger at the commit they ran on (journeys only when the folder matches that commit).
+- **TESTS and LINT in the proof strip**, with a running state and a popover listing failures and new findings. **Send to session** pastes a short line about a failure into the session's input without pressing Enter, and only while the session waits for you.
+- **Lock in.** The button in the Session header is live. It commits anything pending, runs the full checks at that exact commit (mx check, all microflow tests, due journeys, lint) and records them, then offers: **Merge to main** (a merge with a receipt of the checks; failures must be accepted by name and data changes confirmed; conflicts stop and explain; never forced), **Publish to sandbox** (for a Free App the office opens Studio Pro on the merged main and you press Run, then Publish) or **Request deploy** (an ask in Needs you for approval, blocked while demo users are on; the office never deploys). A phased project can close the current phase after a merge. Every step goes to the decision log.
+- To turn the background runs off, set `AGENT_OFFICE_EXPERT_CHECKS=0`.
+
 ## 2026-11-08 · release 85 (`22fa39f`)
 
 - **Expert mode.** A project can now be one person's own Claude Code session, with the office in the background, instead of an agent team. **✨ New project** first asks Expert or Team mode; Team mode is unchanged.
