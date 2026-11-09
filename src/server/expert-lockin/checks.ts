@@ -70,3 +70,18 @@ export function scriptedLockInChecks(script: Partial<Record<LockInCheckKind, str
     },
   };
 }
+
+/** A test office's stand-in for some kinds only (`over` in the script): the real checks run, the named kinds are replaced. */
+export function overlaidLockInChecks(real: LockInChecks, script: Partial<Record<LockInCheckKind, string | Partial<LockInCheck>>>): LockInChecks {
+  const fake = (kind: LockInCheckKind): LockInCheck | undefined => {
+    const s = script[kind];
+    if (s === undefined) return undefined;
+    return typeof s === 'string' ? check(kind, s as LockInCheck['status'], s === 'passed' ? 'Passed' : s) : check(kind, s.status ?? 'passed', s.summary ?? 'Passed', s);
+  };
+  return {
+    async run(floor, commit, o) {
+      const rows = await real.run(floor, commit, { ...o, onProgress: (c) => o.onProgress(fake(c.kind) && c.status !== 'waiting' && c.status !== 'running' ? fake(c.kind)! : c) });
+      return rows.map((c) => fake(c.kind) ?? c);
+    },
+  };
+}

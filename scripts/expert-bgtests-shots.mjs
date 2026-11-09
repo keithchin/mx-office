@@ -10,7 +10,11 @@
 //   then a run that passes, a change that breaks journey J04b and adds a lint warning, and screenshots: the strip
 //   running, passing, the regression flagged, the popover, and Send to session filled in (never submitted).
 //
-//   npm run build && node scripts/expert-bgtests-shots.mjs [--root <scratch/test-offices/...>] [--out <dir>] [--cycles 5]
+//   Then Lock in (slice 7) on the same project, on the same runner: the breaking change undone, Run the checks runs
+//   every journey on the preview (the mx check scripted with AGENT_OFFICE_TEST_LOCKIN, test mode only: no mxbuild
+//   here), and screenshots of the checks running and all passed; plus the strip during the first lint run.
+//
+//   npm run build && node scripts/expert-bgtests-shots.mjs [--root <scratch/test-offices/...>] [--out <dir>] [--cycles 5] [--skip-timer]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -142,7 +146,9 @@ function fixture() {
 
 async function pass({ home, dir, checksOn, shots }) {
   const ghConfig = fs.mkdtempSync(path.join(os.tmpdir(), 'ao-empty-gh-'));
-  const office = await startTestOffice({ home, env: { GH_CONFIG_DIR: ghConfig, FAKE_MODE: 'turn', FAKE_TURN_MS: '6000', FAKE_RATE_MS: '500', FAKE_ECHO: '1', FAKE_NODE: process.execPath, AGENT_OFFICE_EXPERT_CHECKS: checksOn ? '1' : '0' } });
+  const lockinScript = path.join(root, 'lockin-script.json');
+  fs.writeFileSync(lockinScript, JSON.stringify({ over: true, checks: { 'mx-check': { status: 'passed', summary: '0 errors' } }, licence: 'free', demoUsers: { on: false, count: 0 } }));
+  const office = await startTestOffice({ home, env: { AGENT_OFFICE_TEST_LOCKIN: lockinScript, GH_CONFIG_DIR: ghConfig, FAKE_MODE: 'turn', FAKE_TURN_MS: '6000', FAKE_RATE_MS: '500', FAKE_ECHO: '1', FAKE_NODE: process.execPath, AGENT_OFFICE_EXPERT_CHECKS: checksOn ? '1' : '0' } });
   log(`test office up at ${office.base} (idle checks ${checksOn ? 'on' : 'off'})`);
   const browser = await chromium.launch({ headless: true, executablePath: findChrome() });
   const samples = [];
@@ -202,6 +208,16 @@ async function pass({ home, dir, checksOn, shots }) {
     for (let i = 0; i < CYCLES; i++) {
       const l = await cycle(`Change ${i + 1}: add a status filter to the orders list`);
       log(`  cycle ${i + 1}: asked → visible ${l ? `${(l.lastMs / 1000).toFixed(1)} s` : 'not measured'}`);
+      // The first idle run lints for the first time: the strip says it may take a few minutes.
+      if (checksOn && shots && i === 0) {
+        const first = await waitFor(async () => (/first lint run/.test((await proof()).lint?.note ?? '') ? true : undefined), 45000, 'the first lint run');
+        check(first, 'the first lint run says it may take a few minutes');
+        if (first) {
+          await sleep(500);
+          check(/first lint run, may take a few minutes/.test((await page.textContent('.xs-proof')) ?? ''), 'LINT shows it in the strip');
+          await page.screenshot({ path: path.join(out, '30-bgtests-first-lint.png') });
+        }
+      }
       // The next ask lands while the idle run plays its journeys (checks on), or after as long (checks off).
       if (checksOn) await waitFor(async () => ((await proof()).tests?.state === 'running' && /journey/.test((await proof()).tests?.now ?? '') ? true : undefined), 45000, 'the idle run');
       else await sleep(19000);
@@ -283,6 +299,30 @@ async function pass({ home, dir, checksOn, shots }) {
       await page.waitForSelector('.xs-ck');
       await sleep(400);
       await page.screenshot({ path: path.join(out, '30-bgtests-lint-dark.png') });
+      await page.keyboard.press('Escape');
+
+      // Lock in on the same runner: the breaking change undone, then every journey at the head.
+      await page.context().addInitScript(() => localStorage.setItem('agent-office.color-theme', 'portal-light'));
+      fs.writeFileSync(path.join(dir, 'version.txt'), 'approve button added (status chip fixed)');
+      fs.writeFileSync(path.join(dir, 'lint.json'), JSON.stringify({ violations: LINT_BASE }));
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.xs-lockin:not([disabled])', { timeout: 60000 });
+      await sleep(4000);
+      await page.click('.xs-lockin');
+      await page.waitForSelector('.xl .xl-row', { timeout: 20000 });
+      await page.click('.xl-primary');
+      const journeyRunning = await waitFor(async () => ((await page.textContent('.xl-row[data-state="running"]').catch(() => '')) ? true : undefined), 120000, 'Lock in running');
+      check(journeyRunning, 'Lock in shows its checks running');
+      await waitFor(async () => (/Journeys\s*Running/.test((await page.textContent('.xl')) ?? '') ? true : undefined), 120000, 'the journeys running');
+      await sleep(400);
+      await page.screenshot({ path: path.join(out, '40-lockin-checks-running.png') });
+      const ran = await waitFor(async () => (/^ran /.test((await page.textContent('.xl-meta').catch(() => '')) ?? '') ? true : undefined), 300000, 'Lock in finished');
+      check(ran, 'Lock in finished');
+      await sleep(800);
+      const panel = (await page.textContent('.xl')) ?? '';
+      check(/Journeys\s*6 of 6 passed/.test(panel), `Lock in ran every journey (${panel.match(/Journeys[^A-Z]*/)?.[0]})`);
+      await page.screenshot({ path: path.join(out, '40-lockin-all-passed.png') });
+      check(!errors.length, `no page errors after Lock in${errors.length ? `: ${errors.join(' | ')}` : ''}`);
     }
   } finally {
     await browser.close();
@@ -300,7 +340,7 @@ const s1 = (ms) => `${(ms / 1000).toFixed(1)} s`;
 async function main() {
   fs.mkdirSync(out, { recursive: true });
   const results = {};
-  for (const on of [false, true]) {
+  for (const on of process.argv.includes('--skip-timer') ? [true] : [false, true]) {
     if (fs.existsSync(root)) {
       killProcessesUnder(root);
       fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
@@ -308,7 +348,7 @@ async function main() {
     const f = fixture();
     results[on ? 'on' : 'off'] = await pass({ ...f, checksOn: on, shots: on });
   }
-  for (const k of ['off', 'on']) {
+  for (const k of Object.keys(results)) {
     const xs = results[k].slice(0, CYCLES);
     log(`loop timer, idle checks ${k}: ${xs.map(s1).join(', ')} · median ${s1(med(xs))} · max ${s1(Math.max(...xs))}`);
   }

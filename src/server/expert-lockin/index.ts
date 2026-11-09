@@ -27,7 +27,7 @@ import { runProofGit } from '../expert/git.js';
 import { pushBranch, pushTarget } from '../expert/push.js';
 import { decisionCount, expertProofOf } from '../expert/index.js';
 import type { Licence, LockInCheck, LockInCheckKind, LockInPhase, LockInView } from '../../shared/expert-lockin.js';
-import { scriptedLockInChecks, type LockInChecks } from './checks.js';
+import { overlaidLockInChecks, scriptedLockInChecks, type LockInChecks } from './checks.js';
 import { backgroundLockInChecks } from './bg-checks.js';
 import { LockInService, type LFloor } from './service.js';
 
@@ -40,6 +40,8 @@ interface Script {
   demoUsers?: { on: boolean; count?: number };
   impact?: NonNullable<LockInView['impact']>;
   delayMs?: number;
+  /** Run the real checks and replace only the kinds `checks` names. */
+  over?: boolean;
 }
 
 /** The test office's script, only in test mode. */
@@ -89,7 +91,7 @@ export function lockInOf(ctx: Ctx, checks?: LockInChecks): LockInService {
     dataDir: ctx.cfg.dataDir,
     checks: (f) => {
       const sc = scriptFor(f.dir);
-      return sc ? scriptedLockInChecks(sc.checks ?? {}, sc.delayMs) : office;
+      return !sc ? office : sc.over ? overlaidLockInChecks(office, sc.checks ?? {}) : scriptedLockInChecks(sc.checks ?? {}, sc.delayMs);
     },
     commit: (f) => expertProofOf(ctx).commitNow(f.id, f.dir),
     busy: (f) => {
